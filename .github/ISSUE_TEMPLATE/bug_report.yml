@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: CC-BY-4.0
+# SPDX-FileCopyrightText: 2026 Erik Ruzek
+name: Bug report
+description: A wrong result, an error, or a crash in dwlsmv or difftest
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If the problem reproduces with the example data
+        (`net get dwlsmv`, then `use dwlsmv_example`), please say so: that makes
+        it much easier to check.
+  - type: input
+    id: dwlsmv-version
+    attributes:
+      label: dwlsmv version
+      description: From `which dwlsmv` (the first line).
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: stata
+    attributes:
+      label: Stata version, edition and operating system
+      description: From `about`.
+      placeholder: "StataMP 18, Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Commands
+      description: The commands you ran, starting from loading the data.
+      render: stata
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What happened
+      description: The output or error message, including the return code (for example r(3498)).
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: For a numerical difference, name the reference (lavaan, Mplus, ...), its version and its settings.
+  - type: dropdown
+    id: example-data
+    attributes:
+      label: Does it reproduce with the example data?
+      options:
+        - "Yes"
+        - "No"
+        - "Not tried"
+    validations:
+      required: true

@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: CC-BY-4.0
+# SPDX-FileCopyrightText: 2026 Erik Ruzek
+name: Feature request
+description: A model, option or output dwlsmv does not support yet
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search the open issues first: if your request is already there,
+        a comment on how you would use it helps set priorities.
+  - type: textarea
+    id: need
+    attributes:
+      label: What you would like to fit or report
+      description: The model or output, and the syntax you would expect to use.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: A published method, or how lavaan or Mplus does it, if either does.

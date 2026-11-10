@@ -1,7 +1,5 @@
 # dwlsmv
 
-<!-- NOT YET EXECUTED: the install URLs below cannot be tested while the repository is private. Run tools/test_net_install.do against them once it is public, then remove this comment. -->
-
 `dwlsmv` is a Stata command that fits confirmatory factor and structural equation models to
 ordinal and binary indicators. It estimates by diagonally weighted least squares on thresholds and
 polychoric correlations, with robust standard errors and the mean- and variance-adjusted
