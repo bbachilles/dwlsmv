@@ -1,5 +1,7 @@
 # dwlsmv
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24118857.svg)](https://doi.org/10.5281/zenodo.24118857)
+
 `dwlsmv` is a Stata command that fits confirmatory factor and structural equation models to
 ordinal and binary indicators. It estimates by diagonally weighted least squares on thresholds and
 polychoric correlations, with robust standard errors and the mean- and variance-adjusted
@@ -99,6 +101,10 @@ software, so please check results that matter against another program and
 ## Citation and license
 
 `CITATION.cff` has the citation details, and GitHub's "Cite this repository" button uses it.
+Releases are archived on Zenodo. The DOI
+[10.5281/zenodo.24118857](https://doi.org/10.5281/zenodo.24118857) always resolves to the latest
+version; to cite 0.3.0 itself, use
+[10.5281/zenodo.24118858](https://doi.org/10.5281/zenodo.24118858).
 
 The software is licensed under GPL-3.0-or-later (see `LICENSE`). The specification, the prose and
 mathematics of the derivation, and the documentation are licensed under CC BY 4.0; the derivation's
