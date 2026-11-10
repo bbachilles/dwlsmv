@@ -1,0 +1,57 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "dwlsmv: DWLS/WLSMV estimation of SEM and CFA models with ordinal and binary indicators in Stata"
+abstract: >-
+  A Stata command fitting SEM/CFA models to ordinal and binary indicators by
+  diagonally weighted least squares with the Muthén-style mean- and
+  variance-adjusted (WLSMV) correction.
+authors:
+  - family-names: "Ruzek"
+    given-names: "Erik"
+    orcid: "https://orcid.org/0000-0002-0931-1951"
+repository-code: "https://github.com/bbachilles/dwlsmv"
+license: GPL-3.0-or-later
+keywords:
+  - Stata
+  - Mata
+  - structural equation modeling
+  - confirmatory factor analysis
+  - ordinal data
+  - polychoric correlation
+  - WLSMV
+  - DWLS
+references:
+  - type: article
+    authors:
+      - family-names: "Muthén"
+        given-names: "B."
+    title: "A general structural equation model with dichotomous, ordered categorical, and continuous latent variable indicators"
+    journal: "Psychometrika"
+    volume: 49
+    issue: 1
+    start: 115
+    end: 132
+    year: 1984
+  - type: unpublished
+    authors:
+      - family-names: "Muthén"
+        given-names: "B."
+      - family-names: "du Toit"
+        given-names: "S. H. C."
+      - family-names: "Spisic"
+        given-names: "D."
+    title: "Robust inference using weighted least squares and quadratic estimating equations in latent variable modeling with categorical and continuous outcomes"
+    year: 1997
+    notes: "Unpublished manuscript."
+  - type: report
+    authors:
+      - family-names: "Asparouhov"
+        given-names: "T."
+      - family-names: "Muthén"
+        given-names: "B."
+    title: "Simple Second Order Chi-Square Correction"
+    year: 2010
+    month: 5
+    notes: "Mplus technical note, May 3 2010."
+    url: "https://www.statmodel.com/download/WLSMV_new_chi21.pdf"

@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-10-08 21:43:50 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given case_E.csv)",
+    "files": {
+      "fixtures/expected/lavaan_case_E_difftest_fits.csv": "7af35b905a72356530f6dba05d026f11",
+      "fixtures/expected/lavaan_case_E_difftest.csv": "e1642c4a29dbbd2758e7945ce486272a",
+      "fixtures/expected/lavaan_case_E_difftest_matrices.csv": "5f1d3e0c84970e77d61789467ffed9e4"
+    },
+    "packages": ["lavaan 0.7.2", "MASS 7.3.66", "WLSMV, delta, scaled.shifted, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "reference: lavTestLRT satorra.2000, A.method = delta, scaled.shifted; rebuilt from Delta, Gamma, Td (no N)", "negative contrast: A.method = exact (selection H); NA where lavaan fails", "rebuild tolerance 1e-09 relative, chosen after measuring", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

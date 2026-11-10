@@ -1,0 +1,104 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_group_values.do 
+
+. * Probe (2026-10-10): which group values can appear in sem-style names (n.grp
+> #c.F), and what
+. * sem's group() accepts: non-integer, negative, zero, large, string.
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. set seed 3
+
+. set obs 2000
+Number of observations (_N) was 0, now 2,000.
+
+. gen fz = rnormal()
+
+. forvalues j = 1/3 {
+  2.     gen y`j' = 0.7*fz + rnormal()
+  3. }
+
+. gen half = 1 + (_n > 1000)
+
+. gen g_nonint = cond(half == 1, 1.5, 2.5)
+
+. gen g_neg    = cond(half == 1, -1, 2)
+
+. gen g_zero   = cond(half == 1, 0, 1)
+
+. gen g_big    = cond(half == 1, 1, 100000)
+
+. gen str5 g_str = cond(half == 1, "boys", "girls")
+
+. foreach v in g_nonint g_neg g_zero g_big g_str {
+  2.     display "--- sem, group(`v')"
+  3.     capture noisily quietly sem (F -> y1 y2 y3), group(`v')
+  4.     display "sem rc = " _rc
+  5.     if !_rc {
+  6.         matrix b = e(b)
+  7.         local names : colfullnames b
+  8.         display "first names: " word("`names'", 1) " " word("`names'", 2)
+  9.     }
+ 10. }
+--- sem, group(g_nonint)
+variable 'g_nonint' is not nonnegative integer valued
+in option group()
+sem rc = 198
+--- sem, group(g_neg)
+variable 'g_neg' is not nonnegative integer valued
+in option group()
+sem rc = 198
+--- sem, group(g_zero)
+sem rc = 0
+first names: y1:0bn.g_zero#c.F y1:1.g_zero#c.F
+--- sem, group(g_big)
+sem rc = 0
+first names: y1:1bn.g_big#c.F y1:100000.g_big#c.F
+--- sem, group(g_str)
+string variables not allowed in option group();
+g_str is a string variable
+sem rc = 109
+
+. display "--- hand-posted names"
+--- hand-posted names
+
+. foreach s in "y1:1.5.grp#c.F" "y1:-1.grp#c.F" "y1:0bn.grp#c.F" "y1:100000.grp
+> #c.F" {
+  2.     matrix bb = (1)
+  3.     capture matrix colnames bb = `s'
+  4.     display "`s'  colnames rc=" _rc
+  5. }
+y1:1.5.grp#c.F  colnames rc=198
+y1:-1.grp#c.F  colnames rc=198
+y1:0bn.grp#c.F  colnames rc=0
+y1:100000.grp#c.F  colnames rc=0
+
+. 
+end of do-file

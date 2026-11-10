@@ -1,0 +1,140 @@
+D1ENV stata_version 18 processors 6
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT beta F2 F1 free
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT beta F2 F1 free
+D1TXT lambda F1 y1 free
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y4 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric unitvariance F1
+D1TXT metric unitvariance F2
+D1DUM rc real 498 dummy 498  same
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y1 free
+D1TXT lambda F1 y2 fixed .5
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y1 free
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y4 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric unitvariance F1
+D1TXT metric unitvariance F2
+D1TXT psi F2 F1 free
+D1DUM rc real 498 dummy 498  same
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y2 y1 y3 y4 y5 y6
+D1TXT lambda F1 y1 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y2
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F1 y4 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT beta F2 F1 free
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1 F2
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F2 y5 free
+D1TXT lambda F2 y6 free
+D1TXT metric marker F1 y1
+D1TXT metric marker F2 y4
+D1TXT psi F1 F1 free
+D1TXT psi F2 F1 free
+D1TXT psi F2 F2 free
+D1DUM identical
+D1TXT factor F1
+D1TXT ind y1 y2 y3 y4 y5 y6
+D1TXT lambda F1 y2 free
+D1TXT lambda F1 y3 free
+D1TXT lambda F1 y4 free
+D1TXT lambda F1 y5 free
+D1TXT lambda F1 y6 free
+D1TXT metric marker F1 y1
+D1TXT psi F1 F1 free
+D1DUM rc real 3498 dummy 3498  same
+D1DUM rc real 498 dummy 498  same
+D1STATE e(cmd) kept
+D1STATE data kept
+D1STATE sortedby y3 y1
+D1STATE note var kept
+D1STATE rngstate kept

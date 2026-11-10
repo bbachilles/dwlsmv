@@ -1,0 +1,2484 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_sem_group_surface.do 
+
+. * Probe (2026-10-10): sem's group grammar as dwlsmv's surface (D1). (1) group
+> () + ginvariant(none) +
+. * noestimate; (2) e(Cns) for a cross-group @name tie; (3) group-specific path
+> s.
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. set seed 4
+
+. set obs 400
+Number of observations (_N) was 0, now 400.
+
+. gen byte grp = 1 + (_n > 200)
+
+. gen fz = rnormal()
+
+. forvalues j = 1/3 {
+  2.     gen y`j' = 0.7*fz + rnormal()
+  3. }
+
+. display "--- (1) ginvariant(none), noestimate"
+--- (1) ginvariant(none), noestimate
+
+. capture noisily sem (F -> y1 y2 y3), group(grp) ginvariant(none) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3
+
+Exogenous variables
+  Latent: F
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y1]2.grp#c.F = 1
+ ( 3)  [/]mean(F)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .8444109  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8670321  _b[y3:1.grp#c.F]
+       _cons |  -.0069994  _b[y3:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   .7844501  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.038079  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .9474594  _b[/var(e.y3)#1.grp]
+       var(F)|    .665399  _b[/var(F)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |          0  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   1.091755  _b[y2:2.grp#c.F]
+       _cons |   .1105395  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.380685  _b[y3:2.grp#c.F]
+       _cons |   .0025175  _b[y3:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0605663  _b[/mean(F)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.234658  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   .9938108  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .6901167  _b[/var(e.y3)#2.grp]
+       var(F)|   .4101093  _b[/var(F)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+
+. display "rc = " _rc
+rc = 0
+
+. if !_rc {
+.     local names : colfullnames e(b)
+.     display "`names'"
+y1:1bn.grp#c.F y1:2.grp#c.F y1:1bn.grp y1:2.grp y2:1bn.grp#c.F y2:2.grp#c.F y2:
+> 1bn.grp y2:2.grp y3:1bn.grp#c.F y3:2.grp#c.F y3:1bn.grp y3:2.grp /mean(F)#1bn
+> .grp /mean(F)#2.grp /var(e.y1)#1bn.grp /var(e.y1)#2.grp /var(e.y2)#1bn.grp /v
+> ar(e.y2)#2.grp /var(e.y3)#1bn.grp /var(e.y3)#2.grp /var(F)#1bn.grp /var(F)#2.
+> grp
+.     capture matrix list e(Cns)
+.     display "Cns rc = " _rc
+Cns rc = 0
+.     if !_rc matrix list e(Cns)
+
+e(Cns)[3,23]
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          1          0          0          0          0
+r3          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.F        c.F        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          1          0          0          0          0          0
+
+            /:         /:         /:         /:      _Cns:
+    var(e.y3)  var(e.y3)     var(F)     var(F)            
+        1.grp      2.grp      1.grp      2.grp         _r
+r1          0          0          0          0          1
+r2          0          0          0          0          1
+r3          0          0          0          0          0
+. }
+
+. display "--- (2) cross-group tie @a on y2's loading"
+--- (2) cross-group tie @a on y2's loading
+
+. capture noisily sem (F -> y1 y2@a y3), group(grp) ginvariant(none) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3
+
+Exogenous variables
+  Latent: F
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y2]1bn.grp#c.F - [y2]2.grp#c.F = 0
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [/]mean(F)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .8444109  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8670321  _b[y3:1.grp#c.F]
+       _cons |  -.0069994  _b[y3:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   .7844501  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.038079  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .9474594  _b[/var(e.y3)#1.grp]
+       var(F)|    .665399  _b[/var(F)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |          0  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   1.091755  _b[y2:2.grp#c.F]
+       _cons |   .1105395  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.380685  _b[y3:2.grp#c.F]
+       _cons |   .0025175  _b[y3:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0605663  _b[/mean(F)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.234658  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   .9938108  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .6901167  _b[/var(e.y3)#2.grp]
+       var(F)|   .4101093  _b[/var(F)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+
+. display "rc = " _rc
+rc = 0
+
+. if !_rc {
+.     local names : colfullnames e(b)
+.     display "`names'"
+y1:1bn.grp#c.F y1:2.grp#c.F y1:1bn.grp y1:2.grp y2:1bn.grp#c.F y2:2.grp#c.F y2:
+> 1bn.grp y2:2.grp y3:1bn.grp#c.F y3:2.grp#c.F y3:1bn.grp y3:2.grp /mean(F)#1bn
+> .grp /mean(F)#2.grp /var(e.y1)#1bn.grp /var(e.y1)#2.grp /var(e.y2)#1bn.grp /v
+> ar(e.y2)#2.grp /var(e.y3)#1bn.grp /var(e.y3)#2.grp /var(F)#1bn.grp /var(F)#2.
+> grp
+.     matrix list e(Cns)
+
+e(Cns)[4,23]
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          1         -1
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.F        c.F        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          1          0          0          0          0          0
+
+            /:         /:         /:         /:      _Cns:
+    var(e.y3)  var(e.y3)     var(F)     var(F)            
+        1.grp      2.grp      1.grp      2.grp         _r
+r1          0          0          0          0          1
+r2          0          0          0          0          0
+r3          0          0          0          0          1
+r4          0          0          0          0          0
+. }
+
+. display "--- (3) group-specific tie: only group-specific paths"
+--- (3) group-specific tie: only group-specific paths
+
+. capture noisily sem (1: F -> y1 y2@b y3) (2: F -> y1 y2@b y3), group(grp) gin
+> variant(none) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3
+
+Exogenous variables
+  Latent: F
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y2]1bn.grp#c.F - [y2]2.grp#c.F = 0
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [/]mean(F)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .8444109  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8670321  _b[y3:1.grp#c.F]
+       _cons |  -.0069994  _b[y3:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   .7844501  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.038079  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .9474594  _b[/var(e.y3)#1.grp]
+       var(F)|    .665399  _b[/var(F)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |          0  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   1.091755  _b[y2:2.grp#c.F]
+       _cons |   .1105395  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.380685  _b[y3:2.grp#c.F]
+       _cons |   .0025175  _b[y3:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0605663  _b[/mean(F)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.234658  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   .9938108  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .6901167  _b[/var(e.y3)#2.grp]
+       var(F)|   .4101093  _b[/var(F)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+
+. display "rc = " _rc
+rc = 0
+
+. if !_rc matrix list e(Cns)
+
+e(Cns)[4,23]
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          1         -1
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.F        c.F        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          1          0          0          0          0          0
+
+            /:         /:         /:         /:      _Cns:
+    var(e.y3)  var(e.y3)     var(F)     var(F)            
+        1.grp      2.grp      1.grp      2.grp         _r
+r1          0          0          0          0          1
+r2          0          0          0          0          0
+r3          0          0          0          0          1
+r4          0          0          0          0          0
+
+. display "--- (4) default ginvariant (no option), noestimate"
+--- (4) default ginvariant (no option), noestimate
+
+. capture noisily sem (F -> y1 y2 y3), group(grp) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3
+
+Exogenous variables
+  Latent: F
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y2]1bn.grp#c.F - [y2]2.grp#c.F = 0
+ ( 3)  [y3]1bn.grp#c.F - [y3]2.grp#c.F = 0
+ ( 4)  [y1]1bn.grp - [y1]2.grp = 0
+ ( 5)  [y2]1bn.grp - [y2]2.grp = 0
+ ( 6)  [y3]1bn.grp - [y3]2.grp = 0
+ ( 7)  [y1]2.grp#c.F = 1
+ ( 8)  [/]mean(F)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .8444109  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8670321  _b[y3:1.grp#c.F]
+       _cons |  -.0069994  _b[y3:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   .7844501  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.038079  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .9474594  _b[/var(e.y3)#1.grp]
+       var(F)|    .665399  _b[/var(F)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |          0  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   1.091755  _b[y2:2.grp#c.F]
+       _cons |   .1105395  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.380685  _b[y3:2.grp#c.F]
+       _cons |   .0025175  _b[y3:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0605663  _b[/mean(F)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.234658  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   .9938108  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .6901167  _b[/var(e.y3)#2.grp]
+       var(F)|   .4101093  _b[/var(F)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+
+. display "rc = " _rc
+rc = 0
+
+. if !_rc matrix list e(Cns)
+
+e(Cns)[8,23]
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          1         -1
+r3          0          0          0          0          0          0
+r4          0          0          1         -1          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          1          0          0          0          0
+r8          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.F        c.F        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          1         -1          0          0
+r4          0          0          0          0          0          0
+r5          1         -1          0          0          0          0
+r6          0          0          0          0          1         -1
+r7          0          0          0          0          0          0
+r8          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+r8          1          0          0          0          0          0
+
+            /:         /:         /:         /:      _Cns:
+    var(e.y3)  var(e.y3)     var(F)     var(F)            
+        1.grp      2.grp      1.grp      2.grp         _r
+r1          0          0          0          0          1
+r2          0          0          0          0          0
+r3          0          0          0          0          0
+r4          0          0          0          0          0
+r5          0          0          0          0          0
+r6          0          0          0          0          0
+r7          0          0          0          0          1
+r8          0          0          0          0          0
+
+. 
+. * Extension (2026-10-12, decision "Group-specific paths under invariance()", 
+> option (a)):
+. * can Module 11 read each group's paths from e(b)'s stripe and e(Cns), so tha
+> t a
+. * non-mirroring model is detectable from e() and a mirrored one is not flagge
+> d?
+. * Five indicators, two factors, so a cross-loading can differ by group.
+. * Run on StataMP 18; Stata 16 NOT YET EXECUTED.
+. capture drop y4 y5
+
+. gen y4 = 0.7*fz + rnormal()
+
+. gen y5 = 0.7*fz + rnormal()
+
+. * indexed locals: ": word of" splits compound-quoted lists (trap, 2026-10-08)
+. local m1 (F -> y1 y2 y3) (G -> y3 y4 y5)
+
+. local m2 (1: F -> y1 y2 y3) (2: F -> y1 y2 y3) (G -> y3 y4 y5)
+
+. local m3 (F -> y1 y2 y3) (G -> y4 y5) (2: G -> y3)
+
+. local m4 (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4)
+
+. local m5 (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4@0)
+
+. local m6 (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4@0.3)
+
+. local m7 (F -> y1 y2 y3) (G -> y3 y4 y5) (2: y5 <- y4)
+
+. forvalues c = 1/7 {
+  2.     local m `m`c''
+  3.     display "--- (5.`c') `m', ginvariant(none) noestimate"
+  4.     capture noisily sem `m', group(grp) ginvariant(none) noestimate
+  5.     display "rc = " _rc
+  6.     if !_rc {
+  7.         local names : colfullnames e(b)
+  8.         display "ncols = " colsof(e(b))
+  9.         foreach n of local names {
+ 10.             display "  `n'"
+ 11.         }
+ 12.         capture confirm matrix e(Cns)
+ 13.         if !_rc matrix list e(Cns), noheader
+ 14.         else display "no e(Cns)"
+ 15.         matrix list e(b), noheader
+ 16.     }
+ 17. }
+--- (5.1) (F -> y1 y2 y3) (G -> y3 y4 y5), ginvariant(none) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [/]mean(F)#1bn.grp = 0
+ ( 6)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |    .861943  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8055022  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .9110244  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0389701  _b[/mean(F)#2.grp]
+      mean(G)|    .006946  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.329384  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.248319  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .2176244  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.249482  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.084852  _b[/var(e.y5)#2.grp]
+       var(F)|   .3153829  _b[/var(F)#2.grp]
+       var(G)|   .2690647  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 42
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          1          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          1
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y5:        y5:        y5:        y5:         /:         /:
+        1.grp#     2.grp#         1.         2.   mean(F)    mean(F)
+          c.G        c.G        grp        grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          1          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(G)    mean(G)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)  var(e.y5)  var(e.y5)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+       var(F)     var(F)     var(G)     var(G)   cov(F,G)   cov(F,G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+         _Cns:
+              
+           _r
+r1          1
+r2          1
+r3          1
+r4          1
+r5          0
+r6          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1           1  -.11184357  -.06056627   .90722667   .86194298
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .80550218           1           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   -.0069994  -.08110546   .78882891   .91102443   .21827345    .0047802
+
+            y5:         y5:         y5:         y5:          /:          /:
+         1.grp#      2.grp#          1.          2.    mean(F)     mean(F)
+           c.G         c.G         grp         grp       1.grp       2.grp
+y1   .87546016   .99229799  -.01476772   .06541417           0   -.0389701
+
+             /:          /:          /:          /:          /:          /:
+       mean(G)     mean(G)   var(e.y1)   var(e.y1)   var(e.y2)   var(e.y2)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0   .00694597   1.1967063   1.3293843    1.304177   1.2483195
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)   var(e.y5)   var(e.y5)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .11144887   .21762445   1.3886691   1.2494822   1.1880098   1.0848521
+
+             /:          /:          /:          /:          /:          /:
+        var(F)      var(F)      var(G)      var(G)    cov(F,G)    cov(F,G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .25314276   .31538293   .33477753   .26906469           0           0
+--- (5.2) (1: F -> y1 y2 y3) (2: F -> y1 y2 y3) (G -> y3 y4 y5), ginvariant(non
+> e) noestimate
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [/]mean(F)#1bn.grp = 0
+ ( 6)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |    .861943  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8055022  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .9110244  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0389701  _b[/mean(F)#2.grp]
+      mean(G)|    .006946  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.329384  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.248319  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .2176244  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.249482  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.084852  _b[/var(e.y5)#2.grp]
+       var(F)|   .3153829  _b[/var(F)#2.grp]
+       var(G)|   .2690647  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 42
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          1          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          1
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y5:        y5:        y5:        y5:         /:         /:
+        1.grp#     2.grp#         1.         2.   mean(F)    mean(F)
+          c.G        c.G        grp        grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          1          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(G)    mean(G)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)  var(e.y5)  var(e.y5)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+       var(F)     var(F)     var(G)     var(G)   cov(F,G)   cov(F,G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+         _Cns:
+              
+           _r
+r1          1
+r2          1
+r3          1
+r4          1
+r5          0
+r6          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1           1  -.11184357  -.06056627   .90722667   .86194298
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .80550218           1           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   -.0069994  -.08110546   .78882891   .91102443   .21827345    .0047802
+
+            y5:         y5:         y5:         y5:          /:          /:
+         1.grp#      2.grp#          1.          2.    mean(F)     mean(F)
+           c.G         c.G         grp         grp       1.grp       2.grp
+y1   .87546016   .99229799  -.01476772   .06541417           0   -.0389701
+
+             /:          /:          /:          /:          /:          /:
+       mean(G)     mean(G)   var(e.y1)   var(e.y1)   var(e.y2)   var(e.y2)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0   .00694597   1.1967063   1.3293843    1.304177   1.2483195
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)   var(e.y5)   var(e.y5)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .11144887   .21762445   1.3886691   1.2494822   1.1880098   1.0848521
+
+             /:          /:          /:          /:          /:          /:
+        var(F)      var(F)      var(G)      var(G)    cov(F,G)    cov(F,G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .25314276   .31538293   .33477753   .26906469           0           0
+--- (5.3) (F -> y1 y2 y3) (G -> y4 y5) (2: G -> y3), ginvariant(none) noestimat
+> e
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y4]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [y3]1bn.grp#c.G = 0
+ ( 6)  [/]mean(F)#1bn.grp = 0
+ ( 7)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          0  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |          1  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   1.080014  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   .8916939  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.053133  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .8340561  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.202698  _b[/var(e.y4)#1.grp]
+    var(e.y5)|   .9846853  _b[/var(e.y5)#1.grp]
+       var(F)|   .5581552  _b[/var(F)#1.grp]
+       var(G)|   .3942872  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |    .861943  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8055022  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .9110244  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0389701  _b[/mean(F)#2.grp]
+      mean(G)|    .006946  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.329384  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.248319  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .2176244  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.249482  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.084852  _b[/var(e.y5)#2.grp]
+       var(F)|   .3153829  _b[/var(F)#2.grp]
+       var(G)|   .2690647  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 42
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          1
+r5          0          0          0          0          1          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          1          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y5:        y5:        y5:        y5:         /:         /:
+        1.grp#     2.grp#         1.         2.   mean(F)    mean(F)
+          c.G        c.G        grp        grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          1          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(G)    mean(G)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          1          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)  var(e.y5)  var(e.y5)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+       var(F)     var(F)     var(G)     var(G)   cov(F,G)   cov(F,G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+         _Cns:
+              
+           _r
+r1          1
+r2          1
+r3          1
+r4          1
+r5          0
+r6          0
+r7          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1           1  -.11184357  -.06056627   .90722667   .86194298
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .80550218           0           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   -.0069994  -.08110546           1   .91102443   .21827345    .0047802
+
+            y5:         y5:         y5:         y5:          /:          /:
+         1.grp#      2.grp#          1.          2.    mean(F)     mean(F)
+           c.G         c.G         grp         grp       1.grp       2.grp
+y1   1.0800137   .99229799  -.01476772   .06541417           0   -.0389701
+
+             /:          /:          /:          /:          /:          /:
+       mean(G)     mean(G)   var(e.y1)   var(e.y1)   var(e.y2)   var(e.y2)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0   .00694597   .89169388   1.3293843   1.0531334   1.2483195
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)   var(e.y5)   var(e.y5)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .83405612   .21762445   1.2026975   1.2494822   .98468527   1.0848521
+
+             /:          /:          /:          /:          /:          /:
+        var(F)      var(F)      var(G)      var(G)    cov(F,G)    cov(F,G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .55815523   .31538293   .39428723   .26906469           0           0
+--- (5.4) (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4), ginvariant(none) noesti
+> mate
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [y4]1bn.grp#c.F = 0
+ ( 6)  [/]mean(F)#1bn.grp = 0
+ ( 7)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           F |          0  _b[y4:1.grp#c.F]
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |    .861943  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8055022  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           F |   .6951229  _b[y4:2.grp#c.F]
+           G |   .2776098  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0322359  _b[/mean(F)#2.grp]
+      mean(G)|   .0084001  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.288632  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.218043  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .3854746  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.101931  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.312623  _b[/var(e.y5)#2.grp]
+       var(F)|   .3561348  _b[/var(F)#2.grp]
+       var(G)|   .0377443  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 44
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.F
+  y4:2.grp#c.F
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          1          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          1
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          1          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y4:        y4:        y5:        y5:        y5:        y5:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)    mean(G)    mean(G)  var(e.y1)  var(e.y1)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+r7          0          0          1          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y2)  var(e.y2)  var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y5)  var(e.y5)     var(F)     var(F)     var(G)     var(G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:      _Cns:
+     cov(F,G)   cov(F,G)            
+        1.grp      2.grp         _r
+r1          0          0          1
+r2          0          0          1
+r3          0          0          1
+r4          0          0          1
+r5          0          0          0
+r6          0          0          0
+r7          0          0          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1           1  -.11184357  -.06056627   .90722667   .86194298
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .80550218           1           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1   -.0069994  -.08110546           0   .69512292   .78882891   .27760984
+
+            y4:         y4:         y5:         y5:         y5:         y5:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   .21827345    .0047802   .87546016   .99229799  -.01476772   .06541417
+
+             /:          /:          /:          /:          /:          /:
+       mean(F)     mean(F)     mean(G)     mean(G)   var(e.y1)   var(e.y1)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0  -.03223587           0   .00840008   1.1967063   1.2886324
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y2)   var(e.y2)   var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1    1.304177   1.2180431   .11144887   .38547462   1.3886691   1.1019306
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y5)   var(e.y5)      var(F)      var(F)      var(G)      var(G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   1.1880098   1.3126229   .25314276   .35613479   .33477753   .03774433
+
+             /:          /:
+      cov(F,G)    cov(F,G)
+         1.grp       2.grp
+y1           0           0
+--- (5.5) (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4@0), ginvariant(none) noes
+> timate
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [/]mean(F)#1bn.grp = 0
+ ( 6)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |    .861943  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .8055022  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           G |   .9110244  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0389701  _b[/mean(F)#2.grp]
+      mean(G)|    .006946  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.329384  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.248319  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   .2176244  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.249482  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.084852  _b[/var(e.y5)#2.grp]
+       var(F)|   .3153829  _b[/var(F)#2.grp]
+       var(G)|   .2690647  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 42
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          1          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          1          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          1
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+           y5:        y5:        y5:        y5:         /:         /:
+        1.grp#     2.grp#         1.         2.   mean(F)    mean(F)
+          c.G        c.G        grp        grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          1          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(G)    mean(G)  var(e.y1)  var(e.y1)  var(e.y2)  var(e.y2)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)  var(e.y5)  var(e.y5)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+       var(F)     var(F)     var(G)     var(G)   cov(F,G)   cov(F,G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+
+         _Cns:
+              
+           _r
+r1          1
+r2          1
+r3          1
+r4          1
+r5          0
+r6          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1           1  -.11184357  -.06056627   .90722667   .86194298
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .80550218           1           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   -.0069994  -.08110546   .78882891   .91102443   .21827345    .0047802
+
+            y5:         y5:         y5:         y5:          /:          /:
+         1.grp#      2.grp#          1.          2.    mean(F)     mean(F)
+           c.G         c.G         grp         grp       1.grp       2.grp
+y1   .87546016   .99229799  -.01476772   .06541417           0   -.0389701
+
+             /:          /:          /:          /:          /:          /:
+       mean(G)     mean(G)   var(e.y1)   var(e.y1)   var(e.y2)   var(e.y2)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0   .00694597   1.1967063   1.3293843    1.304177   1.2483195
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)   var(e.y5)   var(e.y5)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .11144887   .21762445   1.3886691   1.2494822   1.1880098   1.0848521
+
+             /:          /:          /:          /:          /:          /:
+        var(F)      var(F)      var(G)      var(G)    cov(F,G)    cov(F,G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   .25314276   .31538293   .33477753   .26906469           0           0
+--- (5.6) (F -> y1 y2 y3) (G -> y3 y4 y5) (2: F -> y4@0.3), ginvariant(none) no
+> estimate
+
+Endogenous variables
+  Measurement: y1 y2 y3 y4 y5
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y3]2.grp#c.G = 1
+ ( 4)  [y4]2.grp#c.F = .3
+ ( 5)  [y4]1bn.grp#c.F = 0
+ ( 6)  [/]mean(F)#1bn.grp = 0
+ ( 7)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           F |          0  _b[y4:1.grp#c.F]
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |    .328873  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .2830079  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   .2846767  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+  -----------+----------------------------------------------------------------
+  y4         |
+           F |         .3  _b[y4:2.grp#c.F]
+           G |   .9110244  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+           G |    .992298  _b[y5:2.grp#c.G]
+       _cons |   .0654142  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.1071927  _b[/mean(F)#2.grp]
+      mean(G)|   .0170437  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.486786  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.365643  _b[/var(e.y2)#2.grp]
+    var(e.y3)|    .618689  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   .6250412  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.431544  _b[/var(e.y5)#2.grp]
+       var(F)|    1.46066  _b[/var(F)#2.grp]
+       var(G)|   .0830305  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 44
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  y4:1bn.grp#c.F
+  y4:2.grp#c.F
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y1:        y1:        y1:        y1:        y2:        y2:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.F        c.F        grp        grp        c.F        c.F
+r1          1          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y2:        y2:        y3:        y3:        y3:        y3:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          1          0
+r3          0          0          0          0          0          1
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y3:        y3:        y4:        y4:        y4:        y4:
+            1.         2.     1.grp#     2.grp#     1.grp#     2.grp#
+          grp        grp        c.F        c.F        c.G        c.G
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          1          0          0
+r5          0          0          1          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y4:        y4:        y5:        y5:        y5:        y5:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)    mean(G)    mean(G)  var(e.y1)  var(e.y1)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+r7          0          0          1          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y2)  var(e.y2)  var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y5)  var(e.y5)     var(F)     var(F)     var(G)     var(G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:      _Cns:
+     cov(F,G)   cov(F,G)            
+        1.grp      2.grp         _r
+r1          0          0          1
+r2          0          0          1
+r3          0          0          1
+r4          0          0         .3
+r5          0          0          0
+r6          0          0          0
+r7          0          0          0
+
+            y1:         y1:         y1:         y1:         y2:         y2:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.F         c.F         grp         grp         c.F         c.F
+y1           1   .32887304  -.11184357  -.06056627   .90722667   .28300788
+
+            y2:         y2:         y3:         y3:         y3:         y3:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1  -.07658458   .04441593   1.0485036   .28467673           1           1
+
+            y3:         y3:         y4:         y4:         y4:         y4:
+             1.          2.      1.grp#      2.grp#      1.grp#      2.grp#
+           grp         grp         c.F         c.F         c.G         c.G
+y1   -.0069994  -.08110546           0          .3   .78882891   .91102443
+
+            y4:         y4:         y5:         y5:         y5:         y5:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.G         c.G         grp         grp
+y1   .21827345    .0047802   .87546016   .99229799  -.01476772   .06541417
+
+             /:          /:          /:          /:          /:          /:
+       mean(F)     mean(F)     mean(G)     mean(G)   var(e.y1)   var(e.y1)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0  -.10719269           0   .01704371   1.1967063    1.486786
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y2)   var(e.y2)   var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1    1.304177   1.3656426   .11144887   .61868904   1.3886691   .62504122
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y5)   var(e.y5)      var(F)      var(F)      var(G)      var(G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   1.1880098   1.4315445   .25314276   1.4606596   .33477753   .08303047
+
+             /:          /:
+      cov(F,G)    cov(F,G)
+         1.grp       2.grp
+y1           0           0
+--- (5.7) (F -> y1 y2 y3) (G -> y3 y4 y5) (2: y5 <- y4), ginvariant(none) noest
+> imate
+
+Endogenous variables
+  Observed:    y4 y5
+  Measurement: y1 y2 y3
+
+Exogenous variables
+  Latent: F G
+
+Structural equation model                               Number of obs    = 400
+Grouping variable: grp                                  Number of groups =   2
+Estimation method: ml
+
+ ( 1)  [y1]1bn.grp#c.F = 1
+ ( 2)  [y3]1bn.grp#c.G = 1
+ ( 3)  [y1]2.grp#c.F = 1
+ ( 4)  [y3]2.grp#c.G = 1
+ ( 5)  [y5]1bn.grp#c.y4 = 0
+ ( 6)  [/]mean(F)#1bn.grp = 0
+ ( 7)  [/]mean(G)#1bn.grp = 0
+
+Group: 1                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Structural   |
+  y4         |
+           G |   .7888289  _b[y4:1.grp#c.G]
+       _cons |   .2182734  _b[y4:1.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+          y4 |          0  _b[y5:1.grp#c.y4]
+           G |   .8754602  _b[y5:1.grp#c.G]
+       _cons |  -.0147677  _b[y5:1.grp]
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:1.grp#c.F]
+       _cons |  -.1118436  _b[y1:1.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |   .9072267  _b[y2:1.grp#c.F]
+       _cons |  -.0765846  _b[y2:1.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |   1.048504  _b[y3:1.grp#c.F]
+           G |          1  _b[y3:1.grp#c.G]
+       _cons |  -.0069994  _b[y3:1.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|          0  _b[/mean(F)#1.grp]
+      mean(G)|          0  _b[/mean(G)#1.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.196706  _b[/var(e.y1)#1.grp]
+    var(e.y2)|   1.304177  _b[/var(e.y2)#1.grp]
+    var(e.y3)|   .1114489  _b[/var(e.y3)#1.grp]
+    var(e.y4)|   1.388669  _b[/var(e.y4)#1.grp]
+    var(e.y5)|    1.18801  _b[/var(e.y5)#1.grp]
+       var(F)|   .2531428  _b[/var(F)#1.grp]
+       var(G)|   .3347775  _b[/var(G)#1.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#1.grp]
+------------------------------------------------------------------------------
+
+Group: 2                                                   Number of obs = 200
+
+------------------------------------------------------------------------------
+             | Coefficient  Legend
+-------------+----------------------------------------------------------------
+Structural   |
+  y4         |
+           G |          0  _b[y4:2.grp#c.G]
+       _cons |   .0047802  _b[y4:2.grp]
+  -----------+----------------------------------------------------------------
+  y5         |
+          y4 |    .397272  _b[y5:2.grp#c.y4]
+           G |          0  _b[y5:2.grp#c.G]
+       _cons |   .0635151  _b[y5:2.grp]
+-------------+----------------------------------------------------------------
+Measurement  |
+  y1         |
+           F |          1  _b[y1:2.grp#c.F]
+       _cons |  -.0605663  _b[y1:2.grp]
+  -----------+----------------------------------------------------------------
+  y2         |
+           F |          1  _b[y2:2.grp#c.F]
+       _cons |   .0444159  _b[y2:2.grp]
+  -----------+----------------------------------------------------------------
+  y3         |
+           F |          0  _b[y3:2.grp#c.F]
+           G |          1  _b[y3:2.grp#c.G]
+       _cons |  -.0811055  _b[y3:2.grp]
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0080752  _b[/mean(F)#2.grp]
+      mean(G)|  -.0811055  _b[/mean(G)#2.grp]
+-------------+----------------------------------------------------------------
+    var(e.y1)|   1.644767  _b[/var(e.y1)#2.grp]
+    var(e.y2)|   1.482632  _b[/var(e.y2)#2.grp]
+    var(e.y3)|   1.471904  _b[/var(e.y3)#2.grp]
+    var(e.y4)|   1.472797  _b[/var(e.y4)#2.grp]
+    var(e.y5)|   1.349788  _b[/var(e.y5)#2.grp]
+       var(F)|   1.482632  _b[/var(F)#2.grp]
+       var(G)|          1  _b[/var(G)#2.grp]
+-------------+----------------------------------------------------------------
+     cov(F,G)|          0  _b[/cov(F,G)#2.grp]
+------------------------------------------------------------------------------
+Note: The above coefficient values are starting values and not the result of
+      a fully fitted model.
+rc = 0
+ncols = 44
+  y4:1bn.grp#c.G
+  y4:2.grp#c.G
+  y4:1bn.grp
+  y4:2.grp
+  y5:1bn.grp#c.y4
+  y5:2.grp#c.y4
+  y5:1bn.grp#c.G
+  y5:2.grp#c.G
+  y5:1bn.grp
+  y5:2.grp
+  y1:1bn.grp#c.F
+  y1:2.grp#c.F
+  y1:1bn.grp
+  y1:2.grp
+  y2:1bn.grp#c.F
+  y2:2.grp#c.F
+  y2:1bn.grp
+  y2:2.grp
+  y3:1bn.grp#c.F
+  y3:2.grp#c.F
+  y3:1bn.grp#c.G
+  y3:2.grp#c.G
+  y3:1bn.grp
+  y3:2.grp
+  /mean(F)#1bn.grp
+  /mean(F)#2.grp
+  /mean(G)#1bn.grp
+  /mean(G)#2.grp
+  /var(e.y1)#1bn.grp
+  /var(e.y1)#2.grp
+  /var(e.y2)#1bn.grp
+  /var(e.y2)#2.grp
+  /var(e.y3)#1bn.grp
+  /var(e.y3)#2.grp
+  /var(e.y4)#1bn.grp
+  /var(e.y4)#2.grp
+  /var(e.y5)#1bn.grp
+  /var(e.y5)#2.grp
+  /var(F)#1bn.grp
+  /var(F)#2.grp
+  /var(G)#1bn.grp
+  /var(G)#2.grp
+  /cov(F,G)#1bn.grp
+  /cov(F,G)#2.grp
+
+           y4:        y4:        y4:        y4:        y5:        y5:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.G        c.G        grp        grp       c.y4       c.y4
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          1          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y5:        y5:        y5:        y5:        y1:        y1:
+        1.grp#     2.grp#         1.         2.     1.grp#     2.grp#
+          c.G        c.G        grp        grp        c.F        c.F
+r1          0          0          0          0          1          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          1
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y1:        y1:        y2:        y2:        y2:        y2:
+            1.         2.     1.grp#     2.grp#         1.         2.
+          grp        grp        c.F        c.F        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+           y3:        y3:        y3:        y3:        y3:        y3:
+        1.grp#     2.grp#     1.grp#     2.grp#         1.         2.
+          c.F        c.F        c.G        c.G        grp        grp
+r1          0          0          0          0          0          0
+r2          0          0          1          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          1          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+      mean(F)    mean(F)    mean(G)    mean(G)  var(e.y1)  var(e.y1)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          1          0          0          0          0          0
+r7          0          0          1          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y2)  var(e.y2)  var(e.y3)  var(e.y3)  var(e.y4)  var(e.y4)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:         /:         /:         /:         /:
+    var(e.y5)  var(e.y5)     var(F)     var(F)     var(G)     var(G)
+        1.grp      2.grp      1.grp      2.grp      1.grp      2.grp
+r1          0          0          0          0          0          0
+r2          0          0          0          0          0          0
+r3          0          0          0          0          0          0
+r4          0          0          0          0          0          0
+r5          0          0          0          0          0          0
+r6          0          0          0          0          0          0
+r7          0          0          0          0          0          0
+
+            /:         /:      _Cns:
+     cov(F,G)   cov(F,G)            
+        1.grp      2.grp         _r
+r1          0          0          1
+r2          0          0          1
+r3          0          0          1
+r4          0          0          1
+r5          0          0          0
+r6          0          0          0
+r7          0          0          0
+
+            y4:         y4:         y4:         y4:         y5:         y5:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.G         c.G         grp         grp        c.y4        c.y4
+y1   .78882891           0   .21827345    .0047802           0   .39727199
+
+            y5:         y5:         y5:         y5:         y1:         y1:
+         1.grp#      2.grp#          1.          2.      1.grp#      2.grp#
+           c.G         c.G         grp         grp         c.F         c.F
+y1   .87546016           0  -.01476772   .06351513           1           1
+
+            y1:         y1:         y2:         y2:         y2:         y2:
+             1.          2.      1.grp#      2.grp#          1.          2.
+           grp         grp         c.F         c.F         grp         grp
+y1  -.11184357  -.06056627   .90722667           1  -.07658458   .04441593
+
+            y3:         y3:         y3:         y3:         y3:         y3:
+         1.grp#      2.grp#      1.grp#      2.grp#          1.          2.
+           c.F         c.F         c.G         c.G         grp         grp
+y1   1.0485036           0           1           1   -.0069994  -.08110546
+
+             /:          /:          /:          /:          /:          /:
+       mean(F)     mean(F)     mean(G)     mean(G)   var(e.y1)   var(e.y1)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1           0  -.00807517           0  -.08110546   1.1967063   1.6447672
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y2)   var(e.y2)   var(e.y3)   var(e.y3)   var(e.y4)   var(e.y4)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1    1.304177   1.4826319   .11144887   1.4719043   1.3886691   1.4727966
+
+             /:          /:          /:          /:          /:          /:
+     var(e.y5)   var(e.y5)      var(F)      var(F)      var(G)      var(G)
+         1.grp       2.grp       1.grp       2.grp       1.grp       2.grp
+y1   1.1880098   1.3497881   .25314276   1.4826319   .33477753           1
+
+             /:          /:
+      cov(F,G)    cov(F,G)
+         1.grp       2.grp
+y1           0           0
+
+. 
+end of do-file

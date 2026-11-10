@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-10-06 22:26:15 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "set.seed 21261007 (P replicate 1, chosen by the pre-set rule)",
+    "files": {
+      "fixtures/data/marker_trap.csv": "d0d94c59d9291abe9881beabcf793d8f",
+      "fixtures/expected/marker_trap_population.csv": "d3662811daf39dcfcc44e06a3139fa08"
+    },
+    "packages": ["haven 2.5.5", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

@@ -1,0 +1,14 @@
+{
+    "generated_utc": "2026-10-13 15:14:31 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "20261013 (design B data), 20261015 (design D data); design E reads mg_E.csv (98_, seed 20261010)",
+    "files": {
+      "fixtures/data/mg_B.csv": "f19b9910421a062a76e8c20cbd4f0268",
+      "fixtures/data/mg_D.csv": "07610ffec0ab32af1b9afa123964d963",
+      "fixtures/expected/lavaan_mg_difftest_fits.csv": "94e4c2c0f94db5549be9991ccaadf10b",
+      "fixtures/expected/lavaan_mg_difftest_parameters.csv": "6383159335d6106074a7499fdaca4efa",
+      "fixtures/expected/lavaan_mg_difftest.csv": "f6b443657e8238a4f36a99c4d0d1349c"
+    },
+    "packages": ["lavaan 0.7.2", "MASS 7.3.66", "WLSMV, delta, scaled.shifted, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "explicit level syntax (98_ lev_syntax), never group.equal; files use surface level names", "reference: lavTestLRT satorra.2000, a_method = delta, scaled_shifted; rebuilt by ginv(Dst1) Dst0 with pooled P and V1 (MG7)", "T_d3 tolerance 1e-08 relative (mg_TOLD, set before measuring in the derivation); rebuild 1e-09 carried from 97_/98_", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

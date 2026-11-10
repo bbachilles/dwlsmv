@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-10-11 14:18:10 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (data read from fixtures/data/mg_beta.csv, 99_'s)",
+    "files": {
+      "fixtures/expected/lavaan_mg_betafix_fits.csv": "9b0560427c653bcd2b63c639aa4ea778",
+      "fixtures/expected/lavaan_mg_betafix_parameters.csv": "cd261f32e3870e5c52a17f439ccb1b2a",
+      "fixtures/expected/lavaan_mg_betafix_vcov.csv": "ca29a9c26aca1f222b1a23249c0d9266"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, std.lv, auto.cov.y = FALSE, auto.cov.lv.x = FALSE, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "explicit level syntax (@sec-mg-beta mgb_syntax, beta fixed at 0.4 in both groups, psi gen), never group.equal", "rebuild tolerance 1e-09 relative, carried from 97_ (chosen after measuring there)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

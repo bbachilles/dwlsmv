@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-11-01 16:23:07 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given mg_E, mg_B, mg_D)",
+    "files": {
+      "fixtures/expected/lavaan_mg_std.csv": "25234482ec9451ee02c24a7bb98d7e24",
+      "fixtures/expected/lavaan_mg_std_theta.csv": "46ea3ae999a8af0af99c5d24d6ca3743",
+      "fixtures/expected/lavaan_mg_std_vcov.csv": "a9ab94875a0e473f3a443a5f47e89256"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "explicit level syntax, never group.equal; standardizedSolution(type = 'std.all')", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

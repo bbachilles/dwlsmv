@@ -1,0 +1,33 @@
+# rendered derivation output
+spec/derivations/*.html
+spec/derivations/*.pdf
+spec/derivations/*_files/
+spec/derivations/.quarto/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+renv/library/
+
+# Stata
+*.smcl
+*.log
+*.mlib
+!src/mata/*.mlib
+!tools/mlib18/*.mlib
+!tools/mlib16/*.mlib
+!dist/*.mlib
+
+# bulk replication study output (regenerate, don't commit)
+fixtures/replication/
+
+.DS_Store
+
+# the spec renders too -- track sources, not output
+spec/*.html
+spec/*.pdf
+spec/derivations/*_cache/
+
+# the distributed example dataset (tools/build_example.do)
+build/*.dta

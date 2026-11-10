@@ -1,0 +1,15 @@
+{
+    "generated_utc": "2026-10-06 22:26:46 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none: deterministic given fixtures/data/marker_trap.csv",
+    "files": {
+      "fixtures/data/marker_trap.csv": "d0d94c59d9291abe9881beabcf793d8f",
+      "fixtures/expected/lavaan_marker_trap_sampstat.csv": "3f2783baaaf67a867c9afc5c6fd08815",
+      "fixtures/expected/lavaan_marker_trap_uv.csv": "6dae3419e0cd14401e4ce7795a956bee",
+      "fixtures/expected/lavaan_marker_trap_marker.csv": "ad8c7fb54ae2d00dcfeabd085767626e",
+      "fixtures/expected/lavaan_marker_trap_ref.csv": "b70ef13691b0973540b965d5fb5061ce",
+      "fixtures/expected/lavaan_marker_trap_test.csv": "a90800c7cb872050d6ac58f8aa9a8796"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, bad.marker.crit = 0 (pinned)", "uv T3 59.938368; marker converged TRUE, T3 59.938370, max gap to ref 8.884e-07", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

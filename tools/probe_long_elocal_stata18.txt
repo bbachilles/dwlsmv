@@ -1,0 +1,23 @@
+LONGEENV stata_version 18 processors 6
+==== fit
+LONGE fit invariance scalar
+LONGE fit canon length 815 newlines 41 checksum              24414472
+LONGE fit canon_configural length 289 newlines 19 checksum               3348592
+LONGE fit regenerates 1
+==== restore
+LONGE second fit invariance configural
+LONGE restore invariance scalar
+LONGE restore canon length 815 newlines 41 checksum              24414472
+LONGE restore canon_configural length 289 newlines 19 checksum               3348592
+LONGE restore regenerates 1
+LONGE restore same canon 1 canon_configural 1
+==== use
+LONGE use invariance scalar
+LONGE use canon length 815 newlines 41 checksum              24414472
+LONGE use canon_configural length 289 newlines 19 checksum               3348592
+LONGE use regenerates 1
+LONGE use same canon 1 canon_configural 1
+==== synthetic
+LONGE synthetic posted length 200000 newlines 10000 checksum         1372575762784 same 1
+LONGE synthetic restore length 200000 newlines 10000 checksum         1372575762784 same 1
+LONGE synthetic use length 200000 newlines 10000 checksum         1372575762784 same 1

@@ -1,0 +1,368 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do tools/probe_sem_ginvariant_stripe.do 
+
+. * Probe (2026-10-12): sem's e(b) stripe under group() with each ginvariant()
+. * class, against ginvariant(none), for D6 at G > 1 (spec D5 multi-group
+. * posting convention; the user's caveat: compatibility had been shown for
+. * ginvariant(none) only). For each class: the full colfullnames list, its
+. * length, and which columns e(Cns) fixes (and at what value), so a class that
+. * omits, renames, reorders or fixes intercepts or means shows up.
+. * Diagnostic, not a pass/fail test. StataMP 18; Stata 16 NOT YET EXECUTED.
+. *
+. * SPDX-License-Identifier: GPL-3.0-or-later
+. * SPDX-FileCopyrightText: 2026 Erik Ruzek
+. version 16
+
+. clear all
+
+. set more off
+
+. set linesize 255
+
+. import delimited using "fixtures/data/mg_E.csv", clear varnames(1) delimiters(",")
+(6 vars, 4,000 obs)
+
+. 
+. local classes none mcoef mcons "mcoef mcons" "mcoef mcons merrvar" all
+
+. local nc : word count `classes'
+
+. forvalues c = 1/`nc' {
+  2.     local cl : word `c' of `classes'
+  3.     display _n "==== ginvariant(`cl')"
+  4.     capture noisily quietly sem (F -> y1 y2 y3 y4 y5), group(g) ginvariant(`cl') var(1: F@1) noestimate
+  5.     if _rc {
+  6.         display "rc " _rc
+  7.         continue
+  8.     }
+  9.     matrix b = e(b)
+ 10.     local names : colfullnames b
+ 11.     display "k = " colsof(b)
+ 12.     local i 0
+ 13.     foreach n of local names {
+ 14.         local ++i
+ 15.         display "  `i' `n'"
+ 16.     }
+ 17.     capture matrix C = e(Cns)
+ 18.     if _rc {
+ 19.         display "  no e(Cns)"
+ 20.         continue
+ 21.     }
+ 22.     mata: C = st_matrix("C"); nm = st_matrixcolstripe("C"); ///
+>         for (r = 1; r <= rows(C); r++) { ///
+>             sel = selectindex(C[r, 1..cols(C)-1] :!= 0); ///
+>             s = ""; ///
+>             for (k = 1; k <= cols(sel); k++) s = s + " " + strofreal(C[r, sel[k]]) + "*" + nm[sel[k], 1] + ":" + nm[sel[k], 2]; ///
+>             printf("  Cns %f:%s = %g\n", r, s, C[r, cols(C)]); ///
+>         }
+ 23. }
+
+==== ginvariant(none)
+k = 34
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /mean(F)#1bn.g
+  22 /mean(F)#2.g
+  23 /var(e.y1)#1bn.g
+  24 /var(e.y1)#2.g
+  25 /var(e.y2)#1bn.g
+  26 /var(e.y2)#2.g
+  27 /var(e.y3)#1bn.g
+  28 /var(e.y3)#2.g
+  29 /var(e.y4)#1bn.g
+  30 /var(e.y4)#2.g
+  31 /var(e.y5)#1bn.g
+  32 /var(e.y5)#2.g
+  33 /var(F)#1bn.g
+  34 /var(F)#2.g
+  Cns 1: 1*/:var(F)#1bn.g = 1
+  Cns 2: 1*y1:2.g#c.F = 1
+  Cns 3: 1*/:mean(F)#1bn.g = 0
+
+==== ginvariant(mcoef)
+k = 34
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /mean(F)#1bn.g
+  22 /mean(F)#2.g
+  23 /var(e.y1)#1bn.g
+  24 /var(e.y1)#2.g
+  25 /var(e.y2)#1bn.g
+  26 /var(e.y2)#2.g
+  27 /var(e.y3)#1bn.g
+  28 /var(e.y3)#2.g
+  29 /var(e.y4)#1bn.g
+  30 /var(e.y4)#2.g
+  31 /var(e.y5)#1bn.g
+  32 /var(e.y5)#2.g
+  33 /var(F)#1bn.g
+  34 /var(F)#2.g
+  Cns 1: 1*y2:1bn.g#c.F -1*y2:2.g#c.F = 0
+  Cns 2: 1*y3:1bn.g#c.F -1*y3:2.g#c.F = 0
+  Cns 3: 1*y4:1bn.g#c.F -1*y4:2.g#c.F = 0
+  Cns 4: 1*y5:1bn.g#c.F -1*y5:2.g#c.F = 0
+  Cns 5: 1*/:var(F)#1bn.g = 1
+  Cns 6: 1*y1:2.g#c.F = 1
+  Cns 7: 1*/:mean(F)#1bn.g = 0
+
+==== ginvariant(mcons)
+k = 34
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /mean(F)#1bn.g
+  22 /mean(F)#2.g
+  23 /var(e.y1)#1bn.g
+  24 /var(e.y1)#2.g
+  25 /var(e.y2)#1bn.g
+  26 /var(e.y2)#2.g
+  27 /var(e.y3)#1bn.g
+  28 /var(e.y3)#2.g
+  29 /var(e.y4)#1bn.g
+  30 /var(e.y4)#2.g
+  31 /var(e.y5)#1bn.g
+  32 /var(e.y5)#2.g
+  33 /var(F)#1bn.g
+  34 /var(F)#2.g
+  Cns 1: 1*/:var(F)#1bn.g = 1
+  Cns 2: 1*y1:1bn.g -1*y1:2.g = 0
+  Cns 3: 1*y2:1bn.g -1*y2:2.g = 0
+  Cns 4: 1*y3:1bn.g -1*y3:2.g = 0
+  Cns 5: 1*y4:1bn.g -1*y4:2.g = 0
+  Cns 6: 1*y5:1bn.g -1*y5:2.g = 0
+  Cns 7: 1*y1:2.g#c.F = 1
+  Cns 8: 1*/:mean(F)#1bn.g = 0
+
+==== ginvariant(mcoef mcons)
+k = 34
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /mean(F)#1bn.g
+  22 /mean(F)#2.g
+  23 /var(e.y1)#1bn.g
+  24 /var(e.y1)#2.g
+  25 /var(e.y2)#1bn.g
+  26 /var(e.y2)#2.g
+  27 /var(e.y3)#1bn.g
+  28 /var(e.y3)#2.g
+  29 /var(e.y4)#1bn.g
+  30 /var(e.y4)#2.g
+  31 /var(e.y5)#1bn.g
+  32 /var(e.y5)#2.g
+  33 /var(F)#1bn.g
+  34 /var(F)#2.g
+  Cns 1: 1*y2:1bn.g#c.F -1*y2:2.g#c.F = 0
+  Cns 2: 1*y3:1bn.g#c.F -1*y3:2.g#c.F = 0
+  Cns 3: 1*y4:1bn.g#c.F -1*y4:2.g#c.F = 0
+  Cns 4: 1*y5:1bn.g#c.F -1*y5:2.g#c.F = 0
+  Cns 5: 1*/:var(F)#1bn.g = 1
+  Cns 6: 1*y1:1bn.g -1*y1:2.g = 0
+  Cns 7: 1*y2:1bn.g -1*y2:2.g = 0
+  Cns 8: 1*y3:1bn.g -1*y3:2.g = 0
+  Cns 9: 1*y4:1bn.g -1*y4:2.g = 0
+  Cns 10: 1*y5:1bn.g -1*y5:2.g = 0
+  Cns 11: 1*y1:2.g#c.F = 1
+  Cns 12: 1*/:mean(F)#1bn.g = 0
+
+==== ginvariant(mcoef mcons merrvar)
+k = 34
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /mean(F)#1bn.g
+  22 /mean(F)#2.g
+  23 /var(e.y1)#1bn.g
+  24 /var(e.y1)#2.g
+  25 /var(e.y2)#1bn.g
+  26 /var(e.y2)#2.g
+  27 /var(e.y3)#1bn.g
+  28 /var(e.y3)#2.g
+  29 /var(e.y4)#1bn.g
+  30 /var(e.y4)#2.g
+  31 /var(e.y5)#1bn.g
+  32 /var(e.y5)#2.g
+  33 /var(F)#1bn.g
+  34 /var(F)#2.g
+  Cns 1: 1*y2:1bn.g#c.F -1*y2:2.g#c.F = 0
+  Cns 2: 1*y3:1bn.g#c.F -1*y3:2.g#c.F = 0
+  Cns 3: 1*y4:1bn.g#c.F -1*y4:2.g#c.F = 0
+  Cns 4: 1*y5:1bn.g#c.F -1*y5:2.g#c.F = 0
+  Cns 5: 1*/:var(e.y1)#1bn.g -1*/:var(e.y1)#2.g = 0
+  Cns 6: 1*/:var(e.y2)#1bn.g -1*/:var(e.y2)#2.g = 0
+  Cns 7: 1*/:var(e.y3)#1bn.g -1*/:var(e.y3)#2.g = 0
+  Cns 8: 1*/:var(e.y4)#1bn.g -1*/:var(e.y4)#2.g = 0
+  Cns 9: 1*/:var(e.y5)#1bn.g -1*/:var(e.y5)#2.g = 0
+  Cns 10: 1*/:var(F)#1bn.g = 1
+  Cns 11: 1*y1:1bn.g -1*y1:2.g = 0
+  Cns 12: 1*y2:1bn.g -1*y2:2.g = 0
+  Cns 13: 1*y3:1bn.g -1*y3:2.g = 0
+  Cns 14: 1*y4:1bn.g -1*y4:2.g = 0
+  Cns 15: 1*y5:1bn.g -1*y5:2.g = 0
+  Cns 16: 1*y1:2.g#c.F = 1
+  Cns 17: 1*/:mean(F)#1bn.g = 0
+
+==== ginvariant(all)
+k = 32
+  1 y1:1bn.g#c.F
+  2 y1:2.g#c.F
+  3 y1:1bn.g
+  4 y1:2.g
+  5 y2:1bn.g#c.F
+  6 y2:2.g#c.F
+  7 y2:1bn.g
+  8 y2:2.g
+  9 y3:1bn.g#c.F
+  10 y3:2.g#c.F
+  11 y3:1bn.g
+  12 y3:2.g
+  13 y4:1bn.g#c.F
+  14 y4:2.g#c.F
+  15 y4:1bn.g
+  16 y4:2.g
+  17 y5:1bn.g#c.F
+  18 y5:2.g#c.F
+  19 y5:1bn.g
+  20 y5:2.g
+  21 /var(e.y1)#1bn.g
+  22 /var(e.y1)#2.g
+  23 /var(e.y2)#1bn.g
+  24 /var(e.y2)#2.g
+  25 /var(e.y3)#1bn.g
+  26 /var(e.y3)#2.g
+  27 /var(e.y4)#1bn.g
+  28 /var(e.y4)#2.g
+  29 /var(e.y5)#1bn.g
+  30 /var(e.y5)#2.g
+  31 /var(F)#1bn.g
+  32 /var(F)#2.g
+  Cns 1: 1*y2:1bn.g#c.F -1*y2:2.g#c.F = 0
+  Cns 2: 1*y3:1bn.g#c.F -1*y3:2.g#c.F = 0
+  Cns 3: 1*y4:1bn.g#c.F -1*y4:2.g#c.F = 0
+  Cns 4: 1*y5:1bn.g#c.F -1*y5:2.g#c.F = 0
+  Cns 5: 1*/:var(e.y1)#1bn.g -1*/:var(e.y1)#2.g = 0
+  Cns 6: 1*/:var(e.y2)#1bn.g -1*/:var(e.y2)#2.g = 0
+  Cns 7: 1*/:var(e.y3)#1bn.g -1*/:var(e.y3)#2.g = 0
+  Cns 8: 1*/:var(e.y4)#1bn.g -1*/:var(e.y4)#2.g = 0
+  Cns 9: 1*/:var(e.y5)#1bn.g -1*/:var(e.y5)#2.g = 0
+  Cns 10: 1*/:var(F)#1bn.g = 1
+  Cns 11: 1*y1:1bn.g -1*y1:2.g = 0
+  Cns 12: 1*y2:1bn.g -1*y2:2.g = 0
+  Cns 13: 1*y3:1bn.g -1*y3:2.g = 0
+  Cns 14: 1*y4:1bn.g -1*y4:2.g = 0
+  Cns 15: 1*y5:1bn.g -1*y5:2.g = 0
+  Cns 16: 1*y1:2.g#c.F = 1
+
+. 
+end of do-file

@@ -1,0 +1,16 @@
+paramHeader,param,est,se,est_se,pval
+FAC.BY,Y1,1,0,999,999
+FAC.BY,Y2,0.976,0.026,37.009,0
+FAC.BY,Y3,1.006,0.027,37.206,0
+FAC.BY,Y4,0.973,0.026,37.217,0
+Thresholds,Y1$1,-1.075,0.022,-48.866,0
+Thresholds,Y1$2,0.001,0.018,0.057,0.955
+Thresholds,Y1$3,0.851,0.02,41.989,0
+Thresholds,Y2$1,-1.055,0.022,-48.364,0
+Thresholds,Y2$2,0.007,0.018,0.396,0.692
+Thresholds,Y2$3,0.852,0.02,42.015,0
+Thresholds,Y3$1,-0.259,0.018,-14.438,0
+Thresholds,Y3$2,0.676,0.019,35.082,0
+Thresholds,Y4$1,-0.286,0.018,-15.875,0
+Thresholds,Y4$2,0.654,0.019,34.131,0
+Variances,FAC,0.482,0.017,27.748,0

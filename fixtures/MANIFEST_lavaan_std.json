@@ -1,0 +1,10 @@
+{
+    "generated_utc": "2026-10-05 12:51:56 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given case_E.csv)",
+    "files": {
+      "fixtures/expected/lavaan_case_E_standardized.csv": "49a4de5488e370d8e9f7d402e17b4f4a"
+    },
+    "packages": ["lavaan 0.7.2", "se type: robust.sem", "standardizedSolution(type = 'std.all'); se by lavaan's forward-difference Jacobian (complex step fails), ~1.5e-8 relative vs analytic", "zero.keep.margins = TRUE (pinned, as 20_)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

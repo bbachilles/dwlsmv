@@ -1,0 +1,42 @@
+# Licensing for files that cannot carry an SPDX header (REUSE specification 3.3).
+# Code files, the spec and the derivation carry their own headers.
+# CSV, JSON and .dta files must not gain a header: the manifests hash them and
+# import delimited reads line 1 as variable names.
+# tests/** and tools/** cover recorded outputs, reference data and scripts whose
+# bytes are hashed in preregistrations, so they must not gain a header either;
+# files there that carry their own header state the same licence (aggregate).
+version = 1
+
+[[annotations]]
+path = [
+    "fixtures/data/**",
+    "fixtures/expected/**",
+    "fixtures/MANIFEST*.json",
+    "tools/**",
+    "tests/**",
+    "src/ado/*.sthlp",
+    "dist/**",
+    ".gitignore",
+    ".gitattributes",
+    ".claude/settings.json",
+    "REUSE.toml",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Erik Ruzek"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = [
+    "README.md",
+    "CLAUDE.md",
+    "docs/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Erik Ruzek"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "CITATION.cff"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Erik Ruzek"
+SPDX-License-Identifier = "CC0-1.0"

@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+# Fixtures are hash-verified against fixtures/MANIFEST.json.
+# Never let git rewrite their line endings.
+fixtures/data/**     -text
+fixtures/expected/** -text
+
+# tg-sens study inputs: Stata exports (CRLF), md5-verified against
+# tests/unit/sens_t3_ref_s18_p4.mata's header. Never rewrite them.
+docs/notes/tg-sens/in_*.csv -text
+docs/notes/tg-sens/tgd_run.log -text
+
+# compiled Mata libraries are binary
+*.mlib binary

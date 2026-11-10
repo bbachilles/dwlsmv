@@ -1,0 +1,18 @@
+dwlsmv release build provenance (written by tools/stage_release.ps1)
+Date:            20261104
+Built under:     StataMP 16.1, serial [milestone] (milestone machine, Windows ARM, x86 build under emulation)
+Checked out at:  f9ca4f788e8dbbdd1302ea5b5a974bdff895fe8a
+src/mata last changed in: a9e1a94f8a7378ec5807200b8ca74ac3c870a0af
+ldwlsmv.mlib:    1153204 bytes, MD5 65D13CE83CA95264957E164EC083B136, 215 functions, 132 source files
+
+dist/ file MD5s:
+  470041FF20BE0E6197D689A50D5B6AFC  difftest.ado  6681 bytes
+  873A6E17ADF79F3BE5FC0BAAAE783F2D  difftest.sthlp  6099 bytes
+  0105CD18569643418F757B64B85B8956  dwlsmv.ado  24334 bytes
+  24EEED0647AF3CDC0DA7269E4C3DFEBC  dwlsmv.pkg  680 bytes
+  33E94DECAE5EAAC63F7479AB668997C1  dwlsmv.sthlp  47417 bytes
+  BE70F0457E878CB83F1E27C3FB0DD2C1  dwlsmv_example.dta  38782 bytes
+  EC3664A5D17131981813DBE4902D743E  dwlsmv_example_mg.dta  29257 bytes
+  65D13CE83CA95264957E164EC083B136  ldwlsmv.mlib  1153204 bytes
+  53D49CE390F553842184F1DA5BC16D60  stata.toc  116 bytes
+  B5214B1BA2ACF653E8CF4D22664063AC  _dwlsmv_translate.ado  5470 bytes

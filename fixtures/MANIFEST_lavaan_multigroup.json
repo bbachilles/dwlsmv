@@ -1,0 +1,14 @@
+{
+    "generated_utc": "2026-10-10 21:20:10 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "20261010 (data)",
+    "files": {
+      "fixtures/data/mg_E.csv": "1b7a7ae060c335496a54c492bbf84f26",
+      "fixtures/expected/lavaan_mg_E_fits.csv": "4154cb9824665b0055a26e8ebd9b42c9",
+      "fixtures/expected/lavaan_mg_E_parameters.csv": "46558b191d6f1951bb4134d90130baef",
+      "fixtures/expected/lavaan_mg_E_vcov.csv": "936e6dfd7c364d6853abb3fd5ead28b9",
+      "fixtures/expected/lavaan_mg_E_sampstat.csv": "34e2610b803591c5f394bc6ff9cb56a9"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "explicit level syntax (inv_syntax), never group.equal", "rebuild tolerance 1e-09 relative, carried from 97_ (chosen after measuring there)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

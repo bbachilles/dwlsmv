@@ -1,0 +1,10 @@
+{
+    "generated_utc": "2026-10-22 02:58:55 UTC",
+    "r_version": "R version 4.5.2 (2025-10-31 ucrt)",
+    "platform": "aarch64-w64-mingw32",
+    "seeds": "none (reads committed case_E.csv and mg_E.csv)",
+    "files": {
+      "fixtures/expected/lavaan_fitindices.csv": "54e1279a40d8be0bd5fb300ed34bfc18"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE", "c1 closed form vs lavaan baseline tolerance 1e-08 relative (set before running)", "R version 4.5.2 (2025-10-31 ucrt)"]
+  }

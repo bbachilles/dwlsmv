@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-09-26 13:18:12 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "mc replicates seeded 20260919 + position * 1000000 + replicate by 50_replicates.R; each condition's range is in lavaan_mc_conditions.csv",
+    "files": {
+      "fixtures/expected/lavaan_mc_conditions.csv": "0b508b22e6a054b6bc4c9f726e9aa68d",
+      "fixtures/expected/lavaan_mc_summary.csv": "f29b27c809450669b6ce2424fd4f3623",
+      "fixtures/expected/lavaan_mc_condition_stats.csv": "c4761c5d3bb9257bc1f8e9b6b676a881"
+    },
+    "packages": ["lavaan 0.7.2", "haven 2.5.5", "se type: robust.sem", "zero.keep.margins = TRUE (pinned, as 20_)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

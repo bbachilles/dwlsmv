@@ -1,0 +1,6 @@
+fit,case,n_sigma,n_free,expected_rank,rank,deficiency,sval_max,sval_min,sval_ratio,note
+D_marker,D,16,14,14,14,0,1.69836090211715,0.248414892187871,0.146267434606038,single factor; marker metric (lambda_1_1 fixed to 1); psi free
+D_unitvar,D,16,14,14,14,0,1.47827190501345,0.695840884193675,0.470712378307252,single factor; unit-variance metric (psi_1_1 fixed to 1); all loadings free
+E_marker,E,27,19,19,19,0,1.51740834462426,0.226088533535014,0.148996500734942,two factors; F2 <- F1; marker metric on both; psi_1_1 and psi_2_2 free
+E_unitvar,E,27,19,19,19,0,1.81997236370724,0.671716260981254,0.369080473075418,two factors; F2 <- F1; unit-variance metric: psi_2_2 = 1 is the DISTURBANCE variance so implied Var(F2) = beta^2 + 1
+E_over,E,27,20,19,19,1,2.17737415806989,8.45094820952719e-17,3.88125677812694e-17,DELIBERATELY OVERPARAMETERIZED: beta_2_1 and psi_2_1 both free -- rank deficiency 1

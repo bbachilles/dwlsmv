@@ -1,0 +1,14 @@
+{
+    "generated_utc": "2026-10-06 17:20:27 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "set.seed 20261006 (data); fit deterministic given the data",
+    "files": {
+      "fixtures/data/emptycell.csv": "e1fab8d859cdaa0e7e36112e373a9059",
+      "fixtures/expected/lavaan_emptycell_sampstat.csv": "51a94345bea81e70f9b4c4ae8901b502",
+      "fixtures/expected/lavaan_emptycell_gamma.csv": "8e77a9a522ccac948b2aaa8b18767dc3",
+      "fixtures/expected/lavaan_emptycell_parameters.csv": "5f6e016f4c298dabc2630409ed0d6345",
+      "fixtures/expected/lavaan_emptycell_test.csv": "26d80237f12bdba10289351edee4f2b6"
+    },
+    "packages": ["lavaan 0.7.2", "se type: robust.sem", "zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "self-checks: rho(y1,y2) vs keep-margins inversion 4.53e-09; without repair 0.969771 (repaired 0.787881)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

@@ -1,0 +1,30 @@
+{
+    "generated_utc": "2026-09-25 14:20:52 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given case_D.csv, case_E.csv and the stated matrices)",
+    "files": {
+      "fixtures/expected/lavaan_case_D_gamma.csv": "15101036dbd89b75cbe38d3156530c5b",
+      "fixtures/expected/lavaan_case_D_wls_obs.csv": "7c770a9bb21781ed4288d2e779e42bda",
+      "fixtures/expected/lavaan_case_D_wls_est.csv": "8e67abf85a57e8e428b058d8b0281fea",
+      "fixtures/expected/lavaan_case_D_th.csv": "2eb3b85a034c6398e24df759d064517a",
+      "fixtures/expected/lavaan_case_D_sampstat.csv": "ee2072b33ebd9a5f243a6d7d94319922",
+      "fixtures/expected/lavaan_case_D_parameters.csv": "652511d61b5119e16f81e5d9a4354864",
+      "fixtures/expected/lavaan_case_D_test.csv": "df196eab283daa78b719b77ac5185d5d",
+      "fixtures/expected/lavaan_case_E_metric.csv": "39ec939d375509b6faa56ab046ce95a2",
+      "fixtures/expected/lavaan_case_E_equivalence.csv": "33a249a71b9ca209c09338a5550e62c1",
+      "fixtures/expected/lavaan_case_E_parameters.csv": "bd1ee0aee36875e6fdc5bf283db95403",
+      "fixtures/expected/lavaan_acov_delta.csv": "8d0057a09870d3e972b92dccbfc11925",
+      "fixtures/expected/lavaan_acov_vcov.csv": "1d4e7e3fb1bf228164ce10f7a58d2cd7",
+      "fixtures/expected/lavaan_t3.csv": "42e5bb867dc1d1d56713f43ca6441078",
+      "fixtures/expected/lavaan_case_E_gamma.csv": "a52fd3102152d6792e8335b47fe7c0f1",
+      "fixtures/expected/lavaan_case_E_sampstat.csv": "bdbad3591e6bceb6ebb9b2314d8d93c1",
+      "fixtures/expected/lavaan_modelimplied_input.csv": "0eb3ec8b644029a2aa3903eb73ba9c84",
+      "fixtures/expected/lavaan_modelimplied_sigma.csv": "3038f8e92ed4c8ae83e5528a2099191c",
+      "fixtures/expected/lavaan_modelimplied_jacobian.csv": "bbffac9caddef8adafa5088a1b0d9ef9",
+      "fixtures/expected/lavaan_modelimplied_svals.csv": "d0d5320cb3ed7e48e316035d28d9b8fd",
+      "fixtures/expected/lavaan_modelimplied_rank.csv": "713fab494cb15e6a03009c98c8a0e2dc",
+      "fixtures/expected/lavaan_modelimplied_nullvec.csv": "0e106a4ec8cdd769ac5594cf6233e480"
+    },
+    "packages": ["lavaan 0.7.2", "se type: robust.sem", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

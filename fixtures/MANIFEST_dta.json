@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-09-19 14:28:28 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given case_D.csv and fixed probe values)",
+    "files": {
+      "fixtures/data/case_D.dta": "005b0043a015bb05a2176cf9e4ff12cb",
+      "fixtures/data/roundtrip_probe.dta": "d7a6ad271a1070c9f5ea4eca6285ca62",
+      "fixtures/data/roundtrip_probe.csv": "0975050d46b4ae6e855de8f0645486ce"
+    },
+    "packages": ["haven 2.5.5", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

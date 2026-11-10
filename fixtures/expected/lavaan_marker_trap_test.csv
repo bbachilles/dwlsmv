@@ -1,0 +1,10 @@
+label,value
+uv.chisq.scaled,59.9383679722606
+uv.df.scaled,64
+uv.pvalue.scaled,0.620807969009943
+uv.converged,1
+marker.chisq.scaled,59.938369570887
+marker.df.scaled,64
+marker.pvalue.scaled,0.620807912883638
+marker.converged,1
+marker.max_abs_gap_to_ref,8.88374068641617e-07

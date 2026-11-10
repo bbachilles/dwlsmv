@@ -1,0 +1,5 @@
+lavaan 0.7.2 R R version 4.6.0 (2026-04-24 ucrt) 
+STD marker   rows 15  max|est.all - est.lv| 0.000e+00  max|se.all - se.lv| 0.000e+00
+STD marker   Phi_F2F2 (model-implied latent variance) 0.511085
+STD unitvar  rows 15  max|est.all - est.lv| 0.000e+00  max|se.all - se.lv| 2.491e-12
+STD unitvar  Phi_F2F2 (model-implied latent variance) 1.279953

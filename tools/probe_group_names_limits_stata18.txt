@@ -1,0 +1,342 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_group_names_limits.do 
+
+. * Probe (2026-10-10): (1) gsem's cutpoint names under group() for ordinal out
+> comes;
+. * (2) the 32-character limit with group tags: which part of a grouped name it
+>  applies to.
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. set seed 2
+
+. set obs 2000
+Number of observations (_N) was 0, now 2,000.
+
+. gen byte grp = 1 + (_n > 1000)
+
+. gen fz = rnormal()
+
+. forvalues j = 1/3 {
+  2.     gen z = 0.8*fz + rnormal()
+  3.     gen byte o`j' = 1 + (z > -0.5) + (z > 0.6)
+  4.     drop z
+  5. }
+
+. display "--- (1) gsem, ologit outcomes, group(grp)"
+--- (1) gsem, ologit outcomes, group(grp)
+
+. capture noisily gsem (F -> o1 o2 o3, ologit), group(grp) nolog
+
+Group: 1
+
+Group: 2
+
+Generalized structural equation model                 Number of obs    = 2,000
+Grouping variable: grp                                Number of groups =     2
+Log likelihood = -6299.1823
+
+ ( 1)  [o1]1bn.grp#c.F = 1
+ ( 2)  [/]mean(F)#1bn.grp = 0
+ ( 3)  [o1]2.grp#c.F = 1
+ ( 4)  [/o1]1bn.grp#c.cut1 - [/o1]2.grp#c.cut1 = 0
+ ( 5)  [/o1]1bn.grp#c.cut2 - [/o1]2.grp#c.cut2 = 0
+ ( 6)  [/o2]1bn.grp#c.cut1 - [/o2]2.grp#c.cut1 = 0
+ ( 7)  [/o2]1bn.grp#c.cut2 - [/o2]2.grp#c.cut2 = 0
+ ( 8)  [/o3]1bn.grp#c.cut1 - [/o3]2.grp#c.cut1 = 0
+ ( 9)  [/o3]1bn.grp#c.cut2 - [/o3]2.grp#c.cut2 = 0
+ (10)  [o2]1bn.grp#c.F - [o2]2.grp#c.F = 0
+ (11)  [o3]1bn.grp#c.F - [o3]2.grp#c.F = 0
+
+Group:    1                                              Number of obs = 1,000
+
+Response: o1     
+Family:   Ordinal
+Link:     Logit  
+
+Response: o2     
+Family:   Ordinal
+Link:     Logit  
+
+Response: o3     
+Family:   Ordinal
+Link:     Logit  
+
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+o1           |
+           F |          1  (constrained)
+-------------+----------------------------------------------------------------
+o2           |
+           F |    1.30246   .1641764     7.93   0.000     .9806805     1.62424
+-------------+----------------------------------------------------------------
+o3           |
+           F |   1.303032     .16336     7.98   0.000     .9828519    1.623211
+-------------+----------------------------------------------------------------
+/o1          |
+        cut1 |  -.9615202   .0733113                     -1.105208   -.8178327
+        cut2 |   .8512882   .0722977                      .7095873    .9929891
+-------------+----------------------------------------------------------------
+/o2          |
+        cut1 |  -.9911317   .0900102                     -1.167548    -.814715
+        cut2 |   .8925543   .0866711                      .7226821    1.062427
+-------------+----------------------------------------------------------------
+/o3          |
+        cut1 |  -.9708548   .0885002                     -1.144312   -.7973976
+        cut2 |   .7738659   .0855881                      .6061163    .9416155
+-------------+----------------------------------------------------------------
+      mean(F)|          0  (omitted)
+-------------+----------------------------------------------------------------
+       var(F)|   1.459735    .247191                      1.047447    2.034306
+------------------------------------------------------------------------------
+
+Group:    2                                              Number of obs = 1,000
+
+Response: o1     
+Family:   Ordinal
+Link:     Logit  
+
+Response: o2     
+Family:   Ordinal
+Link:     Logit  
+
+Response: o3     
+Family:   Ordinal
+Link:     Logit  
+
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+o1           |
+           F |          1  (constrained)
+-------------+----------------------------------------------------------------
+o2           |
+           F |    1.30246   .1641764     7.93   0.000     .9806805     1.62424
+-------------+----------------------------------------------------------------
+o3           |
+           F |   1.303032     .16336     7.98   0.000     .9828519    1.623211
+-------------+----------------------------------------------------------------
+/o1          |
+        cut1 |  -.9615202   .0733113                     -1.105208   -.8178327
+        cut2 |   .8512882   .0722977                      .7095873    .9929891
+-------------+----------------------------------------------------------------
+/o2          |
+        cut1 |  -.9911317   .0900102                     -1.167548    -.814715
+        cut2 |   .8925543   .0866711                      .7226821    1.062427
+-------------+----------------------------------------------------------------
+/o3          |
+        cut1 |  -.9708548   .0885002                     -1.144312   -.7973976
+        cut2 |   .7738659   .0855881                      .6061163    .9416155
+-------------+----------------------------------------------------------------
+      mean(F)|   -.004481   .0686333    -0.07   0.948    -.1389997    .1300377
+-------------+----------------------------------------------------------------
+       var(F)|   1.298989   .2263084                      .9232301    1.827682
+------------------------------------------------------------------------------
+
+. if !_rc {
+.     matrix b = e(b)
+.     local names : colfullnames b
+.     foreach n of local names {
+  2.         display "`n'"
+  3.     }
+o1:1bn.grp#c.F
+o1:2.grp#c.F
+o2:1bn.grp#c.F
+o2:2.grp#c.F
+o3:1bn.grp#c.F
+o3:2.grp#c.F
+/o1:1bn.grp#c.cut1
+/o1:2.grp#c.cut1
+/o1:1bn.grp#c.cut2
+/o1:2.grp#c.cut2
+/o2:1bn.grp#c.cut1
+/o2:2.grp#c.cut1
+/o2:1bn.grp#c.cut2
+/o2:2.grp#c.cut2
+/o3:1bn.grp#c.cut1
+/o3:2.grp#c.cut1
+/o3:1bn.grp#c.cut2
+/o3:2.grp#c.cut2
+/mean(F)#1bn.grp
+/mean(F)#2.grp
+/var(F)#1bn.grp
+/var(F)#2.grp
+. }
+
+. display "--- (2) sem, group(), a 32-character indicator name"
+--- (2) sem, group(), a 32-character indicator name
+
+. rename o1 abcdefghijklmnopqrstuvwxyz012345
+
+. capture noisily sem (F -> abcdefghijklmnopqrstuvwxyz012345 o2 o3), group(grp)
+>  nolog
+
+Endogenous variables
+  Measurement: abcdefghijklmnopqrstuvwxyz012345 o2 o3
+
+Exogenous variables
+  Latent: F
+
+Structural equation model                             Number of obs    = 2,000
+Grouping variable: grp                                Number of groups =     2
+Estimation method: ml
+
+Log likelihood = -7064.3873
+
+ ( 1)  [abcdefghijklmnopqrstuvwxyz012345]1bn.grp#c.F = 1
+ ( 2)  [o2]1bn.grp#c.F - [o2]2.grp#c.F = 0
+ ( 3)  [o3]1bn.grp#c.F - [o3]2.grp#c.F = 0
+ ( 4)  [abcdefghijklmnopqrstuvwxyz012345]1bn.grp -
+       [abcdefghijklmnopqrstuvwxyz012345]2.grp = 0
+ ( 5)  [o2]1bn.grp - [o2]2.grp = 0
+ ( 6)  [o3]1bn.grp - [o3]2.grp = 0
+ ( 7)  [abcdefghijklmnopqrstuvwxyz012345]2.grp#c.F = 1
+ ( 8)  [/]mean(F)#1bn.grp = 0
+
+Group: 1                                                 Number of obs = 1,000
+
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Measurement  |
+  abc~012345 |
+           F |          1  (constrained)
+       _cons |   2.019818   .0218418    92.47   0.000     1.977008    2.062627
+  -----------+----------------------------------------------------------------
+  o2         |
+           F |   1.202661   .0963777    12.48   0.000     1.013765    1.391558
+       _cons |   2.014374    .023528    85.62   0.000      1.96826    2.060488
+  -----------+----------------------------------------------------------------
+  o3         |
+           F |    1.20616   .0956551    12.61   0.000     1.018679     1.39364
+       _cons |   2.030389   .0238645    85.08   0.000     1.983615    2.077163
+-------------+----------------------------------------------------------------
+      mean(F)|          0  (constrained)
+-------------+----------------------------------------------------------------
+var(e.abcd~5)|   .4694174    .026813                      .4196998    .5250245
+    var(e.o2)|   .4134935   .0304751                       .357877    .4777532
+    var(e.o3)|   .4436879   .0306131                      .3875674    .5079346
+       var(F)|   .1801972   .0225564                      .1409931    .2303023
+------------------------------------------------------------------------------
+
+Group: 2                                                 Number of obs = 1,000
+
+------------------------------------------------------------------------------
+             |                 OIM
+             | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+Measurement  |
+  abc~012345 |
+           F |          1  (constrained)
+       _cons |   2.019818   .0218418    92.47   0.000     1.977008    2.062627
+  -----------+----------------------------------------------------------------
+  o2         |
+           F |   1.202661   .0963777    12.48   0.000     1.013765    1.391558
+       _cons |   2.014374    .023528    85.62   0.000      1.96826    2.060488
+  -----------+----------------------------------------------------------------
+  o3         |
+           F |    1.20616   .0956551    12.61   0.000     1.018679     1.39364
+       _cons |   2.030389   .0238645    85.08   0.000     1.983615    2.077163
+-------------+----------------------------------------------------------------
+      mean(F)|  -.0032344   .0239956    -0.13   0.893     -.050265    .0437961
+-------------+----------------------------------------------------------------
+var(e.abcd~5)|   .5013116   .0281441                      .4490766    .5596224
+    var(e.o2)|   .4503613   .0303941                      .3945617    .5140522
+    var(e.o3)|   .4598207    .031647                      .4017953    .5262259
+       var(F)|   .1632017   .0212485                      .1264445    .2106442
+------------------------------------------------------------------------------
+LR test of model vs. saturated: chi2(4) = 3.75            Prob > chi2 = 0.4407
+
+. if !_rc {
+.     matrix b = e(b)
+.     local names : colfullnames b
+.     foreach n of local names {
+  2.         display "`n'  [" strlen("`n'") "]"
+  3.     }
+abcdefghijklmnopqrstuvwxyz012345:1bn.grp#c.F  [44]
+abcdefghijklmnopqrstuvwxyz012345:2.grp#c.F  [42]
+abcdefghijklmnopqrstuvwxyz012345:1bn.grp  [40]
+abcdefghijklmnopqrstuvwxyz012345:2.grp  [38]
+o2:1bn.grp#c.F  [14]
+o2:2.grp#c.F  [12]
+o2:1bn.grp  [10]
+o2:2.grp  [8]
+o3:1bn.grp#c.F  [14]
+o3:2.grp#c.F  [12]
+o3:1bn.grp  [10]
+o3:2.grp  [8]
+/mean(F)#1bn.grp  [16]
+/mean(F)#2.grp  [14]
+/var(e.abcdefghijklmnopqrstuvwxyz012345)#1bn.grp  [48]
+/var(e.abcdefghijklmnopqrstuvwxyz012345)#2.grp  [46]
+/var(e.o2)#1bn.grp  [18]
+/var(e.o2)#2.grp  [16]
+/var(e.o3)#1bn.grp  [18]
+/var(e.o3)#2.grp  [16]
+/var(F)#1bn.grp  [15]
+/var(F)#2.grp  [13]
+. }
+
+. display "--- (3) ereturn post with long grouped stripes"
+--- (3) ereturn post with long grouped stripes
+
+. foreach s in "/var(e.abcdefghijklmnopqrstuvwxyz012345)#1bn.grp" "abcdefghijkl
+> mnopqrstuvwxyz012345:2.grp#c.F" "/abcdefghijklmnopqrstuvwxyz012345:cut1#2.grp
+> " "/abcdefghijklmnopqrstuvwxyz012345:2.grp#cut1" {
+  2.     matrix bb = (1)
+  3.     matrix VV = (1)
+  4.     capture matrix colnames bb = `s'
+  5.     local rc1 = _rc
+  6.     capture matrix colnames VV = `s'
+  7.     capture matrix rownames VV = `s'
+  8.     capture ereturn post bb VV
+  9.     display "`s'  colnames rc=`rc1'  post rc=" _rc
+ 10.     if !_rc {
+ 11.         capture noisily display _b[`s']
+ 12.         display "  _b[] rc=" _rc
+ 13.     }
+ 14. }
+/var(e.abcdefghijklmnopqrstuvwxyz012345)#1bn.grp  colnames rc=0  post rc=0
+1
+  _b[] rc=0
+abcdefghijklmnopqrstuvwxyz012345:2.grp#c.F  colnames rc=0  post rc=0
+1
+  _b[] rc=0
+/abcdefghijklmnopqrstuvwxyz012345:cut1#2.grp  colnames rc=0  post rc=0
+1
+  _b[] rc=0
+/abcdefghijklmnopqrstuvwxyz012345:2.grp#cut1  colnames rc=0  post rc=0
+1
+  _b[] rc=0
+
+. 
+end of do-file

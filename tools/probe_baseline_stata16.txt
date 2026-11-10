@@ -1,0 +1,289 @@
+# Probe baseline -- MILESTONE MACHINE
+#
+# Produced by tools/probe_machine.do on the Stata 16 milestone machine,
+# 2026-09-20, alongside the Stage 1 milestone suite run. Compare a future run
+# against this file to detect drift:
+#
+#     grep "^PROBE|" probe_machine.log > /tmp/now.txt
+#     diff <(grep "^PROBE|" tools/probe_baseline_stata16.txt) /tmp/now.txt
+#
+# Machine identity, from this run: StataMP 16.1, c(MP) = 1, processors_max 4,
+# licence serial [milestone]. The development machine is StataMP 18, 6-core,
+# serial [dev] -- the licence banner at the top of any batch log is the
+# quickest way to tell which machine produced it, and is what settled a case
+# where the wrong log was compared.
+#
+# THIS SUPERSEDES THE 2026-09-18 BASELINE, which is worth stating precisely:
+# the 146 computational PROBE| lines are BYTE-IDENTICAL to that run. Only the
+# env| block changed, and only because probe_machine.do was fixed to record
+# c(MP) instead of relying on c(flavor). So this is a re-recording, not a
+# measurement that moved -- the milestone machine shows zero drift across the
+# two runs, two days and one Stata suite apart.
+#
+# CONFIRMED A THIRD TIME, 2026-09-20, after the Module 4 milestone sync: the
+# diff above came back empty against probe_machine_stata16_20260920.log. Worth
+# recording because of WHEN it was taken rather than because it changed --
+# immediately after a suite run that called optimize() roughly 800 times and
+# accumulated Gamma with quadcross() on 5000 x 16 psi matrices. So the
+# primitives are stable on that machine across a far heavier workload than the
+# two earlier probes followed, which is what the section 7.3 Monte Carlo plan
+# needs from it.
+#
+# CROSS-MACHINE RESULT, 2026-09-20, on the p1 block (one processor, so
+# reduction order is fixed and core count cannot contribute):
+#
+#   68 of 69 p1 lines identical bitwise against the development machine.
+#   The ONE difference is eig1, by 1 ulp: ...fc89f here, ...fc8a0 there.
+#
+# Identical across the two machines: all 35 binormal() values, all seven
+# normal(), lnnormal() and invnormal() values, exp(), ln(), sqrt(), cross(),
+# quadcross(), invsym() and cholesky(). The rng| block matches too, so
+# `set seed` is bitwise portable and the Section 7.3 Monte Carlo work can be
+# run on either machine. The data| block matches, so both machines load the
+# committed CSV identically.
+#
+# Note cholesky() in particular. Stata 17 moved Mata's decompositions onto
+# LAPACK/Intel MKL and names cholesky() explicitly in that whatsnew -- yet it
+# agrees bitwise across 16 and 18 here. So the LAPACK migration is NOT a
+# general source of cross-version difference in this project, and the
+# remaining 1-ulp gap is specific to the eigen path rather than evidence of a
+# broad numerical shift. symeigenvalues() is used only for the rank checks of
+# spec 4.8 and 4.5.6, which discriminate on a sixteen-order-of-magnitude gap.
+#
+# TWO FIELDS BELOW DO NOT MEAN WHAT THEIR NAMES SUGGEST.
+#
+# c(machine_type) reads 'PC (64-bit x86-64)' even though this is Windows ARM
+# -- the emulated x86 build cannot see through the emulation, so that field
+# does NOT identify the architecture.
+#
+# c(flavor) reads 'IC' even though this machine is StataMP 16. It reads 'IC'
+# on StataMP 18 as well, where c(MP) is 1 in the same session. So c(flavor)
+# does NOT identify MP; c(MP) does. Reading the flavor line alone produced a
+# confident and incorrect conclusion that this machine was Stata/IC, which
+# would have made flavor an active confound in the milestone triage when it is
+# genuinely matched. Both machines are MP. The line is kept, and labelled.
+#
+#
+# EXTENDED 2026-09-23, Modules 3/5/6 milestone (commit ab6d19c). The probe
+# gained svd() and luinv() lines, 12 per block, appended after sqrt2 -- 170
+# computational lines now. The 146 above them are BYTE-IDENTICAL to the
+# 2026-09-20 recording, env block included: a fourth zero-drift result, after
+# the full 16-test suite. The new lines are this machine's run of that commit.
+# Against the development machine's StataMP 18, p1: sv1, svsum, luinv11 and
+# luinvsum bitwise identical; svmin 3 ulp; svnullvec 2 by 1 ulp; svnoise and
+# svnullvec 3-4 differ at rounding-residue level (their true values are zero);
+# svnull_lt_1e12 is 1 on both. svd() is on the eigen path with
+# symeigenvalues(); luinv() is bitwise with cholesky() and invsym().
+# Assembled from the milestone run rather than copied from its log, so this
+# header survives; see docs/milestone.md.
+#
+# EXTENDED 2026-09-24, Module 8 milestone (commit 959ffb7). The probe gained
+# six cholinv() lines per block, appended after luinvsum -- 182 computational
+# lines now. The 170 above them are BYTE-IDENTICAL to the 2026-09-23 recording,
+# env block included: a sixth zero-drift result, after the full 18-test suite.
+# The new lines are this machine's run of that commit. Against the development
+# machine's StataMP 18, p1: all six cholinv lines bitwise identical, so
+# cholinv() sits with cholesky(), invsym() and luinv(). zerocol_missing is 1
+# (the one abort dwlsmv_acov() relies on), sing14 1, sing2 0, nearsing 0 on
+# both machines -- the fused-multiply-add flip the Module 8 review allowed for
+# did not occur here. p4: cholinvsum differs from the development machine's
+# four-processor value by 1 ulp (...bb here, ...bc there), the first p4 line of
+# a non-eigen routine to differ; p4 is the bonus comparison and p1 the clean
+# one. Assembled from the milestone run rather than copied from its log, so
+# this header survives; see docs/milestone.md.
+#
+# RE-CONFIRMED 2026-09-24, Module 9 milestone (commit 4f72af0). Module 9 adds
+# no probe lines. All 191 PROBE| lines (182 computational) are BYTE-IDENTICAL
+# to the recording above, env block included -- a seventh zero-drift result,
+# after the full 19-test suite. No PROBE| line was changed by this entry.
+PROBE|env|stata_version|16.1
+PROBE|env|version|16
+PROBE|env|flavor_MISLEADING|IC
+PROBE|env|MP|1
+PROBE|env|SE|1
+PROBE|env|processors_max|4
+PROBE|env|os|Windows
+PROBE|env|machine_type|PC (64-bit x86-64)
+PROBE|env|bit|64
+PROBE|rng|1|-1.40d4934bd31b3X-004
+PROBE|rng|2|-1.ac203ec81c156X-001
+PROBE|rng|3|-1.91b76c5a09adbX-001
+PROBE|rng|4|-1.9b5f35935aff3X-003
+PROBE|rng|5|+1.7a84d897d9f92X-002
+PROBE|data|rows|5000
+PROBE|data|cols|4
+PROBE|data|sum|+1.78f4000000000X+00e
+PROBE|p1|cross11|+1.d921d8edc26e5X-001
+PROBE|p1|crosssum|+1.b2f141205bbceX+002
+PROBE|p1|qcross11|+1.d921d8edc265dX-001
+PROBE|p1|qcrosssum|+1.b2f141205bc02X+002
+PROBE|p1|invsym11|+1.809d3c8d868daX+000
+PROBE|p1|invsymsum|+1.410fbddd378baX+001
+PROBE|p1|chol11|+1.ec2ebdbe1f2d5X-001
+PROBE|p1|cholsum|+1.33017d5564fa0X+002
+PROBE|p1|eig1|+1.bd39f935fc89fX+000
+PROBE|p1|eigsum|+1.8dfc8622ef436X+001
+PROBE|p1|normal|1|+1.96f4e57e49ce4X-008
+PROBE|p1|normal|2|+1.44ed0bb7cb20bX-003
+PROBE|p1|normal|3|+1.9aecba9d22528X-002
+PROBE|p1|normal|4|+1.0000000000000X-001
+PROBE|p1|normal|5|+1.42339cb171cfaX-001
+PROBE|p1|normal|6|+1.ddcb724ed3702X-001
+PROBE|p1|normal|7|+1.fe796fbcb6138X-001
+PROBE|p1|lnnormal|1|-1.4539b9b22bf32X+002
+PROBE|p1|lnnormal|2|-1.d74d31cc8afc1X+000
+PROBE|p1|lnnormal|3|-1.d37cd4e62f096X-001
+PROBE|p1|lnnormal|4|-1.62e42fefa39efX-001
+PROBE|p1|lnnormal|5|-1.da433fa96a921X-002
+PROBE|p1|lnnormal|6|-1.1b362b09643d7X-004
+PROBE|p1|lnnormal|7|-1.8725862e57978X-009
+PROBE|p1|invnormal|1|-1.8b8cbb7204470X+001
+PROBE|p1|invnormal|2|-1.f5c0331eeff83X+000
+PROBE|p1|invnormal|3|-1.4813c36e26d34X+000
+PROBE|p1|invnormal|4|+0.0000000000000X-3ff
+PROBE|p1|invnormal|5|+1.5956b87528a49X-001
+PROBE|p1|invnormal|6|+1.f5c0331eeff82X+000
+PROBE|p1|invnormal|7|+1.8b8cbb7204470X+001
+PROBE|p1|binormal|1|1|+1.02b3000000000X-025
+PROBE|p1|binormal|1|2|+1.2d3730f2bb200X-00c
+PROBE|p1|binormal|1|3|+1.a533b1e6d4f2cX-006
+PROBE|p1|binormal|1|4|+1.1248b18860049X-004
+PROBE|p1|binormal|1|5|+1.58c961d81519eX-003
+PROBE|p1|binormal|1|6|+1.48bd6c50556beX-001
+PROBE|p1|binormal|1|7|+1.c109248d36a5fX-001
+PROBE|p1|binormal|2|1|+1.ad2623a3fe000X-00f
+PROBE|p1|binormal|2|2|+1.2a1e27c5dbe20X-006
+PROBE|p1|binormal|2|3|+1.b0a048ec84b75X-004
+PROBE|p1|binormal|2|4|+1.4d8d837c73bccX-003
+PROBE|p1|binormal|2|5|+1.0a34b9349ec20X-002
+PROBE|p1|binormal|2|6|+1.4cce7c82dc2d6X-001
+PROBE|p1|binormal|2|7|+1.c10ecdcdba1acX-001
+PROBE|p1|binormal|3|1|+1.dec581c508200X-00c
+PROBE|p1|binormal|3|2|+1.3a7b289508db6X-005
+PROBE|p1|binormal|3|3|+1.32369c7940fd7X-003
+PROBE|p1|binormal|3|4|+1.aed68af0463c8X-003
+PROBE|p1|binormal|3|5|+1.3934a5f457eb0X-002
+PROBE|p1|binormal|3|6|+1.52ae1e92364ebX-001
+PROBE|p1|binormal|3|7|+1.c138026612cb4X-001
+PROBE|p1|binormal|4|1|+1.56774fe10bf00X-009
+PROBE|p1|binormal|4|2|+1.40744df420a25X-004
+PROBE|p1|binormal|4|3|+1.c0164f6975cc7X-003
+PROBE|p1|binormal|4|4|+1.21dd7bb4fa445X-002
+PROBE|p1|binormal|4|5|+1.80aceeead8c65X-002
+PROBE|p1|binormal|4|6|+1.5e8b047c168d3X-001
+PROBE|p1|binormal|4|7|+1.c1ee4dd9c8a29X-001
+PROBE|p1|binormal|5|1|+1.91fd3af2c9db8X-008
+PROBE|p1|binormal|5|2|+1.1e929a3c17930X-003
+PROBE|p1|binormal|5|3|+1.44ca7bb5c095eX-002
+PROBE|p1|binormal|5|4|+1.8757bc5d174fcX-002
+PROBE|p1|binormal|5|5|+1.dc47598b92989X-002
+PROBE|p1|binormal|5|6|+1.6a999c12658daX-001
+PROBE|p1|binormal|5|7|+1.c28f8910b0229X-001
+PROBE|p1|exp|+1.b7ec0328d9ebdX+001
+PROBE|p1|ln|+1.250cf662abf9aX+000
+PROBE|p1|sqrt2|+1.6a09e667f3bcdX+000
+PROBE|p1|sv1|+1.218c4364311d6X+003
+PROBE|p1|svsum|+1.01ca719b95ef5X+004
+PROBE|p1|svmin|+1.c3af9a3fdf32bX+000
+PROBE|p1|svnull_lt_1e12|1
+PROBE|p1|svnoise|+1.b357c4df7f3baX-032
+PROBE|p1|svnullvec|1|+1.279a74590331dX-001
+PROBE|p1|svnullvec|2|+1.279a74590331bX-001
+PROBE|p1|svnullvec|3|+1.4800000000000X-034
+PROBE|p1|svnullvec|4|+1.a000000000000X-036
+PROBE|p1|svnullvec|5|+1.279a74590331bX-001
+PROBE|p1|luinv11|+1.809d3c8d868dbX+000
+PROBE|p1|luinvsum|+1.410fbddd378bdX+001
+PROBE|p1|cholinv11|+1.809d3c8d868dbX+000
+PROBE|p1|cholinvsum|+1.410fbddd378bcX+001
+PROBE|p1|cholinv_zerocol_missing|1
+PROBE|p1|cholinv_sing14_missing|1
+PROBE|p1|cholinv_sing2_missing|0
+PROBE|p1|cholinv_nearsing_missing|0
+PROBE|p4|cross11|+1.d921d8edc2601X-001
+PROBE|p4|crosssum|+1.b2f141205bc0eX+002
+PROBE|p4|qcross11|+1.d921d8edc265bX-001
+PROBE|p4|qcrosssum|+1.b2f141205bc00X+002
+PROBE|p4|invsym11|+1.809d3c8d868dcX+000
+PROBE|p4|invsymsum|+1.410fbddd378bbX+001
+PROBE|p4|chol11|+1.ec2ebdbe1f2d4X-001
+PROBE|p4|cholsum|+1.33017d5564fa0X+002
+PROBE|p4|eig1|+1.bd39f935fc89dX+000
+PROBE|p4|eigsum|+1.8dfc8622ef433X+001
+PROBE|p4|normal|1|+1.96f4e57e49ce4X-008
+PROBE|p4|normal|2|+1.44ed0bb7cb20bX-003
+PROBE|p4|normal|3|+1.9aecba9d22528X-002
+PROBE|p4|normal|4|+1.0000000000000X-001
+PROBE|p4|normal|5|+1.42339cb171cfaX-001
+PROBE|p4|normal|6|+1.ddcb724ed3702X-001
+PROBE|p4|normal|7|+1.fe796fbcb6138X-001
+PROBE|p4|lnnormal|1|-1.4539b9b22bf32X+002
+PROBE|p4|lnnormal|2|-1.d74d31cc8afc1X+000
+PROBE|p4|lnnormal|3|-1.d37cd4e62f096X-001
+PROBE|p4|lnnormal|4|-1.62e42fefa39efX-001
+PROBE|p4|lnnormal|5|-1.da433fa96a921X-002
+PROBE|p4|lnnormal|6|-1.1b362b09643d7X-004
+PROBE|p4|lnnormal|7|-1.8725862e57978X-009
+PROBE|p4|invnormal|1|-1.8b8cbb7204470X+001
+PROBE|p4|invnormal|2|-1.f5c0331eeff83X+000
+PROBE|p4|invnormal|3|-1.4813c36e26d34X+000
+PROBE|p4|invnormal|4|+0.0000000000000X-3ff
+PROBE|p4|invnormal|5|+1.5956b87528a49X-001
+PROBE|p4|invnormal|6|+1.f5c0331eeff82X+000
+PROBE|p4|invnormal|7|+1.8b8cbb7204470X+001
+PROBE|p4|binormal|1|1|+1.02b3000000000X-025
+PROBE|p4|binormal|1|2|+1.2d3730f2bb200X-00c
+PROBE|p4|binormal|1|3|+1.a533b1e6d4f2cX-006
+PROBE|p4|binormal|1|4|+1.1248b18860049X-004
+PROBE|p4|binormal|1|5|+1.58c961d81519eX-003
+PROBE|p4|binormal|1|6|+1.48bd6c50556beX-001
+PROBE|p4|binormal|1|7|+1.c109248d36a5fX-001
+PROBE|p4|binormal|2|1|+1.ad2623a3fe000X-00f
+PROBE|p4|binormal|2|2|+1.2a1e27c5dbe20X-006
+PROBE|p4|binormal|2|3|+1.b0a048ec84b75X-004
+PROBE|p4|binormal|2|4|+1.4d8d837c73bccX-003
+PROBE|p4|binormal|2|5|+1.0a34b9349ec20X-002
+PROBE|p4|binormal|2|6|+1.4cce7c82dc2d6X-001
+PROBE|p4|binormal|2|7|+1.c10ecdcdba1acX-001
+PROBE|p4|binormal|3|1|+1.dec581c508200X-00c
+PROBE|p4|binormal|3|2|+1.3a7b289508db6X-005
+PROBE|p4|binormal|3|3|+1.32369c7940fd7X-003
+PROBE|p4|binormal|3|4|+1.aed68af0463c8X-003
+PROBE|p4|binormal|3|5|+1.3934a5f457eb0X-002
+PROBE|p4|binormal|3|6|+1.52ae1e92364ebX-001
+PROBE|p4|binormal|3|7|+1.c138026612cb4X-001
+PROBE|p4|binormal|4|1|+1.56774fe10bf00X-009
+PROBE|p4|binormal|4|2|+1.40744df420a25X-004
+PROBE|p4|binormal|4|3|+1.c0164f6975cc7X-003
+PROBE|p4|binormal|4|4|+1.21dd7bb4fa445X-002
+PROBE|p4|binormal|4|5|+1.80aceeead8c65X-002
+PROBE|p4|binormal|4|6|+1.5e8b047c168d3X-001
+PROBE|p4|binormal|4|7|+1.c1ee4dd9c8a29X-001
+PROBE|p4|binormal|5|1|+1.91fd3af2c9db8X-008
+PROBE|p4|binormal|5|2|+1.1e929a3c17930X-003
+PROBE|p4|binormal|5|3|+1.44ca7bb5c095eX-002
+PROBE|p4|binormal|5|4|+1.8757bc5d174fcX-002
+PROBE|p4|binormal|5|5|+1.dc47598b92989X-002
+PROBE|p4|binormal|5|6|+1.6a999c12658daX-001
+PROBE|p4|binormal|5|7|+1.c28f8910b0229X-001
+PROBE|p4|exp|+1.b7ec0328d9ebdX+001
+PROBE|p4|ln|+1.250cf662abf9aX+000
+PROBE|p4|sqrt2|+1.6a09e667f3bcdX+000
+PROBE|p4|sv1|+1.218c4364311d6X+003
+PROBE|p4|svsum|+1.01ca719b95ef5X+004
+PROBE|p4|svmin|+1.c3af9a3fdf32bX+000
+PROBE|p4|svnull_lt_1e12|1
+PROBE|p4|svnoise|+1.b357c4df7f3baX-032
+PROBE|p4|svnullvec|1|+1.279a74590331dX-001
+PROBE|p4|svnullvec|2|+1.279a74590331bX-001
+PROBE|p4|svnullvec|3|+1.4800000000000X-034
+PROBE|p4|svnullvec|4|+1.a000000000000X-036
+PROBE|p4|svnullvec|5|+1.279a74590331bX-001
+PROBE|p4|luinv11|+1.809d3c8d868ddX+000
+PROBE|p4|luinvsum|+1.410fbddd378bbX+001
+PROBE|p4|cholinv11|+1.809d3c8d868dbX+000
+PROBE|p4|cholinvsum|+1.410fbddd378bbX+001
+PROBE|p4|cholinv_zerocol_missing|1
+PROBE|p4|cholinv_sing14_missing|1
+PROBE|p4|cholinv_sing2_missing|0
+PROBE|p4|cholinv_nearsing_missing|0

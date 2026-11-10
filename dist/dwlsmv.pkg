@@ -1,0 +1,21 @@
+v 3
+d dwlsmv. Diagonally weighted least squares SEM/CFA for ordinal indicators with mean- and variance-adjusted (WLSMV, T3) test
+d
+d dwlsmv fits sem-style models to ordinal and binary indicators by DWLS with the scaled-and-shifted (T3) test.
+d The Mata code ships as a compiled library, ldwlsmv.mlib, built by Stata 16.1.
+d
+d Requires: Stata version 16. Tested on Stata 16.1 and 18.
+d Version: 0.3.0
+d Author: Erik Ruzek
+d Support: https://github.com/bbachilles/dwlsmv/issues
+d License: GPL-3.0-or-later
+d Distribution-Date: 20261104
+d
+f dwlsmv.ado
+f _dwlsmv_translate.ado
+f dwlsmv.sthlp
+f ldwlsmv.mlib
+f dwlsmv_example.dta
+f difftest.ado
+f difftest.sthlp
+f dwlsmv_example_mg.dta

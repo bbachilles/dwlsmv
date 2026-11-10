@@ -1,0 +1,105 @@
+D2ENV stata_version 18 processors 6
+D2NA 0 user constraint(s)
+D2INJ var(F1@1) var(e.F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT beta F2 F1 free
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2NA 0 user constraint(s)
+D2INJ var(F1@1) var(F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2TXT psi F2 F1 free
+D2NA 1 user constraint(s)
+D2INJ var(e.F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT beta F2 F1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric marker F1 y1
+D2TXT metric unitvariance F2
+D2TXT psi F1 F1 free
+D2NA 1 user constraint(s)
+D2INJ var(e.F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT beta F2 F1 free
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2NA 1 user constraint(s)
+D2INJ var(F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 fixed .5
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F2
+D2TXT psi F1 F1 free
+D2TXT psi F2 F1 free
+D2NA 0 user constraint(s)
+D2INJ var(F1@1) var(F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2TXT psi F2 F1 free
+D2NA 1 user constraint(s)
+D2INJ var(F1@1) var(F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT lambda F1 y1 free
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2TXT psi F2 F1 fixed .3
+D2NA 2 user constraint(s)
+D2INJ var(F2@1)
+D2TXT factor F1 F2
+D2TXT ind y1 y2 y3 y4 y5 y6
+D2TXT lambda F1 y1 fixed 1
+D2TXT lambda F1 y2 free
+D2TXT lambda F1 y3 free
+D2TXT lambda F2 y4 free
+D2TXT lambda F2 y5 free
+D2TXT lambda F2 y6 free
+D2TXT metric unitvariance F1
+D2TXT metric unitvariance F2
+D2TXT psi F2 F1 free

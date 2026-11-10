@@ -1,0 +1,32 @@
+D8DENV stata_version 18 processors 6
+==== short
+D8D short post rc 0
+D8D short names round-trip 1
+D8D short got y1~~y2 y1~~y3 y2~~y3
+D8D short colnumb first 1
+D8D short value first 1
+==== long
+D8D long post rc 198
+==== mixed
+D8D mixed post rc 0
+D8D mixed names round-trip 1
+D8D mixed got q7_anx~~q9_dep q7_anx~~x2 q9_dep~~x2
+D8D mixed colnumb first 1
+D8D mixed value first 1
+==== len32
+D8D len32 post rc 0
+D8D len32 names round-trip 1
+D8D len32 got abcdefghijklmno~~ABCDEFGHIJKLMNO y1~~y2
+D8D len32 colnumb first 1
+D8D len32 value first 1
+==== len33
+D8D len33 post rc 198
+==== slash
+D8D slash post rc 198
+==== eqform
+D8D eqform post rc 0
+D8D eqform names round-trip 1
+D8D eqform got abcdefghijklmnopqrstuvwxyz012345:ABCDEFGHIJKLMNOPQRSTUVWXYZ678901 y1:y2
+D8D eqform colnumb first 1
+D8D eqform value first 1
+==== done

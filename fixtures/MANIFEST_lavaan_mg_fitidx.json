@@ -1,0 +1,13 @@
+{
+    "generated_utc": "2026-11-01 02:23:50 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "20261031 (design P data), 20261032 (design N data); E, D read mg_E.csv, mg_D.csv",
+    "files": {
+      "fixtures/data/mg_P.csv": "74407eac7ba8833d6c7feef5ce544385",
+      "fixtures/data/mg_N.csv": "e0119db10e39ce572d908baf541bc414",
+      "fixtures/expected/lavaan_mg_fitidx_fits.csv": "67dfa31c0c23e5e587d4fb16ae8299c4",
+      "fixtures/expected/lavaan_mg_fitidx_steps.csv": "7070c2df20a5cb6def187f71c2f6e4f7"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, scaled.shifted, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE, bad.marker.crit = 0 (pinned)", "explicit level syntax (99e_ lev_syntax), never group.equal; files use surface level names", "asserted: T rebuild 1e-09, T3 = T/c + b 1e-10, c1 baseline 1e-08, FI1 anchor 1e-10 abs", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

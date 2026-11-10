@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-10-29 14:07:06 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": ["20261099", "20261100"],
+    "files": {
+      "fixtures/data/case_F.csv": "105f124379bc973f89c5f16cd1c26b3d",
+      "fixtures/data/case_G.csv": "b180c32c2374ba13cd45ee06e2ef9e63"
+    },
+    "packages": ["none (base R only)", "N 5000", "case F thresholds (all items): -1.036433  0.000000  0.841621", "case F Lambda (column-major 9x3): 0.7 0.7 0.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.3 0.7 0.7 0.6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.3 0.7 0.7 0.6", "case F Phi (column-major 3x3): 1.0 0.3 0.3 0.3 1.0 0.3 0.3 0.3 1.0", "case G thresholds (all items): -0.524401", "case G Lambda (column-major 6x2): 0.7 0.7 0.7 0.0 0.0 0.0 0.0 0.0 0.0 0.7 0.7 0.7", "case G Phi (column-major 2x2): 1.0 0.4 0.4 1.0"]
+  }

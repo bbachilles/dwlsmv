@@ -1,0 +1,20 @@
+QP|env|stata_version|18
+QP|env|processors|6
+QP|e= 50|quadsum_exact|1|quadcross_exact|1|sum_exact|1
+QP|e= 60|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e= 70|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e= 80|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e= 90|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=100|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=110|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=120|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=130|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=140|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=150|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=160|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=170|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=180|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=190|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=200|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=210|quadsum_exact|1|quadcross_exact|1|sum_exact|0
+QP|e=220|quadsum_exact|1|quadcross_exact|1|sum_exact|0

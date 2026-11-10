@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-10-25 05:43:36 UTC",
+    "r_version": "R version 4.5.2 (2025-10-31 ucrt)",
+    "platform": "aarch64-w64-mingw32",
+    "seeds": "20261024",
+    "files": {
+      "fixtures/data/condx_A.csv": "82231c69bfb14c7db3873e5d41a07deb",
+      "fixtures/expected/lavaan_condx_s.csv": "538b0de3b0f73f9a694944bf4b804272",
+      "fixtures/expected/lavaan_condx_gamma.csv": "6db077082d3cad8c37b9c142891fac72"
+    },
+    "packages": ["lavaan 0.7.2", "WLSMV, delta, conditional.x = TRUE, std.lv, do.fit = FALSE, zero.add = c(0.5, 0), zero.keep.margins = TRUE", "wls.obs against sampstat pieces tolerance 1e-15 (set before running)", "R version 4.5.2 (2025-10-31 ucrt)"]
+  }

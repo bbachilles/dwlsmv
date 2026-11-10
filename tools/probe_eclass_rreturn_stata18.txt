@@ -1,0 +1,94 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_eclass_rreturn.do 
+
+. * Probe (2026-10-10): can an eclass command leave matrices in r() (via an rcl
+> ass helper called last),
+. * so that `estadd matrix b_std = r(b_std)` works after `dwlsmv, standardized`
+> ?
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. program define stdhelper, rclass
+  1.     matrix S = (.6, .8)
+  2.     matrix colnames S = y1:F y2:F
+  3.     return matrix b_std = S
+  4. end
+
+. program define fakecmd, eclass
+  1.     matrix bb = (1, .5)
+  2.     matrix VV = (.01, 0 \ 0, .01)
+  3.     matrix colnames bb = y1:F y2:F
+  4.     matrix colnames VV = y1:F y2:F
+  5.     matrix rownames VV = y1:F y2:F
+  6.     ereturn post bb VV
+  7.     ereturn local cmd "fakecmd"
+  8.     stdhelper
+  9. end
+
+. fakecmd
+
+. capture noisily matrix list r(b_std)
+
+r(b_std)[1,2]
+     y1:  y2:
+      F    F
+r1   .6   .8
+
+. display "r(b_std) rc = " _rc
+r(b_std) rc = 0
+
+. display "e(cmd) = " e(cmd)
+e(cmd) = fakecmd
+
+. capture which estadd
+
+. display "estadd rc = " _rc
+estadd rc = 0
+
+. capture noisily estadd matrix b_std = r(b_std)
+
+added matrix:
+              e(b_std) :  1 x 2
+
+. display "estadd rc = " _rc
+estadd rc = 0
+
+. capture noisily matrix list e(b_std)
+
+e(b_std)[1,2]
+     y1:  y2:
+      F    F
+r1   .6   .8
+
+. display "e(b_std) rc = " _rc
+e(b_std) rc = 0
+
+. 
+end of do-file

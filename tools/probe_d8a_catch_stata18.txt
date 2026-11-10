@@ -1,0 +1,33 @@
+. *! markers D8AMSG (errprintf) and D8AERR (_error). Whether they appear in the
+. *!     grep -E "^(====|D8A)|D8AMSG|D8AERR" probe_d8a_catch.log | diff - tools
+D8AENV stata_version 18 processors 6
+>     errprintf("D8AMSG detailed guidance from errprintf\n")
+>     _error("D8AERR short abort text")
+==== bare
+D8AMSG detailed guidance from errprintf
+             d8a_abort():  3498  D8AERR short abort text
+D8A bare outer _rc 3498
+==== cn
+D8AMSG detailed guidance from errprintf
+             d8a_abort():  3498  D8AERR short abort text
+D8A cn inner _rc 3498
+D8A cn outer _rc 0
+==== cq
+D8A cq inner _rc 3498
+D8A cq outer _rc 0
+==== rethrow
+D8AMSG detailed guidance from errprintf
+             d8a_abort():  3498  D8AERR short abort text
+D8A legend: 1 = y1, 2 = y2
+D8A rethrow outer _rc 3498
+==== recode
+D8AMSG detailed guidance from errprintf
+             d8a_abort():  3498  D8AERR short abort text
+D8A legend: 1 = y1, 2 = y2
+D8A recode outer _rc 459
+==== quiet
+D8AMSG detailed guidance from errprintf
+             d8a_abort():  3498  D8AERR short abort text
+D8A quiet inner _rc 3498
+D8A quiet outer _rc 0
+==== done

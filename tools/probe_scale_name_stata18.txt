@@ -1,0 +1,100 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_scale_name.do 
+
+. * Probe (2026-10-10): does a non-sem keyword name /scale(y1)#1bn.grp post and
+>  resolve in _b[] and test,
+. * beside sem-style names (spec 4.8, names of nu, omega, alpha at G > 1)?
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. matrix bb = (1, 1.2, 0, 0.3)
+
+. matrix VV = (0, 0, 0, 0 \ 0, .04, 0, 0 \ 0, 0, 0, 0 \ 0, 0, 0, .01)
+
+. local s "/scale(y1)#1bn.grp /scale(y1)#2.grp y1:1bn.grp y1:2.grp"
+
+. matrix colnames bb = `s'
+
+. matrix colnames VV = `s'
+
+. matrix rownames VV = `s'
+
+. capture noisily ereturn post bb VV
+
+. display "post rc = " _rc
+post rc = 0
+
+. capture noisily display _b[/scale(y1)#2.grp]
+1.2
+
+. display "_b scale rc = " _rc
+_b scale rc = 0
+
+. capture noisily display _b[y1:2.grp]
+.3
+
+. display "_b nu rc = " _rc
+_b nu rc = 0
+
+. capture noisily test _b[/scale(y1)#2.grp] = 1
+
+ ( 1)  [/]scale(y1)#2.grp = 1
+
+           chi2(  1) =    1.00
+         Prob > chi2 =    0.3173
+
+. display "test rc = " _rc
+test rc = 0
+
+. capture noisily ereturn display
+------------------------------------------------------------------------------
+             | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    scale(y1)|
+         grp |
+          1  |          1          .        .       .            .           .
+          2  |        1.2         .2     6.00   0.000     .8080072    1.591993
+-------------+----------------------------------------------------------------
+y1           |
+         grp |
+          1  |          0  (omitted)
+          2  |         .3         .1     3.00   0.003     .1040036    .4959964
+------------------------------------------------------------------------------
+
+. display "display rc = " _rc
+display rc = 0
+
+. local names : colfullnames e(b)
+
+. display "`names'"
+/scale(y1)#1bn.grp /scale(y1)#2.grp y1:1bn.grp y1:2.grp
+
+. 
+end of do-file

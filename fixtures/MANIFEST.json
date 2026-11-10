@@ -1,0 +1,25 @@
+{
+    "generated_utc": "2026-09-26 22:05:56 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "20260917 + utf8ToInt(case)",
+    "files": {
+      "fixtures/data/case_A.csv": "c9207f22869c80e870d8d05f646cc840",
+      "fixtures/expected/case_A_thresholds.csv": "a4472efcc311cc7366d55e9f59d92ebe",
+      "fixtures/expected/case_A_gamma_tau.csv": "e479d945e07f70233d31e63cf5b384f9",
+      "fixtures/data/case_B.csv": "af8674b7ce1893fea40a699e2dc70433",
+      "fixtures/expected/case_B_thresholds.csv": "f50242ab92464c19cb888a9f604f969c",
+      "fixtures/expected/case_B_gamma_tau.csv": "6830cdbfe7529787ac948509a01cb50b",
+      "fixtures/data/case_C.csv": "34a6257c241058b81120d8c090100010",
+      "fixtures/expected/case_C_thresholds.csv": "d2ff7ee4378bb05578529285e7ccf628",
+      "fixtures/expected/case_C_gamma_tau.csv": "1a74b69afe691703792dbe2d08568379",
+      "fixtures/data/case_D.csv": "4d6ebe4b5d518b8338309ca2d633c5df",
+      "fixtures/expected/case_D_thresholds.csv": "dce33141411e8f1af8dc518aa857f010",
+      "fixtures/expected/case_D_gamma_tau.csv": "f96a7db3b53be6058f98de13d2121b2f",
+      "fixtures/data/case_E.csv": "98c2f66b81d73718d5dcff7e40ec5359",
+      "fixtures/expected/case_E_thresholds.csv": "411038eec4ea262add0df561cd26a873",
+      "fixtures/expected/case_E_gamma_tau.csv": "9b3c5fc280d345551251b995bf16a43a",
+      "fixtures/expected/highrho_polychoric.csv": "3543199328d00b58c037f81b86c94f25"
+    },
+    "packages": "none (base R only)"
+  }

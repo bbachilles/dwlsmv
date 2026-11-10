@@ -1,0 +1,66 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 18.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2023 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 6-core  perpetual
+Serial number: [redacted]
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+
+Running C:\Program Files\Stata18\sysprofile.do ...
+
+. do probe_lrtest.do 
+
+. * Probe (2026-10-10): does lrtest refuse a dwlsmv-style posting (b, V, N, T3;
+>  no e(ll))?
+. * Run on StataMP 18 only; Stata 16 NOT YET EXECUTED (the milestone machine is
+>  the user's).
+. version 16
+
+. clear all
+
+. program define fakefit, eclass
+  1.     args t3
+  2.     matrix bb = (1, .5)
+  3.     matrix VV = (.01, 0 \ 0, .01)
+  4.     matrix colnames bb = y1:F y2:F
+  5.     matrix colnames VV = y1:F y2:F
+  6.     matrix rownames VV = y1:F y2:F
+  7.     ereturn post bb VV
+  8.     ereturn scalar N = 500
+  9.     ereturn scalar T3 = `t3'
+ 10.     ereturn scalar df_T3 = 4
+ 11.     ereturn scalar rank = 2
+ 12.     ereturn local cmd "dwlsmv"
+ 13. end
+
+. fakefit 10
+
+. estimates store m1
+
+. fakefit 12
+
+. estimates store m0
+
+. capture noisily lrtest m1 m0
+model m1 does not contain scalar e(ll)
+
+. display "lrtest rc = " _rc
+lrtest rc = 498
+
+. 
+end of do-file

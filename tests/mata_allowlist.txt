@@ -1,0 +1,250 @@
+# Reviewed allowlist of external Mata routines this project may call.
+#
+# WHY THIS FILE EXISTS
+#
+# Every source file declares `version 16`, but that governs how existing
+# syntax is interpreted -- it does not stop a routine introduced in Stata 17
+# or later from compiling clean and testing green on the development machine.
+# The floor is really enforced on the Stata 16 milestone machine, which is
+# synced periodically, so without this file a post-16 call can sit green here
+# for an entire milestone. See E-072, 2026-09-18.
+#
+# HOW TO USE IT
+#
+# tests/unit/test_version_floor.do fails when a call appears in the scanned
+# sources that is not listed here. That failure is not a bug report -- it is a
+# prompt to look the routine up ONCE and record the answer, which is the whole
+# point.
+#
+# Do NOT add a name speculatively. An entry nobody checked is worse than no
+# entry, because it looks like it was checked.
+#
+# HOW TO CHECK ONE. "help mata <name>" is not usable in batch mode and Mata
+# help files carry no version note, so the check runs against Stata's shipped
+# release history instead. Do NOT do this by grepping for the routine's name.
+# That was the first attempt and it is unreliable: a word-grep for `normal`,
+# `mean`, `exp`, `I`, `diagonal` and `cholesky` all returned hits in
+# whatsnew16to17, every one of them ordinary English prose ("normal linear
+# regression", "change your mind", "exports"). A method whose false-positive
+# rate is that high on short names will eventually be resolved the wrong way.
+#
+# Check against the EXHAUSTIVE LIST instead. StataCorp announces new Mata
+# functions in a structured "New Mata function(s)" entry, so the complete set
+# introduced after the version floor can be enumerated once:
+#
+#     cd "/c/Program Files/Stata18/ado/base/w"
+#     tr '\n' ' ' < whatsnew16to17.sthlp |
+#       grep -o "New Mata function[s]* [^.]\{0,260\}" |
+#       grep -o "helpb mf_[a-z_]*:[A-Za-z_0-9]*()"
+#
+# Run 2026-09-19. The COMPLETE set of Mata functions introduced after Stata 16
+# is six names:
+#
+#     _cholinvlapacke()      _cholsolvelapacke()    _eigengelapacke()
+#     _solvelowerlapacke()   solvelowerlapacke()    ldl()
+#
+# Stata 18 introduced NONE. So the rule for any routine you are about to add
+# is: if it is not one of those six, it predates the floor. That turns the
+# check from an ambiguous grep into a lookup against a six-name denylist.
+#
+# Re-run the enumeration when a Stata release lands, adding the new whatsnew
+# to the list -- the floor is 16, so the set is "every whatsnew from 16to17 on".
+#
+# WHAT THIS DOES NOT COVER, and it is not a small gap. It rules out a post-16
+# INTRODUCTION. It says nothing about a routine that exists in both versions
+# and whose IMPLEMENTATION changed, which can move results without moving a
+# name. That is not hypothetical here: Stata 17 moved Mata's decompositions
+# onto LAPACK/Intel MKL -- the whatsnew names qrd(), lud() and cholesky()
+# explicitly, "such as", so the list is not exhaustive, and the new
+# _eigengelapacke() says the eigen path moved too. Nothing in this file can
+# catch that. Only the milestone machine can. See E-040, 2026-09-19.
+#
+# This procedure exists because a session avoided select() and rowmissing()
+# rather than spending five minutes checking them, and hand-rolled a loop
+# instead. The cost of an unusable check is not a wrong entry, it is code
+# written around the check.
+#
+# Names beginning dwls_, dwlsmv_ or _dwlsmv_ are the project's own and are
+# excluded automatically. Mata keywords are excluded automatically too.
+#
+# Format:  name | justification
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Erik Ruzek
+abs             | Mata 1.0 (Stata 9). Elementwise absolute value.
+cols            | Mata 1.0 (Stata 9). Column count.
+max             | Mata 1.0 (Stata 9). Maximum over a matrix.
+min             | Mata 1.0 (Stata 9). Minimum over a matrix.
+rows            | Mata 1.0 (Stata 9). Row count.
+symeigenvalues  | Mata 1.0 (Stata 9). Exercised on Stata 16.1 by tools/probe_machine.do, which is stronger evidence than the version note: it is the one routine that differs between the two machines, by 1 ulp.
+#
+# Added 2026-09-18 with Module 0-1 (the index map). All seven are core Mata
+# from Stata 9, and all are exercised on Stata 16.1 by the milestone run or by
+# this project's own suite running there.
+#
+J               | Mata 1.0 (Stata 9). Matrix constructor.
+_error          | Mata 1.0 (Stata 9). Raise an error with a message. Used for caller bugs -- an out-of-range index aborts rather than returning missing, because a missing subscript surfaces far from its cause.
+ceil            | Mata 1.0 (Stata 9). Ceiling. Used only by the closed-form inverse in dwlsmv_pos_inv, where the discriminant is a perfect square at every block boundary so the ceiling is exact.
+floor           | Mata 1.0 (Stata 9). Floor. Used only for integer-validity checks on arguments.
+anyof           | Not among the six post-16 names above (checked 2026-10-04). Module 11 translation.
+crexternal      | Not among the six post-16 names above (checked 2026-10-04). Module 11's driver state between steps.
+findexternal    | Not among the six post-16 names above (checked 2026-10-04). Module 11's driver state between steps.
+rmexternal      | Not among the six post-16 names above (checked 2026-10-04). Module 11's driver state between steps.
+printf          | Not among the six post-16 names above (checked 2026-10-04). Module 11 prints the notes block.
+st_local        | Not among the six post-16 names above (checked 2026-10-04). Module 11 hands scalars to dwlsmv.ado.
+st_matrixrowstripe | Not among the six post-16 names above (checked 2026-10-04). Module 11 names e(V)'s rows.
+correlation     | Not among the six post-16 names above (checked 2026-10-04). Module 11's dummy-data assertion.
+exit            | Not among the six post-16 names above (checked 2026-10-04). Module 11 refusals exit rc 198 (D8a).
+invtokens       | Not among the six post-16 names above (checked 2026-10-04). Module 11 translation.
+st_data         | Not among the six post-16 names above (checked 2026-10-04). Module 11's dummy-data assertion.
+st_global       | Not among the six post-16 names above (checked 2026-10-04). Module 11 reads sem's e() macros.
+st_matrix       | Not among the six post-16 names above (checked 2026-10-04). Module 11 reads sem's e(b), e(Cns).
+st_matrixcolstripe | Not among the six post-16 names above (checked 2026-10-04). Module 11 reads sem's stripe.
+st_numscalar    | Not among the six post-16 names above (checked 2026-10-04). Module 11 reads e(N_groups).
+variance        | Not among the six post-16 names above (checked 2026-10-04). Module 11's dummy-data assertion.
+mod             | Not among the six post-16 names above (checked 2026-10-04), so it predates the floor. Modulus; dwls_identify() uses mod(k*phi, 1) for the rank check's second point.
+sqrt            | Mata 1.0 (Stata 9). Square root. Used only by the closed-form inverse.
+strofreal       | Mata 1.0 (Stata 9). Real to string. Used for map labels and error text.
+sum             | Mata 1.0 (Stata 9). Sum over a matrix. Used for T = sum(C).
+#
+# Added with Module 1 (thresholds). Both are the Mata forms of the statistical
+# functions Stata has had since long before the floor, and both are exercised
+# on Stata 16.1 by tools/probe_machine.do, which agreed bitwise with this
+# machine on every value it computed -- stronger evidence than a version note.
+#
+invnormal       | Mata 1.0 (Stata 9). Inverse standard normal CDF. This IS the first-stage estimator: tau-hat = invnormal(q-hat) and nothing more.
+normalden       | Mata 1.0 (Stata 9). Standard normal density. The delta-method denominator phi(tau) in every threshold influence function.
+#
+# Added 2026-09-19 with dwlsmv_listwise(). Both checked by the whatsnew
+# procedure above rather than assumed: neither appears in whatsnew16to17 or
+# whatsnew17to18, so neither is post-16. Used together, and not by our
+# invention -- [M-5] select() example 5 is verbatim
+# `submat = select(X, rowmissing(X):==0)` under the heading "To select rows of
+# X for which there are no missing values", which is listwise deletion.
+#
+select          | Not among the six post-16 Mata functions (checked 2026-09-19). Documented in [M-5] select(), whose own example 5 is this project's exact listwise-deletion idiom.
+rowmissing      | Not among the six post-16 Mata functions (checked 2026-09-19). Documented in [M-5] missing(). Owns the definition of "missing" for dwlsmv_listwise, which is why the extended codes .a through .z are Stata's problem and not a comparison we wrote -- though test_listwise.do asserts .a and .z regardless.
+#
+# Added 2026-09-19 with Module 2 (polychoric correlations). Every name below
+# was confirmed against the six-name post-16 list documented above, BEFORE
+# Module 2's design committed to it -- which is the order that check exists
+# for. None appears in whatsnew16to17 or whatsnew17to18.
+#
+binormal        | Not among the six post-16 Mata functions. THE bivariate normal CDF for this project. Exercised on Stata 16.1 by tools/probe_machine.do, which agreed bitwise with this machine on all 35 values across the rho grid -- so the Phi2 machinery the whole polychoric step rests on is measured, not assumed, across the floor.
+normal          | Not among the six post-16 Mata functions. Univariate normal CDF. Cell-probability boundaries and the conditional probabilities in dwlsmv_wmat.
+exp             | Not among the six post-16 Mata functions. Used only for the bivariate normal density in Plackett's identity.
+ln              | Not among the six post-16 Mata functions. The pairwise log-likelihood.
+pi              | Not among the six post-16 Mata functions. The constant, in the bivariate normal density's 2*pi factor.
+tanh            | Not among the six post-16 Mata functions. rho = 0.999*tanh(z) keeps the optimizer's parameter inside (-1,1) by construction.
+atanh           | Not among the six post-16 Mata functions. Inverts that map for the starting value only.
+#
+# The optimize() family. Spec Section 5 prescribes prototyping with optimize()
+# and validating correctness before any hand-rolled Newton-Raphson, so this is
+# the spec's own choice of machinery rather than a preference. The project's notes
+# optimize() is the newest routine the whole design needs; the enumeration
+# confirms it is not post-16.
+#
+_optimize                    | Not among the six post-16 Mata functions. The non-aborting form. Used rather than optimize() because one non-converging pair out of hundreds must be flagged, not fatal.
+optimize_init                | Not among the six post-16 Mata functions.
+optimize_init_evaluator      | Not among the six post-16 Mata functions.
+optimize_init_evaluatortype  | Not among the six post-16 Mata functions. Module 2 sets "d0" deliberately: a derivative-free optimizer cannot inherit a sign error from our own derivative code. Module 7 sets "d2", supplying the exact-given-Delta gradient and the Gauss-Newton Hessian; the gradient is checked against a difference of F in test_fit.do check 1.
+optimize_init_params         | Not among the six post-16 Mata functions.
+optimize_init_which          | Not among the six post-16 Mata functions.
+optimize_init_argument       | Not among the six post-16 Mata functions.
+optimize_init_conv_maxiter   | Not among the six post-16 Mata functions.
+optimize_init_conv_ptol      | Not among the six post-16 Mata functions.
+optimize_init_conv_vtol      | Not among the six post-16 Mata functions.
+optimize_init_conv_nrtol     | Not among the six post-16 Mata functions.
+optimize_result_params       | Not among the six post-16 Mata functions.
+optimize_result_converged    | Not among the six post-16 Mata functions.
+optimize_result_iterations   | Not among the six post-16 Mata functions.
+#
+# Added 2026-09-19 with the user-facing diagnostics. All three checked against
+# the six-name list. `char` is the live demonstration of why that list exists
+# rather than a name-grep: a raw grep for "char" hits BOTH post-16 whatsnew
+# files, every one of them prose like "character" and "charts". The
+# enumeration answers it in one look.
+#
+errprintf       | Not among the six post-16 Mata functions. Carries the detailed guidance that _error() cannot -- _error() truncates at 100 characters and raises rc 3300 past that, discarding the message.
+char            | Not among the six post-16 Mata functions. char(10) for newlines: `\n` is an escape in a printf FORMAT only, not inside a string variable printed with %s.
+strpos          | Not among the six post-16 Mata functions. Substring search, used to choose singular vs plural wording.
+#
+# Added 2026-09-20 with Module 4 (Gamma). Both were pre-cleared against the
+# six-name post-16 list on 2026-09-19, before Module 4's design leaned on
+# quadcross(); the entries land now because there is finally a call site.
+#
+quadcross       | Not among the six post-16 Mata functions. THE accumulator for Gamma, and not a preference: cross() is core-count dependent by up to ~126 ulps because MP varies reduction order, so it would desync the 6-core development machine from the 4-core milestone machine on spec 4.5.1's machine-precision identity. quadcross() moves by at most ~1 ulp. Costs ~4.1x cross(), measured, which is about one second on a large problem. Being quad precision it is not a BLAS operation, so it gains nothing from Stata 17+'s MKL -- irrelevant here, since the shapes this estimator forms multiply in 0.04 s anyway.
+length          | Not among the six post-16 Mata functions. Element count of a vector. Used only to check that the pair-fit vector handed to dwls_gamma() is as long as the index map says, since rows() alone would accept a row vector of the wrong length.
+#
+# Added 2026-09-22 with Modules 3, 5 and 6 (identification, sigma(theta) and
+# Delta). Every name below was checked against the six-name post-16 list in
+# this file's header before the code that calls it was written, which is the
+# order the check exists for. None of the ten is one of the six, so all ten
+# predate the Stata 16 floor.
+#
+I               | Not among the six post-16 Mata functions. The identity matrix, for (I - B) in Phi = (I-B)^-1 Psi (I-B)^-T.
+luinv           | Not among the six post-16 Mata functions. Inverts (I - B), which is NOT symmetric, so invsym() is not the routine. It returns a matrix of missing values rather than aborting on a singular argument -- dwlsmv_rystar() checks for that explicitly, because an unchecked missing propagates into sigma(theta) and surfaces as an optimizer failure several modules downstream.
+missing         | Not among the six post-16 Mata functions. Counts missing entries. Used for the luinv() singularity check, for strtoreal() failure, and for the assertion in dwls_model() that every entry of sigma was actually written.
+svd             | Not among the six post-16 Mata functions. Section 4.8's rank check on Delta. The singular values alone would come from svdsv(), but the check also reports the NULL DIRECTION, which names the redundant parameters; svd() supplies both from one decomposition. Convention pinned by measurement on StataMP 18, not from memory: svd(A, U, s, V) returns the THIN decomposition with A = U*diag(s)*V, so the right singular vectors are V's ROWS and the null direction is V[rows(V), .]'. Reading it as a column instead is a silent wrong answer, not an error.
+tokens          | Not among the six post-16 Mata functions. Splits a canonical-form directive line into its words. The canonical form is whitespace-delimited by construction (spec Section 4.8), so no regular expression is needed anywhere in Module 3.
+substr          | Not among the six post-16 Mata functions. Line and comment splitting in dwlsmv_canon_lines(). Already used by tests/dwlsmv_scan.mata, which runs on the milestone machine.
+strlen          | Not among the six post-16 Mata functions. Same, and same evidence.
+strtrim         | Not among the six post-16 Mata functions. Same, and same evidence. Note it removes BLANKS and not char(13), which is why dwlsmv_canon_lines() strips carriage returns itself.
+strtoreal       | Not among the six post-16 Mata functions. Reads a start value or a fixed value off a directive. Returns missing on anything non-numeric, which dwlsmv_canon_status() reports rather than silently treating as zero. Already used from Stata code by every reference-fixture import in the suite, for the float-precision reason the project's coding rules record.
+subinstr        | Not among the six post-16 Mata functions. Strips char(13) from a canonical specification that reached Mata from a Windows text file. Without it every keyword comparison on such a line fails while the line plainly reads correctly.
+#
+# CHECKED BUT NOT YET ADDED, because nothing calls them yet. Module 4 was also
+# expected to want quadcolsum(); it does not, because the centring diagnostic
+# is computed from cell counts rather than from the gathered matrix. Modules
+# 7-9 are expected to want invsym(), lusolve(), cholsolve(), uniqrows() and
+# lnnormal(). All were confirmed clear against the six-name list on 2026-09-19
+# at the same time as Module 2's names.
+#
+# They get lines here when they are actually called. This file is a record of
+# what the project calls; entries for routines nothing calls would make it a
+# worse record, and the check behind each is now a ten-second lookup rather
+# than a reason to defer. If test_version_floor flags one of these, it is doing
+# its job -- add the line and move on.
+#
+# Added 2026-09-23 with Module 7 (the DWLS optimizer). All five checked against
+# the six-name post-16 list in this file's header before the code calling them
+# was run; none is one of the six, so all five predate the Stata 16 floor. The
+# optimize() family's other members were cleared with Module 2 (above).
+#
+diagonal                     | Not among the six post-16 Mata functions. diag(Gamma) as a column, from which dwls_fit() forms W_D = 1 :/ diagonal(Gamma) once, as a vector. The D x D diagonal matrix is never formed.
+optimize_init_technique      | Not among the six post-16 Mata functions. "nr", which with dwlsmv_fdwls()'s "d2" Gauss-Newton Hessian is a damped Gauss-Newton. Set explicitly although "nr" is the default, because the choice was measured (tools/time_fit.do) and a default can move.
+optimize_init_conv_warning   | Not among the six post-16 Mata functions. "off": non-convergence is returned to the caller as converged = 0, not printed mid-fit.
+optimize_init_tracelevel     | Not among the six post-16 Mata functions. "none", so a fit prints nothing; the caller reports.
+optimize_result_value        | Not among the six post-16 Mata functions. F at optimize()'s returned parameters, returned by dwlsmv_minimize(). dwls_fit() does not store it directly: it re-evaluates F at the sign-canonicalized theta and stores that as fmin, with T_raw = (N - 1) * fmin.
+cholinv                      | Not among the six post-16 Mata functions (checked 2026-09-23). Inverts the sandwich bread Delta' W_D Delta in dwlsmv_acov(). Chosen over invsym(), which returns a generalized inverse that zeroes the offending rows -- an SE of exactly 0 rather than a failure. cholinv() returns missing only when a floating-point pivot is <= 0: reliably for an identically zero column, but NOT reliably for a matrix singular in exact arithmetic -- [14 14;14 14] returns missing, [2 2;2 2] a finite inverse near 2.3e15 (measured 2026-09-24) -- nor for a numerically singular one. tools/probe_machine.do records all four cases.
+epsilon                      | Not among the six post-16 Mata functions (checked 2026-09-25). epsilon(1) is the machine epsilon, 2.22e-16, in dwlsmv_asym()'s symmetry budget of 4 D eps (derivation @sec-gamma-sym). Returns the spacing at 1 in double precision on both machines, since both are IEEE 754 binary64.
+uniqrows                     | Not among the six post-16 Mata functions (checked 2026-09-25). The distinct rows of Y, whose count is n_pat in dwlsmv_npatterns() (spec 4.5.6). Anticipated by name in this file's own note on Modules 7-9.
+colmax                       | Not among the six post-16 Mata functions (checked 2026-09-26). Column maxima of the scale-free asymmetry matrix, so dwlsmv_asym() finds where its measure is attained in O(D) interpreted steps rather than an O(D^2) loop.
+sort                         | Not among the six post-16 Mata functions (checked 2026-09-26). Orders |eigenvalues| descending in dwlsmv_gammadiag(), so the ratio rows read sigma_r* / sigma_1 within the structurally supported rank.
+sign                         | Not among the six post-16 Mata functions (checked 2026-09-30). The walk's direction d = sign(S(0)) in dwlsmv_rootfind() (derivation @sec-rootfind).
+any                          | Not among the six post-16 Mata functions (checked 2026-10-03). Whether a 2x2 table has an empty cell, for empty-cell 2x2 pairs in dwls_sample_stats() (derivation @sec-kindE).
+args                         | Not among the six post-16 Mata functions (checked 2026-10-03). Whether dwls_sample_stats() was given its optional keep_bound (spec 5.1).
+selectindex                  | Not among the six post-16 Mata functions (checked 2026-10-05). Locates a factor or indicator by name when dwlsmv_m11_std() rebuilds the parameter table from e(b)'s stripe (D7 step 3).
+_stata                       | Not among the six post-16 Mata functions (checked 2026-10-07). Runs D11's recovery fits as a nested mata call, so that an _error() inside returns an rc instead of ending the command (dwlsmv_m11_recover()).
+asarray                      | Not among the six post-16 Mata functions (checked 2026-10-07). Holds D11's recovery inputs and outputs across the nested call (dwlsmv_m11_recover(), dwlsmv_m11_recrun()).
+pinv                         | Not among the six post-16 Mata functions (checked 2026-10-08). Moore-Penrose inverse for DIFFTEST's h-hat = pinv(Delta1) Delta0 in dwlsmv_difftest(), as lavaan's MASS::ginv().
+chi2tail                     | Not among the six post-16 Mata functions (checked 2026-10-08). The DIFFTEST p-value in dwlsmv_difftest().
+ustrregexm                   | Not among the six post-16 Mata functions (checked 2026-10-12). Matches the group tag in sem's e(b) stripe (y1:2.grp#c.F, /var(F)#2.grp) in dwlsmv_translate_g().
+ustrregexs                   | Not among the six post-16 Mata functions (checked 2026-10-12). Reads the group value and the untagged name from that match in dwlsmv_translate_g().
+diag                         | Not among the six post-16 Mata functions (checked 2026-10-12). Forms the diagonal matrix of pi_g-scaled diag(Gamma_g) handed to dwlsmv_breaddiag() for the pooled e(bread_ratio) (O-T10) in dwlsmv_m11_post_g().
+cholesky                     | Not among the six post-16 Mata functions (checked 2026-10-14). Factors P = Delta'W Delta in dwlsmv_sens() for the symmetric form P^-1/2 R P^-1/2 whose eigenvalues give c (@sec-mg-sensitivity S2); a missing factor means P is not positive definite, and is refused.
+cholsolve                    | Not among the six post-16 Mata functions (checked 2026-10-14). Solves with J and P in dwlsmv_sens(): A = J^-1 Delta'W and nu = 2 ghat'P^-1 ghat (@sec-mg-sensitivity S1, S4).
+rowsum                       | Not among the six post-16 Mata functions (checked 2026-10-14). kappa_s = sum_k |A_ik| in dwlsmv_sens() (@sec-mg-sensitivity S1).
+solvelower                   | Not among the six post-16 Mata functions (checked 2026-10-14; the post-16 one is solvelowerlapacke). Inverts P's Cholesky factor in dwlsmv_sens() for c (@sec-mg-sensitivity S2).
+colshape                     | Not among the six post-16 Mata functions (checked 2026-10-19). Reshapes the contraction sum_k (w o r)_k H_k into R in dwlsmv_sens_jmat_x() and dwlsmv_sens_x() (@sec-mg-hessian).
+trunc                        | Not among the six post-16 Mata functions (checked 2026-10-21). dwlsmv_fitidx() refuses a non-integer G.
+quadsum                      | Not among the six post-16 Mata functions (checked 2026-10-21). dwlsmv_fitidx_base() sums the c1 baseline's quadratic form and Frobenius norms in quad precision.
+vec                          | Not among the six post-16 Mata functions (checked 2026-10-21). dwlsmv_fitidx_base() flattens R_g squared for its Frobenius norm.
+abbrev                       | Not among the six post-16 Mata functions (checked 2026-10-23). dwlsmv_dtfront() abbreviates model names in difftest's tables.
+sprintf                      | Not among the six post-16 Mata functions (checked 2026-10-23). dwlsmv_dtfront() formats a steps-table cell.
+mreldif                      | Not among the six post-16 Mata functions (checked 2026-11-01); e(V) symmetry guard in dwlsmv_m11_std_g
+colsum                       | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin() projects the GPA gradient and normalizes columns.
+cos                          | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin_start() builds the GM4 Givens rotations.
+sin                          | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin_start() builds the GM4 Givens rotations.
+mean                         | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin() averages row indices for lavaan's "index" column order.
+order                        | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin() sorts columns by mean index, ties by position.

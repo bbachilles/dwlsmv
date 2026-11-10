@@ -1,0 +1,43 @@
+D5ENV stata_version 16.1 processors 4
+==== all
+D5POST all rc 0
+D5DISP all rc 0
+D5RANK all .
+D5NAMES all /y1:cut1 /y1:cut2 /y2:cut1 /y2:cut2 y1:F1 y2:F1 /var(F1)
+D5B y2:F1 .8
+D5B y2:F1 rc 0
+D5B y1:F1 1
+D5B y1:F1 rc 0
+D5B /y1:cut1 -.5
+D5B /y1:cut1 rc 0
+D5B /var(F1) .3
+D5B /var(F1) rc 0
+D5TEST rc 0 chi2 64
+D5LINCOM rc 0 se .15491933
+D5TESTFIXED rc 0
+==== free
+D5POST free rc 0
+D5DISP free rc 0
+D5RANK free .
+D5NAMES free /y1:cut1 /y1:cut2 /y2:cut1 /y2:cut2 y2:F1 /var(F1)
+D5B y2:F1 .8
+D5B y2:F1 rc 0
+D5B y1:F1 equation y1 not found
+D5B y1:F1 rc 111
+D5B /y1:cut1 -.5
+D5B /y1:cut1 rc 0
+D5B /var(F1) .3
+D5B /var(F1) rc 0
+D5TEST rc 0 chi2 64
+D5LINCOM rc 0 se .14142136
+D5TESTFIXED rc 111
+==== notpd
+D5POST notpd rc 0
+D5DISP notpd rc 0
+D5RANK notpd .
+D5NAMES notpd y2:F1 /var(F1)
+==== long
+D5POST long rc 0
+D5DISP long rc 0
+D5RANK long .
+D5NAMES long /cov(e.Longfactorname01,e.Otherfactorname02)

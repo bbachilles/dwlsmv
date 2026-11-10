@@ -1,0 +1,12 @@
+{
+    "generated_utc": "2026-10-25 23:41:16 UTC",
+    "r_version": "R version 4.5.2 (2025-10-31 ucrt)",
+    "platform": "aarch64-w64-mingw32",
+    "seeds": "none (reads committed condx_A.csv)",
+    "files": {
+      "fixtures/data/condx_A.csv": "82231c69bfb14c7db3873e5d41a07deb",
+      "fixtures/expected/lavaan_condx_fit_est.csv": "9868cbf18b1c39b2ad67f4389376d410",
+      "fixtures/expected/lavaan_condx_fit_test.csv": "1398bde953842cae807d7bf33da241b0"
+    },
+    "packages": ["lavaan 0.7.2", "sem('f =~ y1 + y2 + y3; f ~ x'), WLSMV, delta, conditional.x = TRUE, std.lv, zero.add = c(0.5, 0), zero.keep.margins = TRUE", "R version 4.5.2 (2025-10-31 ucrt)"]
+  }
