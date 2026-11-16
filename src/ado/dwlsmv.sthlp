@@ -1,8 +1,10 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-02 on the 0.3.0 release tree (e572e0d plus the version bump, R): every example run, including esttab and the difftest help example, the random-intercept abort at rc 3498 as documented, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
-{* *! version 0.3.0  02nov2026}{...}
+{* Executed under StataMP 18 on 2026-11-15 on the 0.4.0 release tree (fcd0048 plus the version bump, R): every example run, including esttab, the two covariate examples and the difftest help example, the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.4.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* *! version 0.4.0  15nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
+{vieweralsosee "[SEM] gsem" "help gsem"}{...}
+{vieweralsosee "difftest" "help difftest"}{...}
 {viewerjumpto "Syntax" "dwlsmv##syntax"}{...}
 {viewerjumpto "Description" "dwlsmv##description"}{...}
 {viewerjumpto "Options" "dwlsmv##options"}{...}
@@ -15,6 +17,10 @@
 {viewerjumpto "Comparison with lavaan and Mplus" "dwlsmv##comparison"}{...}
 {viewerjumpto "Examples" "dwlsmv##examples"}{...}
 {viewerjumpto "Stored results" "dwlsmv##results"}{...}
+{viewerjumpto "References" "dwlsmv##references"}{...}
+{viewerjumpto "Author" "dwlsmv##author"}{...}
+{viewerjumpto "Acknowledgments" "dwlsmv##acknowledgments"}{...}
+{viewerjumpto "Also see" "dwlsmv##alsosee"}{...}
 {p2colset 1 15 17 2}{...}
 {p2col:{bf:dwlsmv} {hline 2}}SEM/CFA for ordinal indicators by DWLS with the WLSMV (T3) test{p_end}
 {p2colreset}{...}
@@ -30,6 +36,33 @@
 {p 4 4 2}
 {it:paths} are {helpb sem} path specifications, for example
 {cmd:(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (F2 <- F1)}.
+
+{p 4 4 2}
+One observed variable may appear as a {it:covariate}: a binary variable coded 0 and 1, written as a
+{cmd:sem} path to a factor, {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:)}, or to an indicator,
+{cmd:(}{it:y}{cmd: <- }{it:x}{cmd:)}. The model is then fitted conditional on {it:x}: the
+thresholds are those at {it:x} = 0, {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:)} is the effect of {it:x}
+on the factor, and {cmd:(}{it:y}{cmd: <- }{it:x}{cmd:)} is its direct effect on the indicator's
+latent response (minus a threshold shift). A path written with {cmd:@}, as in {cmd:(}{it:F}{cmd: <-
+}{it:x}{cmd:@.4)}, fixes that coefficient at the value, which is a number in the model's own units, not a
+standardized coefficient: {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:@}{it:c)} fixes the effect of {it:x} = 1 against
+{it:x} = 0 on the factor at {it:c} factor units (with {cmd:metric(unitvariance)}, {it:c} disturbance standard
+deviations; with the marker metric, units of the marker indicator's latent response), and
+{cmd:(}{it:y}{cmd: <- }{it:x}{cmd:@}{it:c)} fixes the direct effect on {it:y}'s latent response, whose
+conditional variance is 1, at {it:c}, so the threshold shift is {it:-c}. A fixed path is shown in the table as
+constrained, with no standard error and a row in {cmd:e(Cns)}; it is not an estimated parameter, so it
+adds one degree of freedom. {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:@0)} is dropped by {cmd:sem} and adds no row: it is the
+same model as no effect of {it:x} on {it:F}. A path fixed at a value other than 0 also fixes the factor's
+orientation under {cmd:metric(unitvariance)}: the loadings are not reflected to make the first one positive. A limitation follows: if the sign of the fixed value
+is opposite to the orientation the starting values imply, the fit can report convergence at a local optimum whose
+test statistic is much larger than that of the same model with the opposite sign, whose mirror-image solution
+(every loading reversed) would fit equally well. To avoid it, fix the value with the other sign and reverse the
+interpretation of the factor, or use the marker metric, where the orientation is set by the marker loading, fixed
+at 1. This was observed on one test dataset; how often it happens has not been studied.
+{cmd:sem} lets an observed exogenous {it:x} covary
+with every exogenous factor; {cmd:dwlsmv} does not take that covariance as a parameter, so for each
+exogenous factor write the path from {it:x} or fix the covariance at zero with the {cmd:sem} option
+{cmd:cov(}{it:x}{cmd:*}{it:F}{cmd:@0)}.
 
 {synoptset 28 tabbed}{...}
 {synopthdr}
@@ -206,22 +239,31 @@ refuses, among models that {cmd:sem} accepts:
 
 {p2colset 8 12 12 2}{...}
 {p2col:o}{opt group()} without {opt invariance()};{p_end}
-{p2col:o}observed exogenous variables (an observed variable predicting a
-factor or another variable);{p_end}
+{p2col:o}observed exogenous variables other than one binary 0/1 covariate
+({cmd:(}{it:F}{cmd: <- }{it:x}{cmd:)} on a factor, {cmd:(}{it:y}{cmd: <- }{it:x}{cmd:)} on an
+indicator), which fits the model conditional on {it:x}: there the statistic,
+degrees of freedom and p-value are reported (not when the fit did not converge, see
+{help dwlsmv##output:Output}), but no baseline model and no RMSEA, CFI or TLI (these would need their own derivation and validation),
+{opt standardized}, {opt keepbound}, {opt efa()} or {helpb difftest} (difference tests with a covariate are refused until their finite-sample size has been studied);{p_end}
 {p2col:o}a model with no latent factor;{p_end}
 {p2col:o}a constraint that ties several parameters together (for example a
 shared {cmd:@}{it:name}); only constraints fixing one parameter at a value are
 accepted;{p_end}
 {p2col:o}a constrained intercept ({cmd:_cons}); thresholds replace intercepts
 for ordinal indicators;{p_end}
-{p2col:o}a path between observed variables, or a path between an observed
-variable and a factor in the structural part;{p_end}
+{p2col:o}a path between observed variables (an indicator on an indicator), or
+a path from an observed variable that is not the covariate to a factor;{p_end}
 {p2col:o}a constrained indicator residual variance {cmd:var(e.}{it:y}{cmd:)}:
 residual variances are not parameters here, being
 1 - (Lambda Phi Lambda')_jj, derived from the model;{p_end}
 {p2col:o}covariances among indicator residuals (planned for a later
 version);{p_end}
-{p2col:o}a variance or covariance of an observed variable;{p_end}
+{p2col:o}a variance or covariance of an observed variable; of the covariate,
+a constrained variance or mean, a covariance with a factor that is free (see
+the covariate in the syntax) or fixed at a value other than 0;{p_end}
+{p2col:o}more than one observed exogenous variable, a covariate together with
+{opt group()}, and a covariate that is not numeric, not coded 0 and 1 in the
+estimation sample, or constant;{p_end}
 {p2col:o}a factor with no observed indicator (second-order factors are not
 supported);{p_end}
 {p2col:o}a factor scaled by a loading or variance fixed at a value other than 1
@@ -330,6 +372,18 @@ transformation is exact for the model: every factor has exactly one fixed
 nonzero loading, equal to 1; no factor (disturbance) variance is fixed; and
 every other fixed loading, regression or covariance is 0. Otherwise the model
 is ineligible, and the note names the reasons.
+
+{p 4 4 2}
+{bf:With a covariate} recovery is the same, with the effect of the covariate on
+a factor (the {cmd:gamma} of {cmd:(F <- x)}) multiplied by c_F, and the effect
+of the covariate on an indicator (the {cmd:kappa} of {cmd:(y <- x)}) and the
+thresholds unchanged. A model that fixes such an effect on a factor at a
+nonzero value is ineligible, because the value means something different in
+the two metrics; one fixed at 0, and a fixed effect on an indicator of any
+value, stay eligible. For a model with a covariate the first marker fit is
+recovered when it did not converge, the admissibility check flags a
+condition, or the weighted derivative matrix is numerically rank deficient
+at the estimate: the same three causes as without a covariate.
 
 {p 4 4 2}
 Recovery succeeds when the final marker fit converges; its admissibility
@@ -610,6 +664,47 @@ A fit that does not converge is still posted, as {cmd:sem} does: {cmd:e(b)},
 {cmd:metric(marker)} such a fit is first put through
 {help dwlsmv##recovery:recovery}.
 
+{p 4 4 2}
+{bf:A model with a covariate that does not converge} is reported differently, and this difference from a model without a covariate is an open decision, not a permanent rule. A
+line in error colour directly under the title says that the optimizer did not
+converge, that the estimates are the last iterate and not a solution, and, under
+{cmd:metric(marker)}, to refit with {cmd:metric(unitvariance)}, adding that the
+recovery refit was not attempted (the model is ineligible) or failed, as the notes
+say; a model with a covariate whose recovery succeeds converges and is
+reported as any fit. Otherwise {cmd:dwlsmv} has no option for other
+starting values. No standard errors, T3 or p-value are reported. Only {cmd:e(b)}
+(and {cmd:e(Cns_b)}, which marks the fixed parameters) is posted, with
+{cmd:e(df_T3)}, {cmd:e(converged)} and {cmd:e(iterations)}; {cmd:e(V)}, {cmd:e(T3)}
+and {cmd:e(p_T3)} are not, so {cmd:test}, {cmd:lincom} and {cmd:nlcom} have nothing
+to work from. The table lists the last iterate and the replay says the same.
+
+{p 4 4 2}
+{bf:Admissibility with a covariate.} The admissibility check is run on every fit
+conditional on a covariate, converged or not, at the reported estimates, and its
+notes appear in the notes block as for any fit, after the note on
+{help dwlsmv##recovery:recovery} when it was triggered.
+
+{p 4 4 2}
+{bf:Diagnostics with a covariate.} The notes on the sampling covariance of the
+thresholds, slopes and correlations (Gamma), on the identification of the parameters
+at the estimate (the weighted derivative matrix) and the category counts are
+produced for a model with a covariate as for any fit, and the four stored values
+{cmd:e(gamma_ratio)}, {cmd:e(gamma_ratio_raw)}, {cmd:e(gamma_rank)} and
+{cmd:e(bread_ratio)} are posted. A response pattern is then the set of responses
+together with the value of the covariate. The category counts are shown pooled and,
+in addition, within each value of the covariate, with the two group sizes: the
+standard error of a slope depends on the counts within each group, which the pooled
+counts do not show.
+{bf:Limitation.} The check for thresholds that move together on every observation
+is not carried out with a covariate. An item that is an exact function of another
+item and the covariate (for example equal to it at covariate = 0 and to its reverse
+at covariate = 1) is accepted, makes the sampling covariance lose rank exactly, and
+is not named in a note; it shows only as a value near 1e-16 of
+{cmd:e(gamma_ratio)}. Gamma is never inverted, so standard errors and the test
+statistic are still produced.
+Whether the standard errors and the test statistic are accurate when Gamma has lost
+rank in this way has not been established.
+
 
 {marker fitindices}{...}
 {title:Fit indices}
@@ -813,6 +908,17 @@ not {cmd:1bn.grp}, and {cmd:drop()} needs that form; {cmd:/:} names the
 parameters outside the equations.{p_end}
 {phang2}{cmd:. esttab configural scalar, se nostar varwidth(24) mtitles(configural scalar) drop(y*:1.grp y*:2.grp /:var(F)#1.grp /:scale(*)#1.grp /:mean(F)#1.grp) stats(N T3 df_T3 p_T3)}{p_end}
 
+{pstd}A binary covariate, on the same data: the factor regressed on an indicator
+of the second group, coded 0 and 1. The thresholds are those of the group coded
+0, and the slope is the difference in the mean of the factor between the groups. A covariate
+cannot be combined with {opt group()}.{p_end}
+{phang2}{cmd:. generate byte grp2 = (grp == 2)}{p_end}
+{phang2}{cmd:. dwlsmv (F -> y1-y5) (F <- grp2)}{p_end}
+
+{pstd}A direct effect of the covariate on one item, {cmd:y5}: a shift of its
+thresholds between the groups beyond what the factor explains{p_end}
+{phang2}{cmd:. dwlsmv (F -> y1-y5) (F <- grp2) (y5 <- grp2)}{p_end}
+
 
 {marker results}{...}
 {title:Stored results}
@@ -824,7 +930,8 @@ parameters outside the equations.{p_end}
 {p2col 5 20 24 2: Scalars}{p_end}
 {synopt:{cmd:e(N)}}number of observations{p_end}
 {synopt:{cmd:e(rank)}}number of free parameters{p_end}
-{synopt:{cmd:e(T3)}}scaled-and-shifted test statistic{p_end}
+{synopt:{cmd:e(T3)}}scaled-and-shifted test statistic; not posted, nor {cmd:e(p_T3)}, for a
+model with a covariate whose fit did not converge{p_end}
 {synopt:{cmd:e(df_T3)}}degrees of freedom of T3{p_end}
 {synopt:{cmd:e(p_T3)}}p-value of T3 (missing if df is 0){p_end}
 {synopt:{cmd:e(rmsea_s)}}RMSEA from T3 (missing if df is 0){p_end}
@@ -859,6 +966,10 @@ not evaluated{p_end}
 {synopt:{cmd:e(keepbound)}}{cmd:keepbound} if specified{p_end}
 {synopt:{cmd:e(datasignature)}}the signature of the indicators in the estimation sample, which {helpb difftest} checks{p_end}
 {synopt:{cmd:e(datasignaturevars)}}the variables the signature covers{p_end}
+{synopt:{cmd:e(covariates)}}the binary covariate, for a model conditional on it; such a fit
+posts no {cmd:e(rmsea_s)}, {cmd:e(cfi_s)}, {cmd:e(tli_s)}, {cmd:e(T3_b)}, {cmd:e(df_T3_b)}
+or {cmd:e(bound)}; it does post {cmd:e(gamma_ratio)}, {cmd:e(gamma_ratio_raw)},
+{cmd:e(gamma_rank)} and {cmd:e(bread_ratio)}{p_end}
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Matrices}{p_end}
@@ -866,7 +977,8 @@ not evaluated{p_end}
 loadings, regressions, factor (co)variances; a fixed parameter carries its
 value{p_end}
 {synopt:{cmd:e(V)}}variance-covariance matrix of the estimates, exactly zero
-in fixed rows and columns{p_end}
+in fixed rows and columns; not posted for a model with a covariate whose fit did not
+converge{p_end}
 {synopt:{cmd:e(Cns)}}one row per fixed parameter, selecting that column at its
 value (posted only when some parameter is fixed){p_end}
 {synopt:{cmd:e(bound)}}1 x P, one column per polychoric pair; 1 for a pair
@@ -951,3 +1063,57 @@ generated from; equal to {cmd:e(canon)} for
 variable in the estimation sample, which {helpb difftest} checks{p_end}
 {synopt:{cmd:e(datasignaturevars)}}the indicators and the group variable{p_end}
 {p2colreset}{...}
+
+
+{marker references}{...}
+{title:References}
+
+{p 4 8 2}
+Asparouhov, T., and B. Muthén. 2006. Robust chi square difference testing with
+mean and variance adjusted test statistics. Mplus Web Notes: No. 10.
+{p_end}
+
+{p 4 8 2}
+Asparouhov, T., and B. Muthén. 2010. Simple second order chi-square correction.
+Mplus technical note, May 3, 2010.
+{browse "https://www.statmodel.com/download/WLSMV_new_chi21.pdf"}.
+{p_end}
+
+{p 4 8 2}
+Muthén, B. 1984. A general structural equation model with dichotomous, ordered
+categorical, and continuous latent variable indicators. {it:Psychometrika} 49: 115{c -}132.
+{p_end}
+
+{p 4 8 2}
+Muthén, B., S. H. C. du Toit, and D. Spisic. 1997. Robust inference using
+weighted least squares and quadratic estimating equations in latent variable
+modeling with categorical and continuous outcomes. Unpublished manuscript.
+{p_end}
+
+
+{marker author}{...}
+{title:Author}
+
+{p 4 4 2}
+Erik Ruzek{break}
+ORCID: {browse "https://orcid.org/0000-0002-0931-1951"}{break}
+Source and issues: {browse "https://github.com/bbachilles/dwlsmv"}
+{p_end}
+
+
+{marker acknowledgments}{...}
+{title:Acknowledgments}
+
+{p 4 4 2}
+Development of {cmd:dwlsmv} was assisted by Claude Code (Anthropic), predominantly
+using Claude Opus models. The author reviewed and tested all code and is responsible
+for any errors.
+{p_end}
+
+
+{marker alsosee}{...}
+{title:Also see}
+
+{p 4 13 2}
+Help:  {manhelp sem SEM}, {manhelp gsem SEM}, {manhelp nlcom R}, {helpb difftest}
+{p_end}

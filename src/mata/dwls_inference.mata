@@ -44,7 +44,14 @@
 *! with N the total (MG6; e(V) = ACOV / (N - G) is Module 11's), and the traces
 *! of MG4. G = 1 passes Gamma itself, so nothing changes there.
 *!
-*! Load order: dwlsmv_types, dwlsmv_acov, dwlsmv_traces, dwlsmv_scaleshift.
+*! CONDITIONAL MODE (one 0/1 covariate, one group; 2026-11-13). D = T + p + P counts the slope rows,
+*! so D_stat = D - npar, ACOV, the traces and T3 are computed by the same calls from the Hessian-form
+*! Gamma; acov is still on the sqrt(N) scale and e(V) = ACOV / (N - 1) is Module 11's (@sec-condx-full
+*! C4). Several groups with a covariate, and several covariates, are refused at rc 3498 by
+*! dwlsmv_cx1_fit_check(). No baseline or fit index is computed here in any mode.
+*!
+*! Load order: dwlsmv_types, dwlsmv_statmap_q, dwlsmv_s2_guard, dwlsmv_cx1_fit_check, dwlsmv_acov,
+*! dwlsmv_traces, dwlsmv_scaleshift.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -87,6 +94,11 @@ void dwls_inference(struct dwlsmv_fit scalar f)
     real matrix A, Om
     real rowvector tr, ab
     real scalar T3, D, g
+
+    // A fit can be assembled by hand, so the stacking guard is not enough. One group
+    // with one 0/1 covariate is accepted (spec 5.1); several groups with a covariate
+    // and several covariates are refused here.
+    (void) dwlsmv_cx1_fit_check(f.stage1, "dwls_inference")
 
     if (length(f.stage1) < 1) {
         _error("dwls_inference: the fit carries no Stage 1 result")

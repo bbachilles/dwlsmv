@@ -43,19 +43,32 @@ void dwlsmv_id_parse(string colvector lines,
                      real colvector erow,
                      real colvector ecol,
                      real colvector efree,
-                     real colvector eval)
+                     real colvector eval,
+                     | real colvector lno)
 {
     string rowvector w
     string scalar d, st
-    real colvector mkind
+    real colvector mkind, lnn
     real matrix Rch
     string scalar cyc
-    real scalar nl, k, i, j, r, c, a, b
+    real scalar nl, k, i, j, r, c, a, b, q
     real scalar nfac, hit, ptc, defval, isfree, val
 
     // =====================================================================
     // Pass 1 -- declarations. Position in these lists IS the matrix index.
     // =====================================================================
+    // Line numbers for messages: the caller's (original numbers in the text), else the
+    // position in lines.
+    if (args() >= 12) {
+        lnn = lno
+    }
+    else {
+        lnn = J(rows(lines), 1, .)
+        for (q = 1; q <= rows(lines); q++) {
+            lnn[q] = q
+        }
+    }
+
     fac = J(0, 1, "")
     ind = J(0, 1, "")
 
@@ -67,7 +80,7 @@ void dwlsmv_id_parse(string colvector lines,
             continue
         }
         if (cols(w) < 2) {
-            errprintf("dwls_identify: line %f: '%s' declares no names.\n", nl, d)
+            errprintf("dwls_identify: line %f: '%s' declares no names.\n", lnn[nl], d)
             _error("dwls_identify: a declaration names nothing")
         }
 
@@ -81,13 +94,13 @@ void dwlsmv_id_parse(string colvector lines,
         // true, and the grammar is written that way: 'factor <F> [<F> ...]'
         // takes the whole list.
         if (d == "factor" & rows(fac) > 0) {
-            errprintf("dwls_identify: a second 'factor' directive on line %f.\n", nl)
+            errprintf("dwls_identify: a second 'factor' directive on line %f.\n", lnn[nl])
             errprintf("Declare every factor on one line: its order fixes B's and Psi's indices,\n")
             errprintf("so two lines would make the order of the lines matter.\n")
             _error("dwls_identify: more than one factor directive")
         }
         if (d == "ind" & rows(ind) > 0) {
-            errprintf("dwls_identify: a second 'ind' directive on line %f.\n", nl)
+            errprintf("dwls_identify: a second 'ind' directive on line %f.\n", lnn[nl])
             errprintf("Declare every indicator on one line: its order is the observed-variable\n")
             errprintf("order behind the Section 4.2 index map.\n")
             _error("dwls_identify: more than one ind directive")
@@ -156,7 +169,7 @@ void dwlsmv_id_parse(string colvector lines,
             }
             if (cols(w) < 3) {
                 errprintf("dwls_identify: group %f, line %f: '%s' needs a name then 'free' or 'fixed'.\n",
-                          g, nl, d)
+                          g, lnn[nl], d)
                 _error("dwls_identify: a parameter directive is incomplete")
             }
             if (cols(w) > 4) {
@@ -254,7 +267,7 @@ void dwlsmv_id_parse(string colvector lines,
             }
             else {
                 errprintf("dwls_identify: line %f: '%s' is not a directive of the canonical form.\n",
-                          nl, d)
+                          lnn[nl], d)
                 errprintf("Accepted: factor, ind, lambda, beta, psi, metric.\n")
             }
             _error("dwls_identify: unrecognized directive")
@@ -262,7 +275,7 @@ void dwlsmv_id_parse(string colvector lines,
 
         if (cols(w) < 4) {
             errprintf("dwls_identify: line %f: '%s' needs two names then 'free' or 'fixed'.\n",
-                      nl, d)
+                      lnn[nl], d)
             _error("dwls_identify: a parameter directive is incomplete")
         }
 
@@ -355,7 +368,7 @@ void dwlsmv_id_parse(string colvector lines,
         }
         if (cols(w) < 3) {
             errprintf("dwls_identify: line %f: 'metric' needs 'marker <F> <y>' or 'unitvariance <F>'.\n",
-                      nl)
+                      lnn[nl])
             _error("dwls_identify: a metric directive is incomplete")
         }
 

@@ -58,11 +58,30 @@ real matrix dwlsmv_delta_cols(real colvector vals,
                               struct dwlsmv_statmap scalar map,
                               real colvector sel)
 {
-    real matrix Dm
-    real colvector v, rp, rm
-    real scalar k, i, h
+    real matrix Dm, Lam, B, A, LA
+    real colvector v, rp, rm, Gam, Kap, g, ds
+    real scalar k, i, h, nsl
 
     Dm = J(map.D, rows(sel), 0)
+
+    // Conditional mode: the slope rows are analytic (derivation @sec-condx item 4).
+    // nsl is p*q; only q = 1 is specified.
+    nsl = map.D - map.T - map.P
+    if (nsl != 0) {
+        if (nsl != map.p) {
+            errprintf("dwlsmv_delta_cols: the map has %f slope rows for %f variables; one covariate is specified.\n",
+                      nsl, map.p)
+            _error("dwlsmv_delta_cols: only one covariate is specified")
+        }
+        dwlsmv_cx1_parts(vals, par, map, Lam, B, Gam, Kap)
+        A = luinv(I(rows(B)) - B)
+        if (missing(A)) {
+            errprintf("dwlsmv_delta_cols: (I - B) is singular, so the slopes do not exist.\n")
+            _error("dwlsmv_delta_cols: (I - B) is singular")
+        }
+        g  = A * Gam
+        LA = Lam * A
+    }
 
     for (k = 1; k <= rows(sel); k++) {
         i = sel[k]
@@ -76,6 +95,26 @@ real matrix dwlsmv_delta_cols(real colvector vals,
             continue
         }
 
+        if (nsl != 0) {
+            ds = J(map.p, 1, 0)
+            if (par.ptype[i] == 1) {
+                ds[par.row[i]] = g[par.col[i]]
+            }
+            else if (par.ptype[i] == 3) {
+                ds = LA[., par.row[i]] * g[par.col[i]]
+            }
+            else if (par.ptype[i] == 8) {
+                ds = LA[., par.row[i]]
+            }
+            else if (par.ptype[i] == 9) {
+                ds[par.row[i]] = 1
+            }
+            Dm[dwlsmv_pos_slope(map, 1, 1)::dwlsmv_pos_slope(map, map.p, 1), k] = ds
+            if (par.ptype[i] == 8 | par.ptype[i] == 9) {
+                continue
+            }
+        }
+
         if (map.P == 0) {
             continue
         }
@@ -87,7 +126,7 @@ real matrix dwlsmv_delta_cols(real colvector vals,
         v[i] = vals[i] - h
         rm   = dwlsmv_corrvec(v, par, map)
 
-        Dm[(map.T + 1)::map.D, k] = (rp - rm) / (2 * h)
+        Dm[(map.D - map.P + 1)::map.D, k] = (rp - rm) / (2 * h)
     }
 
     return(Dm)

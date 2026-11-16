@@ -22,8 +22,9 @@
 *!   4  Module 11's refusals exit rc 198 (D8a): a non-unit loading and a
 *!      non-unit variance as scale (D3), a second-order factor (D3), a
 *!      residual covariance among indicators, a constraint tying two
-*!      loadings, a fixed indicator residual variance, an observed exogenous
-*!      variable, a path between observed variables, and more than one group
+*!      loadings, a fixed indicator residual variance, more than one observed
+*!      exogenous variable (one binary covariate translates, test_translate_cx.do),
+*!      a path between observed variables, and more than one group
 *!      (4.9, group(g), added 2026-10-05). 4.9 also requires Module 11's own
 *!      message: with the earlier continuous dummy, sem refused first ("not
 *!      nonnegative integer valued", also rc 198), so rc alone could not tell.
@@ -160,7 +161,7 @@ local r5 `"(F1 -> y1 y2@a y3@a) (F2 -> y4 y5 y6)"'
 local o5 ""
 local r6 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6)"'
 local o6 "var(e.y1@.5)"
-local r7 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (F1 <- x)"'
+local r7 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (F1 <- x) (F2 <- g)"'
 local o7 ""
 local r8 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (y6 <- y1)"'
 local o8 ""
@@ -170,7 +171,7 @@ local w3 "second-order factor (D3)"
 local w4 "residual covariance among indicators (v1b)"
 local w5 "a constraint tying two loadings"
 local w6 "a fixed indicator residual variance"
-local w7 "an observed exogenous variable"
+local w7 "more than one observed exogenous variable"
 local w8 "a path between observed variables"
 local r9 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6)"'
 local o9 "group(g)"

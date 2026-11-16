@@ -1,0 +1,21 @@
+{
+    "generated_utc": "2026-11-10 21:01:09 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic; each dataset's seed is in its own generator's manifest)",
+    "files": {
+      "fixtures/data/condx_A.csv": "82231c69bfb14c7db3873e5d41a07deb",
+      "fixtures/expected/condx_ref_A_s.csv": "4d76379681f7b89ffec5a69b37c53145",
+      "fixtures/expected/condx_ref_A_gamma.csv": "c2dfdbf70506effc9327bedb6c7b0581",
+      "fixtures/expected/condx_ref_A_blocks.csv": "1aa6b7a4907a8f4a0c3d716febd94489",
+      "fixtures/expected/condx_ref_A_theta.csv": "769349a1c19415ac4f9f83f301113f35",
+      "fixtures/expected/condx_ref_A_scalars.csv": "3248edac860a8fa79b1af9f41cbb3871",
+      "fixtures/data/condx_D.csv": "55c1b1bf9a692b1a6c3af04ae73aad12",
+      "fixtures/expected/condx_ref_D_s.csv": "7e68d53d662dd70502dab3d6c3fa330f",
+      "fixtures/expected/condx_ref_D_gamma.csv": "6dbbc8dc1decf0a29c22e62caeb683ac",
+      "fixtures/expected/condx_ref_D_blocks.csv": "2112eace59543b2aeec997cd994a6308",
+      "fixtures/expected/condx_ref_D_theta.csv": "0715f768e6e36e54c2c596ad1a8091f8",
+      "fixtures/expected/condx_ref_D_scalars.csv": "cdb73e1ab432ea7d49f6220070f989b0"
+    },
+    "packages": ["none (base R only)", "R version 4.6.0 (2026-04-24 ucrt)", "qmd sha256 spec/derivations/dwlsmv-derivations.qmd eadc582ef3d9f2af37d5fea7b464dd02dc9ca268746e4275184c650398601991", "qmd chunks run whole, in order: cx-setup, cx-stage1, cx-model, cxn-psi, cxh-forms", "run-script md5 docs/notes/condx-sim/condx_sim_run.R fd1de1b177c27876b9ce48a15680f61b", "run-script sha256 docs/notes/condx-sim/condx_sim_run.R ebc26cb8fc936868d5df2cb99890a5f3bfc282088a767cfda2673de03f36a2f9", "run-script definitions used: GN_TOL, GN_MAX, cxs_gn, cxs_start", "common md5 fixtures/generate/00_common.R 6efb6a2c94325067252200a0d9603010 (write_csv_lf, write_manifest, labels; its Phi2/phi2 removed)", "pipeline: condx_sim_run.R cxs_rep with psi = cxh_psi (analytic Hessian-form blocks) in place of cx_psi_n(, 'hessian')", "Gamma-hat: cx_gamma, N-divided (w = n_k / N); W_D = diag(1 / diag(Gamma-hat)); SE and T divisor N - 1", "Gauss-Newton: cxs_gn, start cxs_start(s), stop max|step| < 1e-10, at most 200 iterations", "Phi2: the .qmd's integrate() form, rel.tol 1e-12; phi2: cx_phi2 (plain form)", "univariate P: Stage 1 and the score g use Phi(up) - Phi(lo) (cx_uni_score); H_j uses cxh_P's upper-tail branch (prereg [V4])", "pair corner order in cxh_pair_d: (a1,b1), (a1,b2), (a2,b1), (a2,b2) (prereg phi2 clause)", "A: N 1500, 36 patterns, GN 7 iterations, last step 6.207e-11, next step 2.473e-12, item score 2.535e-16, pair step 1.237e-16, T3 1.398006, 0.4 s", "D: N 1500, 36 patterns, GN 14 iterations, last step 3.536e-11, next step 7.219e-12, item score 6.349e-16, pair step 8.769e-16, T3 36.661961, 0.2 s"]
+  }

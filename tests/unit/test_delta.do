@@ -109,11 +109,17 @@ foreach f in tests/dwlsmv_assert.mata               ///
              src/mata/dwlsmv_mg_sigma.mata          ///
              src/mata/dwlsmv_mg_dcols.mata          ///
              src/mata/dwlsmv_id_parse.mata          ///
+             src/mata/dwlsmv_id_cx.mata            ///
              src/mata/dwlsmv_id_rank.mata           ///
              src/mata/dwlsmv_id_tie.mata            ///
              src/mata/dwlsmv_id_groups.mata         ///
              src/mata/dwlsmv_id_opname.mata         ///
              src/mata/dwlsmv_statmap_build.mata     ///
+             src/mata/dwlsmv_statmap_q.mata         ///
+             src/mata/dwlsmv_s2_guard.mata          ///
+             src/mata/dwlsmv_pos_slope.mata         ///
+             src/mata/dwlsmv_cx1_check.mata         ///
+             src/mata/dwlsmv_cx1_fit_check.mata     ///
              src/mata/dwlsmv_pos_tau.mata           ///
              src/mata/dwlsmv_pos_rho.mata           ///
              src/mata/dwlsmv_nfac.mata              ///

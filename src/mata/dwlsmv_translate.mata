@@ -20,8 +20,10 @@
 *! What sem accepts and v1a does not is refused here at rc 198 (D8a), with the
 *! reason through errprintf(): a constraint tying several coefficients;
 *! covariances among indicator residuals (v1b); a fixed indicator residual
-*! variance (Theta is derived); a constrained intercept; observed exogenous
-*! variables or a path between observed variables; more than one group; and,
+*! variance (Theta is derived); a constrained intercept; more than one observed
+*! exogenous variable (one binary covariate is read as covariate, gamma and kappa
+*! lines, dwlsmv_tr_cxterm); a path between observed variables; more than one
+*! group; and,
 *! on the final pass, D3's non-unit scale fixes and factors with no observed
 *! indicator. A factor with no constraint at all (sem leaves it unanchored,
 *! D3's random-intercept case) is NOT refused here: Module 3's rc 3498 says so.
@@ -92,14 +94,22 @@ string colvector dwlsmv_translate(real scalar final)
 string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvector fac,
     string colvector ind, string colvector oxv, real scalar final)
 {
-    string colvector out
+    string colvector out, head
     real colvector fixed, fixval, isvarfix, haslam, hasmet, fixnon1
-    real scalar j, r, nz, cj, f, fa, fz
-    string scalar eq, co, a, z, t
+    real scalar j, r, nz, cj, f, fa, fz, kind
+    string scalar eq, co, a, z, t, cvn
 
-    if (rows(oxv) > 0) {
-        dwlsmv_tr_refuse("dwlsmv: observed exogenous variables (" + invtokens(oxv') +
-            ") are not supported: dwlsmv fits latent factors measured by ordinal indicators.")
+    // DECIDED P1 (owner, 2026-11-14, docs/decisions.md "Stage 2 decisions package"): exactly one observed exogenous variable is
+    // accepted, as the covariate of a conditional fit (one binary 0/1 x, one group; spec 4.8,
+    // Conditional covariates). Two or more are refused here, explicitly and with their own message (not as a side
+    // effect of another check). dwlsmv_translate_g refuses any (a covariate with group() is not in the owner's package).
+    cvn = ""
+    if (rows(oxv) > 1) {
+        dwlsmv_tr_refuse("dwlsmv: more than one observed exogenous variable (" + invtokens(oxv') +
+            "). A model can have one binary 0/1 covariate in this version; the others are not available.")
+    }
+    if (rows(oxv) == 1) {
+        cvn = oxv[1]
     }
     if (rows(fac) == 0) {
         dwlsmv_tr_refuse("dwlsmv: the model has no latent factor.")
@@ -159,6 +169,13 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
             if (dwlsmv_tr_pos(ind, eq)) {
                 r = dwlsmv_tr_pos(fac, co)
                 if (r == 0) {
+                    // (y <- x): the covariate's direct effect on the indicator's latent response.
+                    // P3 (@c semantics), approved by the owner on 2026-11-14: a value fixed with @ is written literally (fixed 0 too).
+                    if (co == cvn) {
+                        out = out \ ("kappa " + eq + " " + co +
+                            (fixed[j] ? " fixed " + dwlsmv_tr_num(fixval[j]) : " free"))
+                        continue
+                    }
                     dwlsmv_tr_refuse("dwlsmv: a path between observed variables (" + eq +
                         " <- " + co + ") is not supported by dwlsmv.")
                 }
@@ -178,6 +195,14 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
                 }
             }
             else {
+                // (F <- x): the covariate's effect on the factor. P3 as for kappa: semantics approved by the owner on 2026-11-14.
+                if (co == cvn) {
+                    if (dwlsmv_tr_pos(fac, eq)) {
+                        out = out \ ("gamma " + eq + " " + co +
+                            (fixed[j] ? " fixed " + dwlsmv_tr_num(fixval[j]) : " free"))
+                        continue
+                    }
+                }
                 if (!dwlsmv_tr_pos(fac, eq) | !dwlsmv_tr_pos(fac, co)) {
                     dwlsmv_tr_refuse("dwlsmv: a path involving an observed variable (" + eq +
                         " <- " + co + ") is not supported by dwlsmv.")
@@ -192,6 +217,44 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
             continue
         }
         // equation "/": variances and covariances
+        kind = dwlsmv_tr_cxterm(co, cvn)
+        if (kind == 1 | kind == 2) {
+            // var(x) and mean(x) listed unconstrained: x is data in a conditional fit, so they
+            // are skipped. A constrained one is the user asking for a parameter that is not one.
+            if (fixed[j]) {
+                dwlsmv_tr_refuse("dwlsmv: the variance or mean of the covariate " + cvn + " is constrained (" +
+                    co + "). In a conditional fit x is data; its variance and mean are not parameters.")
+            }
+            continue
+        }
+        if (kind == 3) {
+            // DECIDED P2 (owner, 2026-11-14: the refusal is retained): sem lets an observed exogenous x covary
+            // with every exogenous factor by default. In dwlsmv's conditional model that
+            // covariance is not a parameter: the factor either depends on x (gamma) or does not.
+            // Only a covariance the user fixed at zero is accepted (and then gives no gamma row);
+            // a free one is refused with the two ways out. A covariance directive is not reinterpreted as a regression path.
+            if (fixed[j]) {
+                if (fixval[j] == 0) {
+                    continue
+                }
+            }
+            t = substr(co, 5, strlen(co) - 5)
+            if (substr(t, 1, strlen(cvn) + 1) == cvn + ",") {
+                a = substr(t, strlen(cvn) + 2, .)
+            }
+            else {
+                a = substr(t, 1, strlen(t) - strlen(cvn) - 1)
+            }
+            if (fixed[j]) {
+                errprintf("dwlsmv: the covariance of the covariate %s with %s is fixed at a value other than 0.\n", cvn, a)
+                errprintf("Only a covariance fixed at zero is accepted: cov(%s*%s@0).\n", cvn, a)
+                exit(198)
+            }
+            errprintf("dwlsmv: sem lets the covariate %s correlate with %s (%s), and in a conditional\n", cvn, a, co)
+            errprintf("fit that covariance is not a parameter. To let %s depend on %s, write the path (%s <- %s).\n", a, cvn, a, cvn)
+            errprintf("To say it does not, fix the covariance at zero with the sem option cov(%s*%s@0).\n", cvn, a)
+            exit(198)
+        }
         if (substr(co, 1, 6) == "var(e.") {
             a = substr(co, 7, strlen(co) - 7)
             if (dwlsmv_tr_pos(ind, a)) {
@@ -264,7 +327,11 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
         }
     }
 
-    return(("factor " + invtokens(fac')) \ ("ind " + invtokens(ind')) \ sort(out, 1))
+    head = ("factor " + invtokens(fac')) \ ("ind " + invtokens(ind'))
+    if (cvn != "") {
+        head = head \ ("covariate " + cvn)
+    }
+    return(head \ sort(out, 1))
 }
 
 end

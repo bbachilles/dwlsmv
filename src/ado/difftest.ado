@@ -1,4 +1,4 @@
-*! version 0.3.0  difftest -- scaled-and-shifted difference test between nested dwlsmv models
+*! version 0.4.0  difftest -- scaled-and-shifted difference test between nested dwlsmv models
 *!
 *!   difftest name1 [name2 ...]
 *!
@@ -82,6 +82,13 @@ program _difftest_run, rclass
         if "`e(efa)'" != "" {
             display as error "difftest: `nm' is an EFA fit (efa(`e(efa)'))."
             display as error "Difference tests with EFA models are not available in this version."
+            exit 3498
+        }
+        * a fit with a covariate (decision 2026-11-13 (3); owner 2026-11-14): refused pending finite-sample size evidence for the
+        * difference test with a covariate, not because it is undefined. rc 3498, difftest's own convention
+        if "`e(covariates)'" != "" {
+            display as error "difftest: `nm' is a fit with a covariate (`e(covariates)')."
+            display as error "Difference tests with a covariate are not available in this version."
             exit 3498
         }
         * check 1: the installed release

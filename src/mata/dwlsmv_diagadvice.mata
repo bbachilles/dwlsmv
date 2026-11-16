@@ -9,7 +9,23 @@
 *!     string scalar dwlsmv_diagadvice(real matrix G, real matrix C,
 *!                                     real matrix B, string colvector ind,
 *!                                     string colvector slab,
-*!                                     string colvector pname)
+*!                                     string colvector pname
+*!                                     | real matrix Cg, string scalar xname)
+*!
+*! CONDITIONAL FIT (decided 2026-11-15, the owner's; one binary covariate). Cg is
+*! dwlsmv_countcells()'s table and xname the covariate's name; both or Cg alone (xname
+*! then reads "x"). Given Cg, the notes change in four ways and nothing else:
+*!   - the pattern note counts "(the set of responses together with the value of x)" and
+*!     says "thresholds, slopes and correlations" (a pattern is a row of (y, x), and
+*!     the slopes are statistics);
+*!   - the centring note says "estimate" where it says "correlation" (an item row can
+*!     name a threshold or a slope; slab carries the label, "y1~x" for a slope);
+*!   - the pooled category counts are headed as pooled over both groups, and a block of
+*!     counts WITHIN each value of x follows: the two group sizes, the smallest boundary
+*!     and interior cell, and one sentence on what a slope's standard error rests on;
+*!   - nothing is said about threshold aliasing, whose row is not evaluated (flag `.`).
+*! G, C and B keep their shapes; a caller with no bread to report passes B as
+*! (J(4, 2, .), J(4, 2, 0)), four rows not evaluated.
 *!
 *! G, C and B are dwlsmv_gammadiag()'s 7 x 4, dwlsmv_countdiag()'s 2 x 4 and
 *! dwlsmv_breaddiag()'s 4 x 4. ind names the indicators in declaration order,
@@ -75,12 +91,22 @@ string scalar dwlsmv_diag_lab(string colvector L, real scalar k, string scalar w
 
 string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
                                 string colvector ind, string colvector slab,
-                                string colvector pname)
+                                string colvector pname,
+                                | real matrix Cg, string scalar xname)
 {
-    string scalar nl, msg, gnote, bnote, where
-    real scalar r
+    string scalar nl, msg, gnote, bnote, where, xn, what
+    real scalar r, cx, Kj, bmin, imin, bi, bc, bg, ii, ic, ig
 
     nl = char(10)
+    cx = (args() >= 7)
+    xn = "x"
+    if (args() >= 8) {
+        xn = xname
+    }
+    what = "correlation"
+    if (cx) {
+        what = "estimate"
+    }
     if (rows(G) != 7 | cols(G) != 4 | rows(C) != 2 | cols(C) != 4 |
         rows(B) != 4 | cols(B) != 4) {
         errprintf("dwlsmv_diagadvice: expected G 7 x 4, C 2 x 4, B 4 x 4; got %f x %f, %f x %f, %f x %f.\n",
@@ -105,6 +131,23 @@ string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
     if (C[2, 3] != 0 & (C[2, 4] < 2 | C[2, 4] != floor(C[2, 4]))) {
         _error("dwlsmv_diagadvice: C's interior row names an invalid category position")
     }
+    // the per-group counts: dwlsmv_countcells()'s table, every item inside its labels
+    if (cx) {
+        if (cols(Cg) != 4 | rows(Cg) < 6) {
+            errprintf("dwlsmv_diagadvice: Cg is %f x %f; expected the 4-column table of dwlsmv_countcells().\n",
+                      rows(Cg), cols(Cg))
+            _error("dwlsmv_diagadvice: Cg is not a dwlsmv_countcells() table")
+        }
+        if (missing(Cg) > 0 | Cg[1, 4] < 1 | Cg[2, 4] < 1) {
+            _error("dwlsmv_diagadvice: Cg has missing values or an empty group")
+        }
+        for (r = 3; r <= rows(Cg); r++) {
+            (void) dwlsmv_diag_lab(ind, Cg[r, 1], "indicator")
+            if (Cg[r, 2] < 1 | Cg[r, 2] != floor(Cg[r, 2]) | (Cg[r, 3] != 0 & Cg[r, 3] != 1)) {
+                _error("dwlsmv_diagadvice: Cg names an invalid category position or group")
+            }
+        }
+    }
 
     // Wording 2026-10-07 (the user's): a technical term is kept where it
     // helps and explained at once. The notes on an exactly singular Gamma
@@ -127,9 +170,17 @@ string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
                 "    Please report this result to the package developers." + nl
     }
     if (G[3, 1] == 1) {
-        gnote = gnote + "    Too few distinct response patterns: " + strofreal(G[3, 2]) +
-                " patterns for " + strofreal(G[3, 3]) + " thresholds and correlations." + nl +
-                "    Gamma is then exactly singular, so standard errors and the WLSMV test rest" + nl +
+        if (cx) {
+            gnote = gnote + "    Too few distinct response patterns: " + strofreal(G[3, 2]) +
+                    " patterns (a pattern is the set of" + nl +
+                    "    responses together with the value of " + xn + ") for " + strofreal(G[3, 3]) +
+                    " thresholds, slopes and correlations." + nl
+        }
+        else {
+            gnote = gnote + "    Too few distinct response patterns: " + strofreal(G[3, 2]) +
+                    " patterns for " + strofreal(G[3, 3]) + " thresholds and correlations." + nl
+        }
+        gnote = gnote + "    Gamma is then exactly singular, so standard errors and the WLSMV test rest" + nl +
                 "    on less information than the model uses." + nl
     }
     if (G[4, 1] == 1) {
@@ -140,7 +191,7 @@ string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
                 "    errors and the WLSMV test rest on less information than the model uses." + nl
     }
     if (G[5, 1] == 1) {
-        gnote = gnote + "    The correlation " + slab[G[5, 3]] + " was not estimated precisely enough (its" + nl +
+        gnote = gnote + "    The " + what + " " + slab[G[5, 3]] + " was not estimated precisely enough (its" + nl +
                 "    estimating equation was not solved to tolerance: " + dwlsmv_diag_num(G[5, 2]) + ")." + nl +
                 "    Gamma, the standard errors and the WLSMV test can be wrong even though" + nl +
                 "    nothing else looks unusual." + nl
@@ -181,7 +232,12 @@ string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
     // Descriptive: no threshold, no warning, not an admissibility criterion
     // (minok is open). The singular-value ratios are no longer printed; Module
     // 11 stores them in e(). "Not evaluated" is read from the FLAG, `.`.
-    msg = msg + "Category counts (the fewest observations in any one category):" + nl
+    if (cx) {
+        msg = msg + "Category counts (the fewest observations in any one category, both groups together):" + nl
+    }
+    else {
+        msg = msg + "Category counts (the fewest observations in any one category):" + nl
+    }
     if (C[1, 1] == .) {
         msg = msg + "    lowest or highest category: not evaluated" + nl
     }
@@ -198,6 +254,53 @@ string scalar dwlsmv_diagadvice(real matrix G, real matrix C, real matrix B,
     else {
         msg = msg + "    middle category:            " + strofreal(C[2, 2]) + " (" + ind[C[2, 3]] +
                 ", category " + strofreal(C[2, 4]) + ")" + nl
+    }
+
+    // ---- conditional fit: the counts within each value of x (2026-11-15, the owner's) ----
+    // Beside the pooled rows, never in place of them. Descriptive, like the pooled block: no
+    // threshold, no warning. The last sentence says what a slope's standard error rests on.
+    if (cx) {
+        msg = msg + "Category counts within each value of " + xn +
+                " (the fewest observations in any one category and group):" + nl
+        msg = msg + "    group sizes:                " + xn + " = 0: " + strofreal(Cg[1, 4]) + ", " +
+                xn + " = 1: " + strofreal(Cg[2, 4]) + nl
+        bmin = .
+        imin = .
+        bi = 0
+        bc = 0
+        bg = 0
+        ii = 0
+        ic = 0
+        ig = 0
+        for (r = 3; r <= rows(Cg); r++) {
+            Kj = max(select(Cg[., 2], Cg[., 1] :== Cg[r, 1]))
+            if (Cg[r, 2] == 1 | Cg[r, 2] == Kj) {
+                if (bmin == . | Cg[r, 4] < bmin) {
+                    bmin = Cg[r, 4]
+                    bi = Cg[r, 1]
+                    bc = Cg[r, 2]
+                    bg = Cg[r, 3]
+                }
+            }
+            else if (imin == . | Cg[r, 4] < imin) {
+                imin = Cg[r, 4]
+                ii = Cg[r, 1]
+                ic = Cg[r, 2]
+                ig = Cg[r, 3]
+            }
+        }
+        msg = msg + "    lowest or highest category: " + strofreal(bmin) + " (" + ind[bi] + ", " +
+                (bc == 1 ? "lowest" : "highest") + ", " + xn + " = " + strofreal(bg) + ")" + nl
+        if (imin == .) {
+            msg = msg + "    middle category:            none (every item is binary)" + nl
+        }
+        else {
+            msg = msg + "    middle category:            " + strofreal(imin) + " (" + ind[ii] +
+                    ", category " + strofreal(ic) + ", " + xn + " = " + strofreal(ig) + ")" + nl
+        }
+        msg = msg + "    The standard error of a slope (the effect of " + xn + " on an item) depends on the" + nl +
+                "    counts within each value of " + xn + ". A category with many observations overall" + nl +
+                "    can have few in one group, which the pooled counts above do not show." + nl
     }
     return(msg)
 }

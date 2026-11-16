@@ -43,8 +43,13 @@
 *! leaves a missing entry that travels silently into the DWLS objective and
 *! emerges as a non-converging optimizer with no diagnosis attached.
 *!
-*! Load order: dwlsmv_types, dwlsmv_pos_tau, dwlsmv_pos_rho, dwlsmv_nfac,
-*! dwlsmv_parvals, dwlsmv_matrices, dwlsmv_rystar, dwlsmv_corrvec.
+*! Conditional mode (one 0/1 covariate, one group): the slope rows b = Lambda (I-B)^-1 Gamma_x + kappa
+*! sit between the thresholds and the correlations (spec 4.2, derivation @sec-condx). Several groups with
+*! a covariate, and several covariates, are refused at rc 3498.
+*!
+*! Load order: dwlsmv_types, dwlsmv_statmap_q, dwlsmv_s2_guard, dwlsmv_pos_tau, dwlsmv_pos_rho,
+*! dwlsmv_pos_slope, dwlsmv_nfac, dwlsmv_parvals, dwlsmv_matrices, dwlsmv_rystar, dwlsmv_corrvec,
+*! dwlsmv_cx1_check.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -59,8 +64,11 @@ real colvector dwls_model(real colvector theta,
 {
     struct dwlsmv_statmap scalar map
     struct dwlsmv_parmap  scalar sub
-    real colvector vals, sigma, idx
-    real scalar i, g
+    real colvector vals, sigma, idx, bs
+    real scalar i, g, q
+
+    // One covariate at one group is accepted; several groups with a covariate stay refused (spec 5.1).
+    q = dwlsmv_cx1_check(par, maps, "dwls_model")
 
     // O14: one map per group, a single group a 1-vector.
     if (length(maps) < 1) {
@@ -84,7 +92,7 @@ real colvector dwls_model(real colvector theta,
     // G = 1: the single-group path, unchanged. It knows no nu, omega or alpha.
     map = maps[1]
     for (i = 1; i <= par.nall; i++) {
-        if (par.ptype[i] >= 5) {
+        if (par.ptype[i] >= 5 & par.ptype[i] != 8 & par.ptype[i] != 9) {
             errprintf("dwls_model: row %f (%s) is a nu, omega or alpha row, which exists only with more than one group.\n",
                       i, par.name[i])
             _error("dwls_model: nu, omega and alpha need more than one group")
@@ -100,8 +108,15 @@ real colvector dwls_model(real colvector theta,
         }
     }
 
+    if (q == 1) {
+        bs = dwlsmv_cx1_slopes(vals, par, map)
+        for (i = 1; i <= map.p; i++) {
+            sigma[dwlsmv_pos_slope(map, i, 1)] = bs[i]
+        }
+    }
+
     if (map.P > 0) {
-        sigma[(map.T + 1)::map.D] = dwlsmv_corrvec(vals, par, map)
+        sigma[(map.D - map.P + 1)::map.D] = dwlsmv_corrvec(vals, par, map)
     }
 
     if (missing(sigma)) {

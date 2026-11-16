@@ -54,6 +54,11 @@ string colvector dwlsmv_translate_g(real scalar final, string scalar gname,
     ind = tokens(st_global("e(oyvars)"))'
     oxv = tokens(st_global("e(oxvars)"))'
     G   = cols(gvals)
+    // PROVISIONAL P1: a covariate with groups or invariance is not specified (spec 4.8)
+    if (rows(oxv) > 0) {
+        dwlsmv_tr_refuse("dwlsmv: an observed exogenous variable (" + invtokens(oxv') +
+            ") is not available with group() in this version: a covariate and several groups cannot be combined.")
+    }
 
     // group of every column, tag removed
     rx1 = "^([0-9]+)(bn)?\." + gname + "(#c\.(.+))?$"

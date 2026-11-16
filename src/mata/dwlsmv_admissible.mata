@@ -11,6 +11,12 @@
 *! correlations outside [-1, 1], a singular (I - B) and disordered thresholds,
 *! and SURFACE them as diagnostics rather than silently accepting the solution.
 *!
+*! CONDITIONAL MODE (one 0/1 covariate, one group). Tested by tests/unit/test_condx_admissible.do.
+*! The six conditions are on the conditional quantities (derivation @sec-condx-full C6): Var(y*|x) = 1, so
+*! Theta_jj = 1 - (Lambda Phi Lambda')_jj with Phi the conditional (residual) factor covariance, and gamma
+*! and kappa (ptype 8, 9) enter none of them. dwlsmv_matrices() and the threshold loop below read ptypes
+*! 1 to 4 only, so those rows are ignored by construction. dwlsmv_cx1_check() replaces the guard.
+*!
 *! A FUNCTION, NOT A FIELD. Decided 2026-09-23: every condition is a function
 *! of (theta, par, map), so storing the verdict on struct dwlsmv_fit would be a
 *! second copy of facts the fit already carries -- the rule dwlsmv_nfac() and
@@ -63,7 +69,7 @@
 *! v1 scope, not checked for stability.
 *!
 *! Load order: dwlsmv_types, dwlsmv_pos_tau, dwlsmv_nfac, dwlsmv_parvals,
-*! dwlsmv_matrices, dwlsmv_rystar.
+*! dwlsmv_matrices, dwlsmv_rystar, dwlsmv_cx1_check (with dwlsmv_statmap_q and dwlsmv_s2_guard).
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -79,6 +85,11 @@ real matrix dwlsmv_admissible(real colvector theta,
     real matrix A, Lam, Psi, B, Ai, Phi, C, R
     real colvector vals, t, th
     real scalar nf, i, j, c, d, w, wi, wj, r
+
+    // One group with one 0/1 covariate is accepted (spec 5.1, @sec-condx-full C6); several covariates
+    // and a gamma or kappa row on an unconditional map are refused at rc 3498. Nothing below reads
+    // the map's correlation rows or the slopes: every condition is a function of theta and the table.
+    (void) dwlsmv_cx1_check(par, map, "dwlsmv_admissible")
 
     A    = J(6, 4, 0)
     vals = dwlsmv_parvals(theta, par)

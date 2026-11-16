@@ -53,6 +53,12 @@
 *! Negation is exact in floating point, so a reflected theta canonicalizes
 *! back to the original bit for bit. test_fit.do check 13 asserts that.
 *!
+*! CONDITIONAL MODE (2026-11-13). The slopes are b = Lambda (I-B)^-1 Gamma_x + K, so reversing
+*! factor f is Lambda -> Lambda D, B -> D B D AND Gamma_x -> D Gamma_x: the gamma rows (ptype 8,
+*! row = factor) of a reversed factor change sign, and a FIXED nonzero gamma on the factor makes
+*! the reflection not a symmetry of the table, as a fixed nonzero loading does. kappa (ptype 9)
+*! never moves: K is not scaled by a factor. A table without gamma rows takes no new branch.
+*!
 *! Load order: dwlsmv_types, dwlsmv_nfac.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
@@ -87,7 +93,8 @@ real colvector dwlsmv_signcanon(real colvector theta,
             if (!((t == 1 & c == f) |
                   (t == 3 & ((r == f) != (c == f))) |
                   (t == 2 & r != c & ((r == f) != (c == f))) |
-                  (t == 7 & r == f))) {
+                  (t == 7 & r == f) |
+                  (t == 8 & r == f))) {
                 continue
             }
             if (!par.free[i] & par.value[i] != 0) {
@@ -131,6 +138,11 @@ real colvector dwlsmv_signcanon(real colvector theta,
             }
         }
         else if (t == 7) {
+            if (flip[r]) {
+                neg[par.fidx[i]] = 1
+            }
+        }
+        else if (t == 8) {
             if (flip[r]) {
                 neg[par.fidx[i]] = 1
             }

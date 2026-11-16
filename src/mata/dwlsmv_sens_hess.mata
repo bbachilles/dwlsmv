@@ -151,6 +151,9 @@ real matrix dwlsmv_sens_hess(real colvector theta,
     real colvector vals, vg, idx, nu, om, al, kap, lam, rws
     real scalar G, g, q, a, b, off, Dtot, col
 
+    // Stage 2 does not take a conditional map yet (spec 5.1).
+    dwlsmv_s2_guard(maps, "dwlsmv_sens_hess")
+
     G = length(maps)
     if (G < 1) {
         _error("dwlsmv_sens_hess: no index map passed")

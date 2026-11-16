@@ -5,6 +5,10 @@
 *! against the tag URL. Written 2026-10-06 from the 2026-10-05 probes (net install
 *! then a fresh session; PLUS set before any Mata call; `net get` for the example
 *! data). Not a suite test: no pass/fail, and the runner ignores it.
+*! 2026-11-15: `net get` takes replace. A throwaway folder left by an earlier run held
+*! example data that differed, and net get refused (rc 602), so the 16.1 check of the
+*! 0.4.0 test build fitted the older copies. Run after the change on StataMP 18 with
+*! differing copies planted in the folder: net_get_rc 0, every rc 0.
 *!
 *! Run in a FRESH session, and set the source first. For a tag vX.Y.Z:
 *!     global DWLSMV_FROM "https://raw.githubusercontent.com/bbachilles/dwlsmv/vX.Y.Z/dist/"
@@ -50,7 +54,7 @@ capture noisily mata: mata which dwlsmv_benign()
 display "NETINST|mata_which_rc|" _rc
 capture noisily findfile ldwlsmv.mlib
 display "NETINST|findfile_mlib_rc|" _rc
-capture noisily net get dwlsmv, from(`"$DWLSMV_FROM"')
+capture noisily net get dwlsmv, from(`"$DWLSMV_FROM"') replace
 display "NETINST|net_get_rc|" _rc
 capture noisily use dwlsmv_example.dta, clear
 display "NETINST|use_example_rc|" _rc

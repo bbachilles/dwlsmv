@@ -86,8 +86,18 @@
 *! the Gauss-Newton 2 Delta' W Delta -- a damped Gauss-Newton. Chosen by
 *! measurement over "d1" with "nr" and with "bfgs": tools/time_fit.do.
 *!
+*! CONDITIONAL MODE (one 0/1 covariate, one group; 2026-11-13). The statistics vector is then
+*! thresholds, p slopes, residual correlations (D = T + p + P), Gamma in Hessian form. Nothing in
+*! the objective changes: W_D = diag(Gamma)^-1 over all D rows, T_raw = (N - 1) F-hat,
+*! D_stat = D - npar with the slopes counted in D (@sec-condx-full C1-C4). dwlsmv_fit_uls() and
+*! dwlsmv_fit_from() ask dwlsmv_fit_stack() to accept one conditional group
+*! (dwlsmv_cx1_fit_check()) and call dwlsmv_cx1_check() for the table against the map; several
+*! groups with a covariate, and several covariates, are refused at rc 3498. Start values are the
+*! table's own (gamma and kappa 0 unless given): nothing reads Stage 1's slopes. The diagnostics
+*! that call dwlsmv_fit_stack() without the flag keep refusing a conditional result.
+*!
 *! Load order: everything dwls_model() and dwls_delta() need, then
-*! dwlsmv_mg_check, dwlsmv_fdwls, dwlsmv_minimize, dwlsmv_signcanon. dwlsmv_fit_w,
+*! dwlsmv_mg_check, dwlsmv_cx1_check, dwlsmv_cx1_fit_check, dwlsmv_fdwls, dwlsmv_minimize, dwlsmv_signcanon. dwlsmv_fit_w,
 *! dwlsmv_fit_stack and
 *! dwlsmv_fit_from are defined above dwls_fit(), in this file.
 *!
@@ -125,10 +135,26 @@ real colvector dwlsmv_fit_w(struct dwlsmv_stage1 scalar st)
 // total. s, w, N and maps are filled by reference.
 void dwlsmv_fit_stack(struct dwlsmv_stage1 vector sts,
                       real colvector s, real colvector w, real scalar N,
-                      struct dwlsmv_statmap vector maps)
+                      struct dwlsmv_statmap vector maps,
+                      | real scalar cxok)
 {
     real colvector wg
-    real scalar G, g
+    real scalar G, g, ok
+
+    // One group with one 0/1 covariate is accepted only when the caller says so
+    // (cxok = 1: dwlsmv_fit_uls() and dwlsmv_fit_from(), spec 5.1); every other
+    // caller, the dwlsmv_sens* diagnostics, still refuses a conditional Stage 1
+    // result. Here, not in dwls_fit(): every fit path stacks through this function.
+    ok = 0
+    if (args() >= 6) {
+        ok = cxok
+    }
+    if (ok) {
+        (void) dwlsmv_cx1_fit_check(sts, "dwls_fit")
+    }
+    else {
+        dwlsmv_s2_guard_st(sts, "dwls_fit")
+    }
 
     G = length(sts)
     if (G == 1) {
@@ -230,7 +256,8 @@ struct dwlsmv_fit scalar dwlsmv_fit_from(struct dwlsmv_stage1 vector sts,
     real scalar fm, it, conv, N, G
 
     G = length(sts)
-    dwlsmv_fit_stack(sts, s, w, N, maps)
+    dwlsmv_fit_stack(sts, s, w, N, maps, 1)
+    (void) dwlsmv_cx1_check(par, maps, "dwls_fit")
     if (rows(start) != par.npar | missing(start)) {
         _error("dwlsmv_fit_from: start is not a complete npar x 1 vector")
     }
@@ -308,7 +335,8 @@ void dwlsmv_fit_uls(struct dwlsmv_stage1 vector sts,
     if (length(sts) > 1) {
         dwlsmv_mg_check(par, length(sts), "dwls_fit")
     }
-    dwlsmv_fit_stack(sts, s, w, N, maps)
+    dwlsmv_fit_stack(sts, s, w, N, maps, 1)
+    (void) dwlsmv_cx1_check(par, maps, "dwls_fit")
 
     start = J(par.npar, 1, .)
     for (i = 1; i <= par.nall; i++) {

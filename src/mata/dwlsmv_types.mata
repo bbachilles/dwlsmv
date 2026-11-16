@@ -39,6 +39,12 @@ mata:
 // Ordering is lavaan's, verified against lavInspect(fit, "gamma"): all
 // thresholds first, grouped by variable and ascending within variable, then
 // all pairs in column-major lower-triangle order.
+//
+// Conditional mode (spec 4.2, 5.1): built from C and q, the number of
+// covariates. The slopes sit between the thresholds and the pairs,
+// covariate-major, and D = T + pq + P. q is NOT a field: it is
+// (D - T - P) / p, dwlsmv_statmap_q(). An unconditional map has q = 0 and is
+// unchanged. (Comment change only, 2026-11-10 draft; no field added.)
 // ---------------------------------------------------------------------------
 struct dwlsmv_statmap {
     real scalar      p        // number of observed variables
@@ -47,13 +53,14 @@ struct dwlsmv_statmap {
     real colvector   Coff     // p x 1  prefix sum of C, Coff[j] = sum_{m<j} C[m]
     real scalar      T        // total thresholds, sum(C)
     real scalar      P        // number of pairs, p(p-1)/2
-    real scalar      D        // length of s, T + P
+    real scalar      D        // length of s, T + pq + P (q = 0 unless conditional)
 
     // one row per element of s, all D x 1
-    real colvector   stat_type   // 1 = threshold, 2 = polychoric
-    real colvector   var_i       // first variable
-    real colvector   var_j       // second variable; 0 for a threshold
-    real colvector   thr_k       // threshold index; 0 for a polychoric
+    real colvector   stat_type   // 1 = threshold, 2 = polychoric, 3 = slope
+    real colvector   var_i       // first variable; for a slope, the indicator
+    real colvector   var_j       // second variable; 0 for a threshold;
+                                 // for a slope, the covariate's index
+    real colvector   thr_k       // threshold index; 0 for a polychoric or a slope
     string colvector label       // "y1|t1" / "y1~~y2" -- the harness's
                                  // alignment key. Section 4.2 requires
                                  // comparison by name, never by position.
@@ -122,7 +129,8 @@ struct dwlsmv_parmap {
 
     string colvector name     // nall x 1, human-readable
     real colvector   ptype    // 1 lambda, 2 psi, 3 beta, 4 tau,
-                              // 5 nu (y, 1), 6 omega (y, 1), 7 alpha (F, 1)
+                              // 5 nu (y, 1), 6 omega (y, 1), 7 alpha (F, 1),
+                              // 8 gamma (F, x), 9 kappa (y, x)
     real colvector   row      // position in its own matrix
     real colvector   col
     real colvector   free     // 1 free, 0 fixed
@@ -158,6 +166,8 @@ struct dwlsmv_stage1 {
                               // included at +-B under keep_bound, else 0.
                               // Stored, not derived: a status-1 root may be
                               // accepted at +-B itself (spec 5.1, 2026-10-03).
+                              // Conditional mode (dwls_sample_stats_cx): all
+                              // zeros, since no pair is kept at the bound.
 }
 
 // ---------------------------------------------------------------------------

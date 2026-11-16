@@ -8,19 +8,19 @@ polychoric correlations, with robust standard errors and the mean- and variance-
 scaled-and-shifted (T3) test statistic, the approach known as WLSMV. Stata's `sem` and `gsem` do
 not offer this estimator.
 
-Current version: **0.3.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
+Current version: **0.4.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
 other platforms have not been checked.
 
 ## Install
 
 ```stata
-net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.3.0/dist/") replace
+net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.0/dist/") replace
 ```
 
 To get the example datasets, change to the folder where you want them and run:
 
 ```stata
-net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.3.0/dist/")
+net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.0/dist/")
 ```
 
 Then see `help dwlsmv` and `help difftest`.
@@ -48,6 +48,19 @@ estimates store scalar
 difftest configural scalar
 ```
 
+A binary covariate: the factor regressed on an indicator coded 0 and 1, then a direct effect of the
+covariate on one item:
+
+```stata
+use dwlsmv_example_mg.dta, clear
+generate byte grp2 = (grp == 2)
+dwlsmv (F -> y1-y5) (F <- grp2)
+dwlsmv (F -> y1-y5) (F <- grp2) (y5 <- grp2)
+```
+
+On the example data (N = 4,000), the first model gives T3 χ²(9) = 27.238, p = 0.001, and a slope of
+0.192 for `F <- grp2`.
+
 Exploratory factor analysis with oblique geomin rotation:
 
 ```stata
@@ -69,6 +82,8 @@ dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)
   models or a chain of them, single-group or multiple-group. It first refits each model and refuses
   the comparison if a refit doesn't reproduce the stored results.
 - **Exploratory factor analysis:** oblique geomin rotation with point estimates and fit statistics.
+- **One binary covariate:** a 0/1 observed variable predicting factors and items, with the model
+  estimated conditional on it; thresholds are those at covariate = 0. Single-group fits only.
 - **Sparse data:** a polychoric pair that can't be estimated stops the fit with a message naming the
   pair. A binary pair with exactly one empty cell is repaired, as lavaan and Mplus do, and listed in
   the output.
@@ -76,7 +91,9 @@ dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)
 ## What it does not do
 
 - Continuous or mixed continuous and ordinal indicators.
-- Observed variables as predictors, including observed covariates of a factor.
+- Observed predictors other than one binary covariate (a continuous covariate, or several), and a
+  covariate together with `group()`. With a covariate: `standardized`, `difftest`, `efa()`,
+  `keepbound`, and CFI, TLI and RMSEA.
 - Covariances among indicator residuals, and second-order factors.
 - Sampling weights, clustering, or full-information handling of missing data. Estimation uses
   listwise deletion.

@@ -31,9 +31,12 @@
 *! exactly as the table is ordered, but column k must belong to theta[k] even
 *! if that ever stops being true. Inverting fidx says so; filtering assumes it.
 *!
-*! Load order: dwlsmv_types, dwlsmv_pos_tau, dwlsmv_pos_rho, dwlsmv_nfac,
-*! dwlsmv_parvals, dwlsmv_matrices, dwlsmv_rystar, dwlsmv_corrvec,
-*! dwlsmv_delta_cols.
+*! Conditional mode (one 0/1 covariate, one group): Delta has the slope rows and the gamma and kappa
+*! columns, built in dwlsmv_delta_cols(). Several groups or covariates are refused at rc 3498.
+*!
+*! Load order: dwlsmv_types, dwlsmv_statmap_q, dwlsmv_s2_guard, dwlsmv_pos_tau, dwlsmv_pos_rho,
+*! dwlsmv_pos_slope, dwlsmv_nfac, dwlsmv_parvals, dwlsmv_matrices, dwlsmv_rystar, dwlsmv_corrvec,
+*! dwlsmv_cx1_check, dwlsmv_delta_cols.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -51,6 +54,9 @@ real matrix dwls_delta(real colvector theta,
     real matrix Dm, Dg
     real colvector vals, sel, idx, hit
     real scalar i, g, k, off, Dtot
+
+    // One covariate at one group is accepted; several groups with a covariate stay refused (spec 5.1).
+    (void) dwlsmv_cx1_check(par, maps, "dwls_delta")
 
     // O14: one map per group, a single group a 1-vector.
     if (length(maps) < 1) {
@@ -93,7 +99,7 @@ real matrix dwls_delta(real colvector theta,
     // G = 1: the single-group path, unchanged. It knows no nu, omega or alpha.
     map = maps[1]
     for (i = 1; i <= par.nall; i++) {
-        if (par.ptype[i] >= 5) {
+        if (par.ptype[i] >= 5 & par.ptype[i] != 8 & par.ptype[i] != 9) {
             errprintf("dwls_delta: row %f (%s) is a nu, omega or alpha row, which exists only with more than one group.\n",
                       i, par.name[i])
             _error("dwls_delta: nu, omega and alpha need more than one group")

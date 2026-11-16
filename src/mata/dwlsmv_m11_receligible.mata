@@ -12,7 +12,11 @@
 *! rule: returns 1 only if
 *!   E1  every factor has exactly one fixed nonzero loading, equal to 1;
 *!   E2  every factor has one psi_ff row and it is free;
-*!   E3  every other fixed lambda, beta or psi (off-diagonal) is exactly 0.
+*!   E3  every other fixed lambda, beta or psi (off-diagonal) is exactly 0;
+*!   E4  (conditional fits, 2026-11-15, owner; derivation @sec-condx-recovery Result C3) every fixed gamma
+*!       (ptype 8, x -> factor) is exactly 0. A gamma fixed at v in the marker table is c_f*v at the
+*!       unit-variance optimum, and c_f is unknown before the fit. A fixed kappa (ptype 9) of any value
+*!       is the same parameter in both metrics and stays eligible.
 *! Read from Module 3's MARKER parameter table (the first fit's par), never
 *! from the canonical text. Every reason is collected, not the first, so the
 *! note can name them all.
@@ -102,6 +106,22 @@ real scalar dwlsmv_m11_receligible(struct dwlsmv_parmap scalar par,
         }
         else if (!psifree) {
             reasons = reasons \ ("factor " + fac[f] + " has its variance fixed")
+        }
+    }
+
+    // ---- E4: a fixed gamma must be exactly 0 (ptype 8; a fixed kappa, ptype 9, is not tested) -------
+    // A missing fixed value is its own reason in the first loop above, so it is not repeated here.
+    for (i = 1; i <= par.nall; i++) {
+        if (par.ptype[i] == 8) {
+            if (!par.free[i]) {
+                if (!missing(par.value[i])) {
+                    if (par.value[i] != 0) {
+                        reasons = reasons \ (par.name[i] + " is fixed at " +
+                                             strtrim(strofreal(par.value[i], "%21.0g")) +
+                                             ", not 0 (the effect of the covariate on a factor)")
+                    }
+                }
+            }
         }
     }
 

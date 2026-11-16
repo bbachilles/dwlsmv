@@ -4,9 +4,9 @@
 *!
 *! Returns P x 1: the model-implied polychoric correlations, ordered exactly as
 *! the correlation block of s is (spec Section 4.2), so entry r corresponds to
-*! element T + r of sigma. The subtraction of map.T is the only place that
-*! offset appears; dwls_model() and dwlsmv_delta_cols() both write the block
-*! into rows (T+1)..D without doing their own arithmetic.
+*! element (D - P) + r of sigma (D - P = T + pq, so T when there are no slopes). The
+*! subtraction of D - P is the only place that offset appears; dwls_model() and
+*! dwlsmv_delta_cols() both write the block into rows (D-P+1)..D.
 *!
 *! Spec Section 4.6: the model-implied polychoric for pair (j,k) is simply the
 *! (j,k) entry of R_y*. Thresholds determine each indicator's marginal category
@@ -47,7 +47,7 @@ real colvector dwlsmv_corrvec(real colvector vals,
     r = J(map.P, 1, .)
     for (i = 1; i <= map.p - 1; i++) {
         for (j = i + 1; j <= map.p; j++) {
-            r[dwlsmv_pos_rho(map, i, j) - map.T] = R[i, j]
+            r[dwlsmv_pos_rho(map, i, j) - (map.D - map.P)] = R[i, j]
         }
     }
 

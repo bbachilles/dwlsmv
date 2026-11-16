@@ -15,6 +15,8 @@
 *!   Bd[3, 1] == 1           could not determine all parameters reliably (the
 *!                           information in the fit was insufficient): the
 *!                           bread's numerical rank (wording 2026-10-07, user)
+*! A conditional fit passes Bd like any other (decided by the owner, 2026-11-15: the bread-rank cause joins the
+*! conditional trigger). The rows(Bd) >= 3 guard stays: a hand-built or empty Bd (0 x 0) evaluates no bread term.
 *! Only a flag of exactly 1 fires: a missing admissibility flag (a condition
 *! that could not be evaluated) does not, and only bread row 3 (numerical
 *! rank) counts, not row 2's zero column (both decided by the user
@@ -45,9 +47,14 @@ string scalar dwlsmv_m11_rectrigger(struct dwlsmv_fit scalar fit, real matrix A,
     if (adm) {
         why = why \ "was not admissible"
     }
-    if (Bd[3, 1] == 1) {
-        why = why \ "could not determine all parameters reliably (the information in the fit was insufficient)"
+    // ===== THE BREAD-RANK TERM (conditional fits included, owner 2026-11-15; see dwlsmv_m11_estimate.mata) =====
+    // rows(Bd) is tested in its own if: Mata's & does not short-circuit, and Bd[3, 1] on an empty Bd aborts.
+    if (rows(Bd) >= 3) {
+        if (Bd[3, 1] == 1) {
+            why = why \ "could not determine all parameters reliably (the information in the fit was insufficient)"
+        }
     }
+    // ============================================================================================================
     if (rows(why) == 0) {
         return("")
     }

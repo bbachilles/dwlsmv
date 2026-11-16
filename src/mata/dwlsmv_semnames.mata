@@ -14,16 +14,25 @@ mata:
 string colvector dwlsmv_semnames()
 {
     string matrix st
-    string colvector ind, out
+    string colvector ind, out, oxv
     real scalar j
-    string scalar co
+    string scalar co, cvn
 
     st  = st_matrixcolstripe("e(b)")
     ind = tokens(st_global("e(oyvars)"))'
+    oxv = tokens(st_global("e(oxvars)"))'
+    cvn = ""
+    if (rows(oxv) == 1) {
+        cvn = oxv[1]
+    }
     out = J(0, 1, "")
     for (j = 1; j <= rows(st); j++) {
         co = st[j, 2]
         if (co == "_cons") {
+            continue
+        }
+        // the covariate's own variance, mean and covariances are skipped by the translator
+        if (dwlsmv_tr_cxterm(co, cvn) > 0) {
             continue
         }
         if (substr(co, 1, 6) == "var(e.") {

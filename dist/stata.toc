@@ -1,5 +1,5 @@
 v 3
 d dwlsmv: SEM/CFA for ordinal indicators (DWLS, WLSMV test)
 d Erik Ruzek
-d Distribution-Date: 20261104
+d Distribution-Date: 20261115
 p dwlsmv

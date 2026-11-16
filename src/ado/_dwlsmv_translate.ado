@@ -1,4 +1,4 @@
-*! version 0.3.0  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
+*! version 0.4.0  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
 *!
 *! Internal; called by dwlsmv.ado. Spec Module 11 D1, D2, D9.
 *!
@@ -23,6 +23,8 @@
 *!   r(ind)       the indicators in e(oyvars) order (D9)
 *!   r(semnames)  sem's structural stripe, eq:name, for D6's check
 *!   r(injected)  what D2 injected, if anything
+*!   r(cov)       the observed exogenous variable (the binary covariate of a conditional
+*!                fit), or empty; the canonical text then carries a covariate line
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -109,6 +111,7 @@ program _dwlsmv_translate, rclass
             }
             quietly sem `paths', `semopts' `inj' noestimate
             mata: st_local("canon", invtokens(dwlsmv_translate(1)', ";"))
+            local cov `e(oxvars)'
             mata: st_local("semnames", invtokens(dwlsmv_semnames()'))
             local ind `e(oyvars)'
         }
@@ -122,4 +125,5 @@ program _dwlsmv_translate, rclass
     return local ind      `"`ind'"'
     return local semnames `"`semnames'"'
     return local injected `"`inj'"'
+    return local cov      `"`cov'"'
 end

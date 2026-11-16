@@ -8,8 +8,8 @@
 *!
 *! Spec D11 step 4. 'canon' is the marker canonical text, ";"-separated;
 *! parm its parameter table (the first fit's); thetam the transformed point
-*! in parm's theta order (dwlsmv_m11_rectransform()). Every 'lambda', 'beta'
-*! or 'psi' line whose status is 'free' becomes '<d> <a> <b> free <start>'
+*! in parm's theta order (dwlsmv_m11_rectransform()). Every 'lambda', 'beta' or 'psi' line,
+*! and in a conditional fit every 'gamma' or 'kappa' line, whose status is 'free' becomes '<d> <a> <b> free <start>'
 *! (spec 4.8's 'free [<start>]'; an existing start is replaced). Fixed lines,
 *! 'factor', 'ind' and 'metric' lines are carried unchanged, so the result is
 *! the same model and dwls_identify() builds the same table, starts aside.
@@ -42,13 +42,14 @@ string scalar dwlsmv_m11_recstarts(string scalar canon,
                                    real colvector thetam)
 {
     string rowvector L, t
-    string colvector fac, ind, out
+    string colvector fac, ind, cvn, out
     string scalar s
     real scalar i, k, j, ptc, r, cc, a, b, x
 
     L   = tokens(canon, ";")
     fac = J(0, 1, "")
     ind = J(0, 1, "")
+    cvn = J(0, 1, "")
     for (i = 1; i <= cols(L); i++) {
         if (L[i] == ";") {
             continue
@@ -60,6 +61,9 @@ string scalar dwlsmv_m11_recstarts(string scalar canon,
             }
             else if (t[1] == "ind") {
                 ind = t[|2 \ cols(t)|]'
+            }
+            else if (t[1] == "covariate") {
+                cvn = t[|2 \ cols(t)|]'
             }
         }
     }
@@ -92,6 +96,20 @@ string scalar dwlsmv_m11_recstarts(string scalar canon,
                     b   = dwlsmv_canon_find(fac, t[3])
                     r   = max((a, b))
                     cc  = min((a, b))
+                }
+                else if (t[1] == "gamma") {
+                    // x -> factor: row = factor, col = covariate (spec 4.8, ptype 8)
+                    ptc = 8
+                    r   = dwlsmv_canon_find(fac, t[2])
+                    cc  = dwlsmv_canon_find(cvn, t[3])
+                }
+                else if (t[1] == "kappa") {
+                    // x -> indicator: row = indicator, col = covariate (ptype 9). Its start is its own
+                    // unit-variance value (kappa is unchanged by the map), written so that the restarted
+                    // table's value matches thetam and no second-start substitution is reported
+                    ptc = 9
+                    r   = dwlsmv_canon_find(ind, t[2])
+                    cc  = dwlsmv_canon_find(cvn, t[3])
                 }
             }
         }

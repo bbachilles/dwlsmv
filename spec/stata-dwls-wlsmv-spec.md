@@ -286,7 +286,9 @@ given $x$, so $D_s = T + pq + P$, with
 $\text{pos}(b_{jk}) = T + (k-1)p + j$ (covariate-major, items within each covariate), and every
 $\text{pos}(\rho_{ij})$ above shifted by $pq$. The thresholds are at $x = 0$. This order was proved
 from lavaan's own labels, not assumed (`@sec-condx-norm`; `fixtures/generate/99h_lavaan_condx.R`).
-The map is still keyed on $C$, and now on $q$, never on the data.
+The map is still keyed on $C$, and now on $q$, never on the data. Slope rows carry `stat_type` 3
+(`var_i` the indicator, `var_j` the covariate index) and the label `y<j>~x<k>`. $q$ is derived from
+the map, $(D - T - P)/p$ (`dwlsmv_statmap_q()`), and is not a field.
 
 ### 4.3 Scale convention (simplified by the v1 scope decision)
 
@@ -675,7 +677,8 @@ variables outside the $p$ indicators, observations removed by listwise deletion,
 categories that are never observed. It is not called $P$, because $P$ is already the number of
 pairs (Section 4.2, `map.P`). This is the right object because $\hat\psi_i$ is a function of
 exactly that row: $\psi_\tau$ is looked up by category and $\psi_\rho$ by observed cell.
-`dwlsmv_npatterns(Y, K)` (Module 10) counts it. It takes the same $(Y, K)$ as
+`dwlsmv_npatterns(Y, K)` (Module 10) counts it; with an optional third argument $x$, the covariate of
+a conditional fit, a pattern is a row of $(Y, x)$ (Module 10, *Conditional mode*). It takes the same $(Y, K)$ as
 `dwls_sample_stats()` and applies the same validation, aborting with rc 3498 on a missing value, a
 non-integer code or an out-of-range code rather than counting a pattern Stage 1 would reject. A
 `.` counted as a code would inflate $n_{\text{pat}}$ and make the check below pass wrongly.
@@ -1031,8 +1034,12 @@ psi     <F> <F>      free [<start>] | fixed <value>
 metric  marker <F> <y>  |  unitvariance <F>
 ```
 
-One directive per line; `#` begins a comment; blank lines are ignored. **Order within the file is
-irrelevant** — θ's ordering is fixed below as a function of the model, not of the text. (Under
+The conditional-mode directives `covariate`, `gamma` and `kappa` are specified under **Conditional
+covariates** and are parsed by `dwls_identify()` alongside these; they add three directives and no
+rule to those above. A message that cites a line cites its number in the text as written, so blank
+and comment lines count. One directive per line; `#` begins a comment; blank lines are ignored.
+**Order within the file is irrelevant** — θ's ordering is fixed below as a function of the model,
+not of the text. (Under
 multiple groups a directive's section is part of what it says; order within and across sections
 stays irrelevant. **Multiple groups**, below.)
 
@@ -1322,7 +1329,8 @@ section means the standardized residual variance $\Theta^*_{g,jj}=1-\omega_{gj}^
 
 **G6. θ order.**
 - Blocks come in the order τ, λ, β, ψ, ν, ω, α (ptypes 4, 1, 3, 2, 5, 6, 7), so a single-group θ
-  is unchanged.
+  is unchanged. (Conditional covariates insert γ and κ, ptypes 8 and 9, between β and ψ; see that
+  section. They are not specified under groups.)
 - ν, ω and α are each ordered by (group, row) (decided 2026-10-08).
 - **Within the τ, λ, β and ψ blocks, elements are ordered by (group, row, col)** (O6, decided
   2026-10-09): all of group 1's elements of the block, then group 2's, and so on, each group's
@@ -1801,7 +1809,7 @@ On is the draft's question Qn, the numbering the 2026-10-08 decisions row (E-003
 Q10, Q11) are the points decided there.
 
 
-#### Conditional covariates (v0.4.0; specified 2026-10-25, not built)
+#### Conditional covariates (v0.4.0; specified 2026-10-25; Stage 1 built 2026-11-10, Stage 2: `dwls_identify()`, `dwls_model()`, `dwls_delta()`, and at one group `dwls_fit()` and `dwls_inference()` built 2026-11-13; admissibility, fit indices, baselines and DIFFTEST not built)
 
 The derivations are `@sec-condx` (one binary $x$, single group) and `@sec-condx-norm`. Several
 covariates, continuous $x$, and multiple groups are specified only once their derivations land
@@ -1815,7 +1823,24 @@ kappa   <y> <x>  free [<start>] | fixed <value>     x → y*  (ptype 9)
 ```
 
 - **Meaning.** $\gamma_{fk}$ is the effect of a one-unit difference in the observed $x_k$ on $\eta_f$,
-  in units of $\eta_f$'s **disturbance** SD, given the covariates in the model. For a binary $x_k$ it
+  in the units of $\eta_f$ (under `unitvariance`, $\psi_{ff}=1$ fixes the **disturbance** SD, so these are
+  disturbance SDs; under `marker` the unit is the marker's $y^*$, with $\lambda=1$ and
+  $b_{\text{marker}}=\gamma+\kappa_{\text{marker}}$), given the covariates in the model. A `fixed` value is
+  taken in these units and is a parameter of the table that is not free: it adds one to the degrees of freedom
+  ($D$ counts the $p$ slopes whether or not $\gamma$, $\kappa$ are free), and a `fixed` $\gamma\neq0$ makes
+  its factor non-reflectable in `dwlsmv_signcanon()`.
+
+*Known limitation (owner, 2026-11-14; observed on one test dataset, frequency not studied).* Under
+`metric(unitvariance)` a fixed nonzero $\gamma$ fixes the factor's orientation. The optimizer's starting values
+imply an orientation; if the fixed sign is the opposite one, the fit can report convergence at a local optimum
+whose $T_3$ is much larger than that of the same model with the other sign, although the mirror-image solution
+($\Lambda\to-\Lambda$, $\gamma\to-\gamma$, which leaves $\sigma(\theta)$ unchanged) fits equally well. The user
+can fix the value with the other sign and reverse the interpretation of the factor, or use the marker metric,
+where the marker's loading is fixed at 1 (a fixed nonzero loading, so the factor is non-reflectable) and the
+orientation is the marker's. The optimizer is not changed for this; `tests/unit/test_condx_fixed.do` check 5
+keeps the behaviour as a characterization fixture and fails, on purpose, if it is lifted.
+
+For a binary $x_k$ it
   is the within-group standardized treatment contrast. $\kappa_{jk}$ is a direct effect of $x_k$ on
   $y_j^*$ at fixed η, i.e. DIF in threshold location: **$\kappa = -(\text{threshold shift})$**
   (`@sec-condx`: $\kappa_3 = -0.300$ for DIF of $+0.3$). These are different parameters with
@@ -1828,16 +1853,101 @@ kappa   <y> <x>  free [<start>] | fixed <value>     x → y*  (ptype 9)
   (factor, covariate) and κ by (indicator, covariate), each in declaration order. A model without
   covariates has empty γ and κ blocks, so every existing θ is unchanged. The threshold block of Δ
   stays the identity, with or without κ (`@sec-condx` (d)), at a single group.
-- **Identification.** Each factor needs at least one indicator with no κ. Otherwise γ and the κ's are
-  confounded along one direction (`@sec-condx` (e)). `dwls_identify()` checks this by name and
-  refuses at rc 3498, rather than leaving it to the rank check.
+- **Identification.** A factor needs an indicator without a free direct effect only if its effect
+  γ of the covariate is a free parameter, and then jointly with the other such factors
+  (`@sec-condx-anchor`): let A be the indicators whose κ is not free (absent, or fixed at any
+  value, zero or not). The matrix (Λ(I−B)⁻¹) restricted to the rows A and to the columns of the
+  factors with a free γ must have full column rank. A factor with no free γ (absent, or fixed at
+  any value), or with no path from x, needs no such indicator, even when every one of its
+  indicators carries a κ. A free-γ factor may be anchored through a factor it predicts by present
+  β's, not through a factor that predicts it (`beta F2 F1` means F1 predicts F2). A loading or a β
+  is **present** when its directive says `free`, or says `fixed` at a value other than 0; one
+  declared `fixed 0`, or with no directive, is **absent**. For κ only `free` counts.
+  `dwls_identify()` checks by name, before the rank check, that every factor with a free γ has an
+  indicator in A with a present loading on itself or on a factor it reaches by present β's, and
+  refuses at rc 3498 otherwise, with a message that names the factor. This is a necessary screen,
+  not the full condition: §4.8's rank check of Δ at the starting values (with its second point at
+  θ₂) runs unchanged for covariate models, Δ including the slope rows, and is the exact test. A
+  model that passes the screen can still fail it (one anchor shared by two free-γ factors; a free
+  β or loading at the value 0).
+- **Names.** A covariate's name must differ from every factor's and every indicator's name;
+  otherwise `dwls_identify()` refuses at rc 3498, naming the line.
 - **Coding.** $x$ is used as given. A covariate taking exactly two values must take **0 and 1**, and
   anything else is refused at rc 3498 with guidance. Otherwise γ's unit and the reported thresholds
   silently change: ±1 coding halves γ, and centring shifts every threshold by $-b_j\bar x$. An
   ordinal predictor enters as $K-1$ dummies, each 0/1, once several covariates are specified.
 - **Missing $x$:** listwise, jointly with the indicators' rule (one complete-case $N$).
-- **Stage 1's input becomes $(Y, K, X)$.** $X$ is data, and nothing model-implied enters. The §5.1
-  signature change is specified with the Stage 1 build, in the same commit as its code.
+- **Stage 1's input becomes $(Y, K, X)$.** $X$ is data, and nothing model-implied enters. The entry
+  point is `dwls_sample_stats_cx(Y, K, X)` (§5.1).
+- **The item fit stops on the Newton step** (`@sec-condx-itemstop`; design accepted in principle by
+  the user, 2026-11-11, with the current iterate returned). With $d_k = H_k^{-1}\bar g_k$ at iterate
+  $\theta_k$: return $\theta_k$ when $\max|d_k| \le \delta_1 = 10^{-12}$ at iterates 0 to 49; at iterate
+  50 accept $\max|d_k| \le \delta_2 = 10^{-10}$; otherwise rc 3498. A step or score with a missing
+  entry never passes. $\theta_k + d_k$ is **not** returned (decided: no extrapolated point). It
+  replaces the score rule ($10^{-14}$, $10^{-12}$), whose error bound carried the unchecked factor
+  $\beta = \|H^{-1}\|_\infty$. Four things are kept apart:
+  - **Derived bound.** At a stop, $\|\theta_k - \hat\theta\|_\infty \le (1+h)(\delta + \beta\gamma)$ with
+    $h = L\beta\|d_k\|$, and $\delta$ is reachable iff it exceeds the step floor $\beta\gamma$. This rests
+    on two cited results (concavity of the item log-likelihood; Newton–Kantorovich) and on the
+    premises below.
+  - **Measured premises, not proved.** $L$, the Lipschitz constant of $H$ (measured at 200 bits, never
+    bounded analytically). $\gamma$ and $\xi$, the rounding of the score and of the solve (measured on
+    R doubles with LAPACK, **not in Mata**). Mata's own step floor is measured on six items only.
+  - **Chosen thresholds.** $\delta_1$ and $\delta_2$ are decisions: $10^{-4}$ and $10^{-2}$ of the
+    $10^{-8}$ tier. No derivation picks them.
+  - **Tested domain.** In Mata: `condx_A` and `condx_D` (six items, $K \le 3$, $\beta$ 9.3 to 9.6) against
+    a 200-bit reference, and three constructed tables ($K$ 2 and 3, chosen after measuring) for
+    threshold ordering and the two constants. In R only: twelve items, six constructed, $\beta$ up to
+    $2.3\times10^{4}$.
+  - **Limitation: weakly informative items.** Nothing measures the rule in Mata at a large $\beta$. The
+    modelled range in which $\delta_1$ is guaranteed reachable is $\beta \lesssim 600$ (61 with a
+    tenfold margin), from R's arithmetic. Beyond it an item is expected to reach iterate 50, and to be
+    accepted under $\delta_2$ or refused; that expectation is the derivation's, not a Mata result.
+  - **`tolc`** on `dwlsmv_cx_item_fit()` is a test hook only (approved 2026-11-11): no production
+    caller passes it, and a malformed one is refused at rc 3498.
+  - **Gate: closed (user, 2026-11-12).** The section is rendered in the full document and the targeted
+    ordering and `tolc` tests are in (2026-11-11), which were the conditions set; the rule's
+    derivation-and-testing gate is closed on that basis. The closure covers the tested domain above
+    and nothing wider: the weak-information limitation stands as stated. It does not bear on the
+    pooled-root uniqueness gate or the $\rho = 0$ usability gate (`@sec-condx-rootfind`), which stay
+    open.
+- **Stage 1 refusals and pair statuses in conditional mode** (decided 2026-11-12, the user;
+  `@sec-condx-policy` items 5 to 7). Stage 1 stops at rc 3498, naming what it can, when: an item
+  cannot be evaluated at its starting values; an item fit cannot move; an item's information is
+  not positive definite, in the fit or at assembly; a pair's $U_\rho \ge 0$; an observed pair cell
+  has a missing or non-positive probability; a category is empty in the pooled sample (v1's
+  refusal); or $\rho = 0$ is unusable for a pair. The pair statuses are v1's default set: status 1
+  and status 6 by the endpoint check enter, the latter with no message; statuses 2, 3, 4, 5, 7, 8
+  and the zero-probe status 6 are refused, and there is no `keep_bound` and no cell repair.
+  `dwlsmv_gammadiag()` accepts a conditional `stage1` with its covariate as a third argument (2026-11-15, Module 10); called without it, it refuses at rc 3498. The separation rule is Result P1 exactly;
+  the frozen R reference's stricter rule is recorded in
+  E-066 and not adopted.
+- **$\rho = 0$ unusable: the abort is the guard, and for $K \ge 3$ it has no lower bound behind it**
+  (decided 2026-11-12, the user). For a binary item every observed cell has fitted probability at
+  least $1/N_x$, so $\rho = 0$ is usable. For $K \ge 3$ the item model is not saturated, and an
+  item can pass Result P1 and fit while an observed cell's fitted probability is below
+  $\delta_P$: the item with counts $(0, m, 1)$ at $x = 0$ and $(1, 0, m)$ at $x = 1$ has
+  $8.9\times10^{-17}$ at $m = 1000$ (measured in Mata). Stage 1 then refuses the pair at rc 3498,
+  naming the pair and the group; the refusal means a nearly separated item. No other starting
+  point is tried and no item-level check is added. The user documentation is to say so.
+- **Root-search budget in conditional mode: 200 evaluations; v1 keeps 40** (decided 2026-11-13, the
+  user). `dwlsmv_cx_pair_fit()` passes 200 as the `cap` argument of the shared root-finder, which
+  is unchanged. At 40, nine constructed pairs with a root stopped at status 7. Under the premises
+  of `@sec-condx-rootcap` the search reaches its stopping test within 180 evaluations; some of
+  those premises are measured and some are unmeasured, so 200 is a margin chosen after measuring,
+  not a derived bound. Status 7 remains a refusal.
+- **A status-6 pair that enters is named in a note** (decided 2026-11-13, the user). Status 6 from
+  the endpoint check enters, as in v1, but conditional Stage 1 prints a note naming the pair and
+  saying that the sign of the score could not be certified at an end of the range of $\rho$, which
+  is a limit of the endpoint sign check and not ordinary convergence. v1 prints no note; a stored
+  pair status is left to the reporting decisions of the command interface.
+- **Uniqueness of the pooled root is a measured premise, kept as in v1** (decided 2026-11-12, the
+  user). It is not proved, and it is false for thresholds that are not the items' own estimates:
+  the pooled score can then change sign three times and the root-finder returns status 1 (shown
+  in Mata on two constructed inputs). The walk detects an even number of sign changes, not an odd
+  one. On inputs Stage 1 can produce, a search in R found no three-change case (173,628 fitted
+  tables; 1,064 directed climbs). No sign-count check is added. A pooled development test is
+  owed. Evidence and limits: E-104.
 - **Stage 1 covariance: the Hessian (M-estimator) form** (decided 2026-10-25, the user). The item
   and pair blocks of the two-step influence function are estimated as derivatives of the mean
   score, not as outer products (BHHH). Under a correctly specified Stage 1 the two forms estimate
@@ -1856,6 +1966,35 @@ kappa   <y> <x>  free [<start>] | fixed <value>     x → y*  (ptype 9)
 - **References.** lavaan 0.7.2's `conditional.x = TRUE` is the Stage 1 reference for $s$ (an equality
   target) and, through the oracle's BHHH route, for Γ̂. It is not the authority for the covariance
   estimator. Stata's Γ̂ is tested against a tier-1 fixture written from the R oracle's Hessian form.
+- **Output of a conditional fit** (decided 2026-11-13 (a), (b); output path drafted 2026-11-14,
+  not built). Surface: `(F <- x)` is γ and `(y <- x)` is κ, with no new option; `e(b)` carries the
+  rows `F:x` and `y:x` under sem's names, after the loadings and regressions and before the
+  variances, in θ order (ptype 8, 9). The header names the covariate and says that thresholds are
+  those at x = 0. The statistic, degrees of freedom and p-value are reported and a note says that
+  no CFI or TLI is defined; RMSEA is left out until its derivation is checked. **Posted:** `e(N)`,
+  `e(T3)`, `e(df_T3)`, `e(p_T3)`, `e(converged)`, `e(iterations)`, `e(rank)`, `e(b)`, `e(V)`,
+  `e(Cns)`, the macros of an ordinary fit, and the macro `e(covariates)`. **Omitted, not posted as
+  missing:** `e(rmsea_s)`, `e(cfi_s)`, `e(tli_s)`, `e(T3_b)`, `e(df_T3_b)` and `e(bound)` (no
+  `keep_bound` in this mode). **Posted from 2026-11-15 (Module 10 in conditional mode, "Yes, both"):**
+  `e(gamma_ratio)`, `e(gamma_ratio_raw)`, `e(gamma_rank)` and `e(bread_ratio)`, as for an ordinary fit (Γ̂ is
+  Stage 1's, so these are posted whether or not the fit converged); the header prints an index only when it is posted, so no display code changes
+  for the omission. `standardized`, `keepbound`, `efa()` and `difftest` refuse a conditional fit
+  (rc 198; difftest rc 3498). **Amended 2026-11-14 (the owner's requirements of that day; the suppression of T3 and its p-value confirmed by the owner the same day):**
+  admissibility IS computed, on every conditional fit, converged or not, by `dwlsmv_admissible()` at the
+  reported θ̂ (one group, one covariate: `dwlsmv_cx1_check()`), and its notes are printed by
+  `dwlsmv_cx_admissnote()` (Module 7's `dwlsmv_admissadvice()` with one edit: for a fit that did not
+  converge the closing paragraph about standard errors is replaced. The former paragraph about a recovery
+  refit was removed 2026-11-15: D11's recovery runs for a conditional marker fit, and its own note, which
+  comes first, says what was tried or why not). Nothing about admissibility is posted (as for an ordinary fit: derived, displayed
+  only). **Module 10 (2026-11-15):** computed for a conditional fit as for any fit: Γ̂'s rows with the pattern
+  counted on $(y, x)$, the bread's rows (`dwlsmv_breaddiag()` on the conditional Δ and Γ̂; the $10^{-8}$ criterion separates
+  a healthy fit, ratio 0.15 and 0.12 on `condx_A` and `condx_D`, from an exact scale twin, $4\times10^{-13}$ and
+  $1.2\times10^{-13}$, StataMP 18, one factor), and the pooled and per-group category counts (Module 10, *Conditional
+  mode*). Not computed, and a note says so: the threshold-aliasing check (its limitation is stated in Module 10). `e(recovery)` is
+  D11's outcome as for any fit (2026-11-15): `none` (not triggered, or `metric(unitvariance)`), `recovered`,
+  `ineligible` or `failed`. A conditional fit that did not
+  converge posts neither `e(V)`, `e(T3)` nor `e(p_T3)`: see D8, Exception. The Posted list above is that of a
+  converged fit.
 
 ### 4.9 The exact WLSMV variant being targeted
 
@@ -2438,7 +2577,9 @@ says a retry happened; `e(converged)` and `e(iterations)` are those of the run r
 the first run if the retry also fails. No stored result is added. **Marker fits are exempt (user,
 2026-11-01):** a `metric(marker)` first fit and D11's unit-variance fit use `dwlsmv_fit_noretry()`, so
 D11's trigger reads the first run and D11 runs as specified; a generic retry that converged would
-otherwise erase its trigger (E-012). Evidence:
+otherwise erase its trigger (E-012). This holds for a conditional fit too (owner, 2026-11-15): its
+`metric(marker)` first fit takes no retry; under `metric(unitvariance)` it takes `dwls_fit()`'s, as every
+unit-variance fit. Not yet measured in conditional mode. Evidence:
 E-013. One caller skips ULS: D11's recovery
 calls `dwlsmv_fit_from()` directly for its final fit, from transformed starts with
 thresholds at s_τ (decided 2026-10-07, the user's; D11 Procedure step 4). `dwls_fit()`'s
@@ -2466,7 +2607,10 @@ nonzero loading, structural path or covariance touching it, so marker factors ne
 reversed if its first free loading is negative. Reversal is $\Lambda \to \Lambda D$,
 $\Psi \to D\Psi D$, $B \to DBD$: the factor's loadings, every $\beta$ with exactly one end at it,
 and every off-diagonal $\psi$ with exactly one end at it change sign; a path or covariance joining
-two reversed factors does not. $\sigma(\theta)$, $F$ and $T$ are invariant, and because the
+two reversed factors does not. In conditional mode the factor's γ (ptype 8) changes sign as well
+($\Gamma_x\to D\Gamma_x$, so $b=\Lambda(I-B)^{-1}\Gamma_x+K$ is invariant), a fixed nonzero γ on the
+factor makes it non-reflectable like a fixed nonzero loading, and κ never moves.
+$\sigma(\theta)$, $F$ and $T$ are invariant, and because the
 reported $\hat\theta$ is already canonical, Modules 8–9's $\Delta$, ACOV and statistics are
 consistent with it without any separate transformation. ESEM (Module 12) may want a
 sum-of-loadings anchor instead, since its first loading can be a near-zero cross-loading.
@@ -2570,7 +2714,7 @@ is a lower bound on the true $d_{\text{alias}}$, and exact whenever every relati
 is the v1 limit already recorded. Without an exact deficiency, $r^* = D$ and the ratio is
 $\sigma_{\min}/\sigma_{\max}$.
 
-`dwlsmv_gammadiag(stage1, Y)` reports Γ̂'s rows in a fixed order: asymmetry, not PSD, too few
+`dwlsmv_gammadiag(stage1, Y)` (and `dwlsmv_gammadiag(stage1, Y, x)` for a conditional `stage1`, below) reports Γ̂'s rows in a fixed order: asymmetry, not PSD, too few
 patterns, threshold aliasing, centring, raw ratio, scale-free ratio. **A flagged asymmetry stops
 it** (decided 2026-09-26): rows 2–7 are then not evaluated, because `symeigenvalues()` reads one
 triangle and a spectrum of an asymmetric matrix would look valid. Y must be the matrix Stage 1
@@ -2612,6 +2756,28 @@ i, j]$ layout of `dwlsmv_admissible()`: 0/1 is a flag evaluated against its crit
 **not evaluated**; `.n` means **evaluated, with no flag defined in v1** (the ratio rows and every
 `countdiag` row). `.n` is still missing, so a caller testing `flag == 1` never fires on it, and tests
 assert `.n` exactly, since `missing()` cannot tell it from `.`.
+
+**Conditional mode, one binary covariate $x$, one group (decided 2026-11-15, the owner's; derivation
+`@sec-condx-m10`).** $D = T + p + P$, the $p$ slopes being statistics.
+- **Patterns are $(y, x)$.** `dwlsmv_npatterns(Y, K, x)` and `dwlsmv_gammadiag(stage1, Y, x)` take $x$ ($N \times 1$,
+  coded 0 and 1, no missing value; else rc 3498). Counting on $y$ alone is wrong: a design whose every $y$-pattern occurs in
+  both groups has $n_{\text{pat}} = 2n_{\text{pat}}^{(y)}$. The bound is $\operatorname{rank}\hat\Gamma \le \min(D, n_{\text{pat}} - 1)$ and is not a detector of a cause.
+  Called on a conditional `stage1` without $x$, or with $x$ on an unconditional one, `dwlsmv_gammadiag()` aborts at rc 3498.
+- **Row 4, threshold aliasing: not evaluated** (flag `.`, value `.`, location 0, 0). v1's cause test does not transfer: with $x$
+  in the score, identical or complementary threshold columns are not an exact null of $\hat\Gamma$. $d_{\text{alias}}$ is taken as 0, so
+  $r^* = \min(D, n_{\text{pat}} - 1)$ for rows 6–7. **Limitation (the owner, 2026-11-15):** an item that is an exact function of another item
+  and $x$ (equal to it at $x = 0$ and to its reverse at $x = 1$, say) passes Stage 1 and makes $\hat\Gamma$ lose rank exactly (2 columns
+  for a binary partner, 3 for a ternary, in the R reference); this shows only as a singular-value ratio near $10^{-16}$ in rows 6–7, which are
+  value-only (flag `.n`). Standard errors and $T_3$ are still produced ($\hat\Gamma$ is never inverted). Whether the standard errors and $T_3$ are accurate when $\hat\Gamma$ has lost rank in this way has not been established. An exact detector is a later,
+  derived follow-up and is not built. Same-orientation perfect association is refused by Stage 1 (status 2).
+- **Row 5, centring:** the item rows are bounded by the item fit's step rule, not exactly zero; the pair rows sit at $T + p + k$; there
+  is no one-empty-cell exclusion (no repair in this mode). The pair bound $z_\rho \le 2\tau_S/\sqrt J$ is not re-derived for the pooled score.
+- **The bread's rows** (`dwlsmv_breaddiag()`) are computed on the conditional Δ and Γ̂ and printed as for an ordinary fit; its numerical-rank
+  row (row 3) joins the conditional D11 trigger (D11, *Conditional*). The $10^{-8}$ criterion is the one defined in `dwlsmv_numrank()`. A Δ with a missing value leaves the bread not evaluated, in this mode as in any (`dwlsmv_m11_bread`, routine table).
+- **Category counts:** `dwlsmv_countdiag(Y, K)` is unchanged and still reported (pooled). **Added:** `dwlsmv_countcells(Y, K, x)`, the counts per
+  (item, category, $x$-group) and the two group sizes; the pooled boundary count cannot see the group cell that sets a binary item's slope SE
+  (pooled 701 and 800 against group cells 1 and 100: SE 0.35 against 0.09). No reference for $K_j > 2$; pair cells not derived; values only.
+- **Posted:** `e(gamma_ratio)`, `e(gamma_ratio_raw)`, `e(gamma_rank)` and `e(bread_ratio)`, as for an ordinary fit.
 
 **Admissibility is a separate channel** (decided 2026-09-26). `dwlsmv_diagadvice()` takes only
 Module 10's rows. `dwlsmv_admissible()` and `dwlsmv_admissadvice()` remain Module 7's, because
@@ -2681,6 +2847,29 @@ arrow direction), and a model ports exactly as sem reads it.
   described the dummy and not the user's data. `test_translate.do` 4.9 asserts Module 11's
   message. No text-level `group()` rejection is added,
   because a second, syntax-specific path could diverge from what sem recognizes.
+- **One binary covariate** (drafted 2026-11-14; **P1 and P2 decided by the owner 2026-11-14 (E-106, the Stage 2 decisions package), P3 (`@c` semantics) approved 2026-11-14; P5 remains provisional until the
+  owner confirms them**). Surface decision (the owner): sem-style paths, no new option, the covariate
+  named in the header. `e(oxvars)` of one variable is the covariate; Module 11 writes
+  `covariate x` after the `ind` line and reads the stripe rows `F:x` as `gamma F x` and `y:x` as
+  `kappa y x` (§4.8, Conditional covariates), `free`, or `fixed v` when a value is attached with `@`
+  (P3: literally, as a number in the model's own units, c = the coefficient of `gamma` or `kappa` as
+  defined in §4.8, never rescaled or re-signed; but `@0` writes no row: sem drops a path constrained to 0 from
+  e(b)'s stripe, the translator reads the stripe, so `(F <- x@0)` and no path give the same canonical text, and
+  `fixed 0` arises only from a hand-written model; an equality constraint through x is refused as any tied
+  constraint is). The canonical form stays a literal serialization of the parameter table; the
+  translator expands nothing. **P1:** two or more observed exogenous variables, and a covariate with
+  `group()`, are refused (rc 198). **P2:** sem gives an observed exogenous x a free covariance with
+  every exogenous factor; that covariance is not a parameter of the conditional model (a factor
+  depends on x through γ or does not), so a free `/cov(x,F)` is refused with the two ways out
+  (write `(F <- x)`, or fix it at zero with `cov(x*F@0)`), a covariance fixed at zero is skipped and
+  gives no γ, and a covariance fixed at another value is refused; an unconstrained `/var(x)` and
+  `/mean(x)` are skipped, a constrained one refused. `dwlsmv_semnames` leaves the same rows out, so
+  D6's two-way check is unchanged. **P5:** the command (not the translator) requires x numeric,
+  exactly the values 0 and 1 in the estimation sample, both present, rc 198 before Stage 1; x
+  enters the listwise sample; Stage 1's own coding check (rc 3498) remains. `dwlsmv_m11_stage1`
+  takes the covariate's name as an optional fourth argument and calls `dwls_sample_stats_cx(Y, K,
+  x)` with the same D9 recode of the indicators; `keepbound` has no meaning there (no `keep_bound`
+  in this mode) and the output side refuses it. **Decided (owner, 2026-11-14):** `keepbound` is unavailable with a covariate, and a boundary estimate (status 2) is not treated as an ordinary one without a derivation of its consequences for estimation, admissibility, covariance and inference. One covariate only; a second is refused explicitly. `standardized`, `keepbound` and `efa()` are refused with a covariate. `difftest` is refused with a covariate pending finite-sample size evidence (not because the difference test is undefined). Only T3, its df and p are reported: no baseline model, and no conditional CFI, TLI or RMSEA without their own derivation and validation. An ordinary (no-covariate) fit that does not converge is unchanged in this release; its inconsistency with the conditional case, which suppresses T3 and p, is an explicit outstanding decision, not a permanent policy. The diagnostics the owner calls P3 and P4 (not the P3 above) are deferred, outside core validation; their definitions and derivations are reviewed before any implementation.
 - **Carried to other D-items.** A fixed non-unit loading (`y2@.5`) is sem's normalisation for
   its factor, so the factor gets no `metric` line and `dwls_identify()` aborts (rc 3498, "a
   factor has no metric constraint"); Module 11's message for it belongs to D3. `ind` order is
@@ -2973,7 +3162,8 @@ the name to another program), a sub-option `stage1(keepbound)` (would set a patt
   not valid for WLSMV; nested comparisons use DIFFTEST.
 - **Fit indices** (Module 12 *Fit indices*, option A, F5 frozen 2026-10-21): `e(rmsea_s)`,
   `e(cfi_s)`, `e(tli_s)` (family S, from $T_3$) and the c1 baseline's `e(T3_b)`, `e(df_T3_b)`, at
-  every fit; missing by F3/F4's rules. Printed in the header under T3 as "RMSEA (scaled)", "CFI (scaled)", "TLI (scaled)", %9.4f, "." when missing (user, 2026-10-21, display "yes"; layout chosen at the build); shown only when posted.
+  every fit; missing by F3/F4's rules. Printed in the header under T3 as "RMSEA (scaled)", "CFI (scaled)", "TLI (scaled)", %9.4f, "." when missing (user, 2026-10-21, display "yes"; layout chosen at the build); shown only when posted. **A conditional fit (one covariate) posts none of these** (2026-11-13 (a)):
+  they are omitted, not missing, and the header prints a note instead.
 - **For `difftest`'s refit** (single-group fits, 2026-10-23; Module 12 *Architecture*):
   `e(canon)`, `e(keepbound)`, `e(datasignature)`, `e(datasignaturevars)`. No Stata version,
   edition or OS is posted (decided 2026-10-23, user). **At $G>1$ (2026-10-31):** `e(canon)` and
@@ -3067,6 +3257,23 @@ was rejected. `e(converged)` and `e(iterations)` join D8d's scalars. **Tested on
 and is posted is not tested, and no iteration-limit option is added to force one (decided by
 the user 2026-10-05).
 
+**Exception, a model with a covariate (confirmed by the owner 2026-11-14; drafted from the owner's requirement of the
+same day).** A conditional fit (§4.8, conditional covariates) that does not converge is
+NOT posted as above. It posts `e(b)`, `e(Cns_b)` (the fixed-parameter rows; Stata reserves `e(Cns)` and refuses it without `e(V)`), `e(N)`, `e(rank)`, `e(df_T3)`, `e(converged)`,
+`e(iterations)` and the macros of an ordinary fit; it posts no `e(V)`, no `e(T3)` and no `e(p_T3)`. The
+header says first, in error colour, directly under the title line, that the optimizer did not converge, that
+the estimates are the last iterate and not a solution, and that no standard errors, T3 or p-value are
+reported; under `metric(marker)` it says to refit with `metric(unitvariance)`, and, when `e(recovery)` is
+`ineligible` or `failed`, that the recovery refit was not attempted (the model is not eligible) or was
+attempted and failed, as the notes say (2026-11-15). A conditional marker fit whose recovery succeeds has
+converged and is posted as a converged fit, so this exception applies to a fit that stayed nonconverged
+after D11, or under `metric(unitvariance)`. The table lists the last iterate without standard errors, and the
+replay shows the same. Reasons: `dwls_inference()` computes a sandwich and T3 at any point, but both are
+asymptotics about a solution, so at a non-solution they are not inference (Module 6, "An unconverged fit",
+leaves whether to show them to the caller); the ordinary-fit rule is unchanged. **Not established:** that the
+ordinary-fit rule has the same gap (flagged to the owner, not edited), and the sandwich's behaviour at a
+non-solution as a diagnostic. Tests: `test_condx_marker.do`.
+
 **D9, indicator order and category recoding (decided 2026-10-04).**
 - **Order.** The indicators are sem's `e(oyvars)` (D1), which lists observed indicators in order
   of first appearance in the path specification as written, not dataset order: a cross-loaded
@@ -3115,7 +3322,9 @@ a degenerate non-converged point: on 200 of 200 replicates of the trap design, w
 and a reverse-coded marker fit both reach the same T3.
 
 - **Scope.** Applies only to `metric(marker)`, the default. A `metric(unitvariance)` fit is never
-  recovered.
+  recovered. It applies to a conditional fit (one binary covariate, one group; §4.8, Conditional
+  covariates) as to any other (owner, 2026-11-15; derivation `@sec-condx-recovery`); the rules that
+  differ for it are marked *conditional* below.
 - **Trigger** (decided with the user 2026-10-06). The first marker fit is recovered when any of
   these holds:
   - `converged` = 0;
@@ -3124,11 +3333,21 @@ and a reverse-coded marker fit both reach the same T3.
 
   Non-convergence alone is present on every trapped fit in the study. Inadmissibility alone
   would miss 47 of 200.
-- **Eligibility** (all-or-nothing, the user's rule; derivation Result 2), read from Module 3's
-  marker parameter table. All three must hold:
+
+  *Conditional:* the trigger is the same three causes (decided by the owner, 2026-11-15, "Yes, both"). Module 10's
+  bread row is computed for a conditional fit (`dwlsmv_breaddiag()` on the conditional Δ and Γ̂; production's ratio
+  0.15 and 0.12 healthy against $4\times10^{-13}$ and $1.2\times10^{-13}$ for an exact scale twin, one factor, StataMP 18;
+  several factors, B and Stata 16.1 not measured), and its numerical-rank flag fires the trigger as for an ordinary fit
+  (`bread_cx = 1` in `dwlsmv_m11_estimate.mata`).
+- **Eligibility** (all-or-nothing, the user's rule; derivation Result 2 and `@sec-condx-recovery`
+  Result C3), read from Module 3's marker parameter table. All of these must hold:
   - every factor has exactly one fixed nonzero loading, equal to 1;
   - no ψ_ff is fixed;
-  - every other fixed λ, β or ψ is exactly 0.
+  - every other fixed λ, β or ψ is exactly 0;
+  - *conditional:* every fixed γ (x → factor, ptype 8) is exactly 0. A γ fixed at v in the marker
+    table is c_f·v at the unit-variance optimum, and c_f is not known before the fit, so no
+    unit-variance table can state it. A fixed κ (x → indicator, ptype 9) of any value, and a fixed
+    γ = 0, keep the model eligible: they mean the same in both tables.
 
   If the model is ineligible, recovery is not attempted: the first fit is reported, with a note
   naming the reasons.
@@ -3143,14 +3362,16 @@ and a reverse-coded marker fit both reach the same T3.
      This is `mr_uv_table()` in text form. Module 3 expands the result, as it expands any
      `metric` line (§4.8).
   2. `dwls_identify()`, then `dwls_fit()` on the same Stage 1 output. Stage 1 is not re-run.
-  3. The transform (derivation Result 1). With c_f the marker's unit-variance loading:
+  3. The transform (derivation Result 1; conditional, `@sec-condx-recovery` Result C1). With c_f the
+     marker's unit-variance loading:
      - λ ↦ λ/c_f;
      - β_fg ↦ β_fg·c_f/c_g;
-     - ψ_fg ↦ ψ_fg·c_f·c_g.
+     - ψ_fg ↦ ψ_fg·c_f·c_g;
+     - *conditional:* γ_fk ↦ c_f·γ_fk (row = factor f, column = covariate k); κ unchanged.
 
      Thresholds are unchanged.
-  4. The transformed values become the starts of the free λ, β and ψ rows in the marker
-     canonical text (`free <start>`, §4.8). Each start must read back as the identical
+  4. The transformed values become the starts of the free λ, β and ψ rows (conditional: and γ, κ)
+     in the marker canonical text (`free <start>`, §4.8). Each start must read back as the identical
      double; the written format is decided, below. Thresholds cannot be carried in the text:
      the grammar has no threshold directive (2026-10-07, the user's). Then `dwls_identify()`
      runs through the normal marker path.
@@ -3174,6 +3395,8 @@ and a reverse-coded marker fit both reach the same T3.
 - **Success and failure.**
   - Recovery **succeeds** when the final marker fit converges. Its admissibility and Module 10
     notes are reported as for any fit: a genuine Heywood case stays inadmissible, correctly.
+    A recovered conditional fit posts what a converged conditional fit posts (§4.8); its notes read:
+    the recovery note, then the admissibility note.
   - Recovery **fails** when the unit-variance fit does not converge, when some c_f is 0 or
     non-finite (the map does not exist), or when the final fit does not converge. Then the first
     marker fit is reported, unchanged, with its own warnings and a note that recovery was tried
@@ -4085,14 +4308,20 @@ positions to variable names for `e()` and the output.
 ```text
 // ---- the index map (Gate 1) --------------------------------------------
 struct dwlsmv_statmap scalar
-    dwlsmv_statmap_build(real colvector K)
+    dwlsmv_statmap_build(real colvector K,
+                         | real scalar q)   // optional, default 0: the number
+                                            // of covariates (conditional mode)
 
 real scalar    dwlsmv_pos_tau(struct dwlsmv_statmap scalar map,
                               real scalar j, real scalar c)
 real scalar    dwlsmv_pos_rho(struct dwlsmv_statmap scalar map,
                               real scalar i, real scalar j)
+real scalar    dwlsmv_pos_slope(struct dwlsmv_statmap scalar map,
+                                real scalar j, real scalar k)
+                              // slope of indicator j on covariate k
 real rowvector dwlsmv_pos_inv(struct dwlsmv_statmap scalar map, real scalar s)
                               // returns (stat_type, var_i, var_j, thr_k)
+                              // a slope is (3, j, k, 0)
 
 // ---- Module 2: one pair's polychoric and its information (Gate 3) ------
 struct dwlsmv_pairfit scalar
@@ -4111,6 +4340,16 @@ real matrix
                real matrix            psi_tau)   // the STACKED per-variable
                                                  // lookup tables, sum(K) x T
                                                  // -- not the gathered N x T
+
+// ---- Modules 1-4, conditional mode (one 0/1 covariate, one group) -------
+struct dwlsmv_stage1 scalar
+    dwls_sample_stats_cx(real matrix Y, real colvector K, real matrix X)
+
+real matrix
+    dwls_gamma_cx(real matrix Y, real matrix X,
+                  struct dwlsmv_statmap scalar map,
+                  real colvector s)   // evaluates Modules 1-2's blocks at s;
+                                      // estimates nothing
 
 // ---- Module 3: identification and the parameter map --------------------
 struct dwlsmv_parmap scalar
@@ -4153,6 +4392,60 @@ values, no `theta`. Any signature change that lets a structural model reach
 `dwls_sample_stats()` or `dwls_gamma()` breaks the paired validation design of
 Section 7.1, which depends on Stage 1 being checkable against lavaan with no
 structural model specified at all.
+
+*In conditional mode Stage 1 takes `(Y, K, X)` and nothing else* (`dwls_sample_stats_cx()`, built
+2026-11-10). $X$ is data. There is no model specification, no start and no `theta`. `keep_bound`
+does not exist in this mode, and `stage1.bound` is all zeros. The map is built from $(K, q)$, and
+$q$ is derived as $(D - T - P)/p$, never stored. `dwls_gamma_cx()` receives the Stage 1 estimates
+as $s$ and does not compute them. The Hessian-form blocks $H_j$, $U_\rho$ and $U_\theta$ are
+evaluated at $s$ by Modules 1 and 2 and assembled into ψ in one place (`dwlsmv_cx_psi_matrix()`).
+No struct field and no new type crosses the boundary. The scope is one covariate coded 0/1 at
+$G = 1$; every other $X$ is refused at rc 3498. Stage 2 accepts a conditional `stage1` only at one
+group and only through the entry points named below: Modules 3 to 9 index the correlations at
+`map.D - map.P + k`, not at `map.T + k`, once slopes exist.
+
+*Stage 2 refuses a conditional map* (user, 2026-11-12). A map with $q > 0$
+(`dwlsmv_statmap_q()`), passed as an argument, as one element of a vector, or inside a `stage1`
+or a vector of them, aborts at rc 3498 after an `errprintf()` that names the function and the
+group. The check is `dwlsmv_s2_guard()` / `dwlsmv_s2_guard_st()`, called before the map is read
+by `dwls_identify()` (its maps, and its Stage 1 results when passed), `dwls_model()`,
+`dwls_delta()`, `dwlsmv_fit_stack()` (through which `dwls_fit()` and every other fit path
+stacks), `dwls_inference()` (through `f.stage1`, since a fit can be assembled by hand),
+`dwlsmv_sens_hess()`, `dwlsmv_admissible()`, `dwlsmv_mg_admissible()` and
+`dwlsmv_fitidx_base()`. No locked signature changes, and an unconditional map is unaffected. The
+guard functions take an optional last argument, the number of covariates the caller's model
+declares (default 0, which is the refusal above). **`dwls_identify()` passes it**, counting
+the `covariate` names in `modelspec`: a conditional map is accepted when its $q$ equals that
+count, is refused at rc 3498 when $q > 0$ and no covariate is declared, and is refused at rc 3498
+when the count and $q$ differ (a covariate declared with an unconditional map included). Several
+covariates, and covariates under `groups`, are refused at rc 3498 as not specified yet.
+**`dwls_model()` and `dwls_delta()` accept one group with a conditional map of one covariate**
+(2026-11-13, `dwlsmv_cx1_check()`): the slope rows are
+$b = ambda(i-b)^{-1}gamma_x + k$ (`@sec-condx`), their derivatives are analytic, and the
+residual-correlation rows sit at $d - p + 1, dots, d$, not at $t + 1$. a table without γ or κ
+rows on a conditional map gives zero slopes (the model in which $x$ has no effect). γ or κ rows
+on an unconditional map, a map with $q > 1$, and several groups with a conditional map or with γ
+or κ rows are refused at rc 3498. **`dwls_fit()` and `dwls_inference()` accept one group with a
+conditional `stage1` of one covariate** (2026-11-13; `dwlsmv_cx1_fit_check()`, called by
+`dwlsmv_fit_stack()` when its optional last argument is 1, which only `dwlsmv_fit_uls()` and
+`dwlsmv_fit_from()` pass, and by `dwls_inference()`; both fit paths also call `dwlsmv_cx1_check()` for
+the table against the map). Nothing in the arithmetic changes (`@sec-condx-full` C1–C4): the weight is
+$W_D=\operatorname{diag}(\hat\Gamma)^{-1}$ over all $D=T+p+P$ rows, slopes included, with the
+Hessian-form $\hat\Gamma$; $T_{\rm raw}=(N-1)F$; `D_stat` $=D-\text{npar}$ with the slopes counted in
+$D$; ACOV, the traces and $T_3$ are as in v1, `acov` on the $\sqrt N$ scale and $e(V)=\text{ACOV}/(N-1)$
+Module 11's. Start values are the table's own (γ and κ start at 0 unless a start is given); nothing
+reads Stage 1's slopes. After convergence `dwlsmv_signcanon()` reverses a factor's γ with its
+loadings (Module 7, Factor signs). **Still refused at rc 3498 for a conditional map or result:**
+the `dwlsmv_sens*` diagnostics (through `dwlsmv_fit_stack()` without the flag), `dwlsmv_sens_hess()`,
+`dwlsmv_mg_admissible()` and `dwlsmv_fitidx_base()`; **`dwlsmv_admissible()` accepts one group with a conditional map of one covariate** (`dwlsmv_cx1_check()`; the conditions are on the conditional $\Phi$, $\Theta$ and $R_{y^*}$, `@sec-condx-full` C6, and $\gamma$, $\kappa$ do not enter). No conditional fit
+index, baseline or DIFFTEST is defined or built: `@sec-condx-fit` leaves the baseline to the user
+and states DIFFTEST's conditions without checking its size, and `dwlsmv_difftest()` has no guard
+because it takes matrices only and Module 11 cannot yet build a covariate model. The guard is
+removed function by function as Stage 2 learns the slope rows. `dwlsmv_gammadiag()`, a Stage 1
+diagnostic that also indexes pairs at `map.T + k`, is not Stage 2 and is not guarded by
+`dwlsmv_s2_guard()`; it carries its own refusal of a conditional `stage1` called without the covariate, at rc 3498 (§4.8;
+`tests/unit/test_condx_stage1.do`, section 8). **Amended 2026-11-15:** given the covariate as a third argument it accepts a
+conditional `stage1` (Module 10, *Conditional mode*), and a covariate fit calls it.
 
 *`dwls_gamma()` receives the pair fits, it does not compute them.* Module 2
 estimates; Module 4 assembles. Keeping the assembly in one place is what makes
@@ -4226,9 +4519,11 @@ signature three lines above its function cannot.
 | `dwlsmv_fit_from` | 7 | The DWLS run from a given start, sign canonicalization and the fit struct: `dwls_fit()` after its ULS run. D11's recovery calls it directly for its final fit, skipping ULS (2026-10-07) |
 | `dwlsmv_fit_w` | 7 | W_D = diag(Γ)⁻¹ as a vector, after checking Stage 1's output; formed only here |
 | `dwlsmv_m11_recstart` | 11 | The recovery's final-fit start: the table's free values, each threshold at s_τ |
-| `dwlsmv_signcanon` | 7 | Canonical factor signs after convergence: reverses each reflectable factor whose first free loading is negative, exactly as $\Lambda D$, $D\Psi D$, $DBD$ |
+| `dwlsmv_signcanon` | 7 | Canonical factor signs after convergence: reverses each reflectable factor whose first free loading is negative, exactly as $\Lambda D$, $D\Psi D$, $DBD$ (and, in conditional mode, $\Gamma_x\to D\Gamma_x$) |
+| `dwlsmv_cx1_fit_check` | 7/8 | `(sts, who)` → q (0 or 1). Replaces the Stage 2 guard in `dwlsmv_fit_stack()` (flagged callers, i.e. `dwls_fit()`'s paths) and in `dwls_inference()`: one group with q ≤ 1 passes, q > 1 and a conditional map under several groups are refused at rc 3498 (`dwlsmv_s2_guard_st()` for the latter). Does not see the table; `dwlsmv_cx1_check()` does |
 | `dwlsmv_admissible` | 7 | The §5 admissibility conditions at any θ: flag, worst value and location per condition. Derived, so never stored on the fit |
 | `dwlsmv_admissadvice` | 7 | Those flags as notes a user can act on — the same flags/prose split as `dwlsmv_diagadvice`; practitioner wording 2026-10-07 (D8e) |
+| `dwlsmv_cx_admissnote` | 11 | A conditional fit's admissibility note: `dwlsmv_admissadvice()` plus, for a fit that did not converge, a sentence replacing its closing paragraph (2026-11-14, provisional; the `metric(marker)` sentence about a recovery refit removed 2026-11-15, D11 now runs for a conditional fit) |
 | `dwlsmv_acov` | 8 | Section 4.10's ACOV from (Δ, Γ): expected-information bread, $W_D$ a vector, `cholinv()` on the bread. Divides by no sample size. `dwls_inference()` calls it |
 | `dwlsmv_ev` | 8 | $e(V) = \operatorname{ACOV}/(N-1)$ and nothing else; called where `e(V)` is posted (Module 11) |
 | `dwlsmv_traces` | 9 | $(\operatorname{Tr}M, \operatorname{Tr}M^2)$ from (Δ, Γ) by Section 4.9's expansion; $U$ and $M$ never formed. Takes matrices so it can be fed lavaan's own Δ and Γ |
@@ -4257,13 +4552,15 @@ signature three lines above its function cannot.
 | `dwlsmv_dt_reftol` | 12 | Check 6's tolerance, **1e-10, chosen after measuring** (2026-10-09): 100 × the observed processor-count maximum 8.05e-13, rounded up to a power of ten (rule frozen before the run); re-checked at G > 1 |
 | `dwlsmv_difftest` | 12 | The DIFFTEST statistic for one nested pair, any $G$: from $(\Delta_1, \Delta_0, \Gamma, T_d)$; at $G > 1$ (2026-10-14, MG7(3), `mg-difftest-omega`, signature unchanged) the caller passes the stacked $\Delta_j$, $\Omega = \operatorname{blockdiag}(\Gamma_g/\pi_g)$ from `dwlsmv_omega` in the $\Gamma$ slot (so $W = \operatorname{diag}(\Omega)^{-1}$ is weighting (a)) and $T_d$ with $T = (N-G)F$; $\hat h = \Delta_1^{+}\Delta_0$, $M_1$ on $\hat h$ with $V_1$ from `dwlsmv_acov`, then $(T_{d3}, d, p, a_d, b_d, \operatorname{Tr}M_1, \operatorname{Tr}M_1^2)$. No validation (nesting, sign, ε) and no $N$; $d = 0$ is an error, the caller's to skip |
 | `dwlsmv_asym` | 10 | $(a, 4D\varepsilon, i, j)$, $(i, j)$ where $a$ is attained ($i<j$; $(0,0)$ when $a=0$; added 2026-09-26 for `gammadiag`'s row 1), with $a = \max|A_{ij}-A_{ji}|/\sqrt{A_{ii}A_{jj}}$: the **one** definition of Γ's symmetry measure and budget. `dwlsmv_acov` and `dwlsmv_traces` abort with rc 3498 when $a$ exceeds the budget, and Module 10's diagnostic reports the same comparison; none carries its own tolerance |
-| `dwlsmv_npatterns` | 10 | $n_{\text{pat}}$ from $(Y, K)$ as §4.5.6 defines it, with Stage 1's per-column validation (rc 3498 on a missing, non-integer or out-of-range code) |
+| `dwlsmv_npatterns` | 10 | $n_{\text{pat}}$ from $(Y, K)$ as §4.5.6 defines it, with Stage 1's per-column validation (rc 3498 on a missing, non-integer or out-of-range code). **Optional third argument $x$ (2026-11-15):** the covariate of a conditional fit, $N \times 1$, coded 0/1 (rc 3498 otherwise); a pattern is then a row of $(Y, x)$ |
 | `dwlsmv_thralias` | 10 | Pairwise relations among the columns of $[\mathbf 1\mid Z]$ (identical, complementary, constant), found from the exact integer counts of $Z'Z$ with no cutoff; rows $(a, b, \text{type})$ in $s$'s positions. Relations among three or more columns are a recorded v1 limit |
 | `dwlsmv_countdiag` | 10 | The small-count family from $(Y, K)$: 2 × 4, the smallest boundary- and interior-category counts with (variable, category position), every flag `.n`. Same validation as `dwls_sample_stats()`; an empty declared category reads 0 rather than aborting. No pair-cell rows until the S partition decides their role |
-| `dwlsmv_gammadiag` | 10 | Γ̂'s seven rows from `(stage1, Y)`, 7 × 4: asymmetry, not PSD, too few patterns, threshold aliasing, centring, raw ratio, scale-free ratio (§5 Module 10). A flagged asymmetry stops it: rows 2–7 are `.`. rc 3498 when Y is not the matrix Stage 1 was built on, or Γ/ψ̄ do not match the map. Folds in the `dwlsmv_symdiag()` of the 2026-09-25 shape row |
+| `dwlsmv_countcells` | 10 | **(new 2026-11-15, conditional mode)** From $(Y, K, x)$: $(2 + 2\sum_j K_j) \times 4$ table of counts, rows 1–2 the group sizes $(0,0,g,n_g)$, then $(j, c, g, \text{count})$ per item, category position and $x$-group; a count table, not the $[\text{flag}, \text{value}, i, j]$ layout. Same validation as `dwlsmv_countdiag`, plus $x$ coded 0/1 with both values present (rc 3498) |
+| `dwlsmv_gammadiag` | 10 | Γ̂'s seven rows from `(stage1, Y)` or, for a conditional `stage1`, `(stage1, Y, x)`, 7 × 4 (row 4 is `.` not evaluated in the conditional case): asymmetry, not PSD, too few patterns, threshold aliasing, centring, raw ratio, scale-free ratio (§5 Module 10). A flagged asymmetry stops it: rows 2–7 are `.`. rc 3498 when Y is not the matrix Stage 1 was built on, or Γ/ψ̄ do not match the map. Folds in the `dwlsmv_symdiag()` of the 2026-09-25 shape row |
 | `dwlsmv_dalias` | 10 | $d_{\text{alias}}$ from `dwlsmv_thralias()`'s relations, by connected components: each constant column 1, a component of $m$ columns $m-1$. Its own function so the count is testable on relations no Stage 1 could be run on |
 | `dwlsmv_numrank` | 3, 10 | The one numerical-rank criterion: the number of singular values above $10^{-8}$ of the largest, with the singular values and right vectors (as rows) returned for the caller. `dwls_identify()` aborts on it at the starting values; `dwlsmv_breaddiag()` reports it at $\hat\theta$ |
-| `dwlsmv_breaddiag` | 10 | The bread's four rows from `(Delta, Gamma)`, 4 × 4: npar > D; an identically zero Δ column; numerical rank of $W_D^{1/2}\Delta$ (`dwlsmv_numrank`); its $\sigma_{\min}/\sigma_{\max}$, flag `.n`. npar is `cols(Delta)`. Rows 3–4 judge only the non-zero columns and are `.` when row 1 flags or no column is non-zero. rc 3498 on an empty or missing Δ, or a Γ that is not D × D with a positive diagonal |
+| `dwlsmv_breaddiag` | 10 | The bread's four rows from `(Delta, Gamma)`, 4 × 4: npar > D; an identically zero Δ column; numerical rank of $W_D^{1/2}\Delta$ (`dwlsmv_numrank`); its $\sigma_{\min}/\sigma_{\max}$, flag `.n`. npar is `cols(Delta)`. Rows 3–4 judge only the non-zero columns and are `.` when row 1 flags or no column is non-zero. **Runs on a conditional fit's Δ and Γ̂ (2026-11-15).** rc 3498 on an empty or missing Δ, or a Γ that is not D × D with a positive diagonal |
+| `dwlsmv_m11_bread` | 11 | **(new 2026-11-15)** The caller-level rule for the bread: Module 11 reads `dwlsmv_breaddiag()` through it, for ordinary and conditional fits and at $G > 1$. A Δ with any missing value gives the not-evaluated 4 × 4, `(J(4, 2, .), J(4, 2, 0))`: no bread flag fires (D11's bread cause included), no bread note prints, `e(bread_ratio)` is missing. Any other Δ gives `dwlsmv_breaddiag()`'s own result, the same call. `dwlsmv_breaddiag()` keeps its contract (rc 3498 on a missing Δ). Defensive: on a reading of `dwls_fit` and `dwls_delta`, no fit reaches a missing Δ |
 | `dwlsmv_diagadvice` | 10 | The three row matrices as prose, `(G, C, B, ind, slab, pname)`. Flag notes by family, only when a row fires: Γ̂ (the sampling covariance of the thresholds and correlations) and the identification of the parameters at the estimate (the bread), in the 2026-10-07 practitioner wording (D8e). Then **always** the category counts, as descriptive diagnostics with no threshold (D8e), never worded as Γ conditioning. The singular-value ratios are not printed (stored by Module 11, D8d). Unevaluated rows read "not evaluated". It prints nothing and aborts only on a contract violation (rc 3498): wrong shapes, or a location outside its labels. Admissibility is not an input (separate channel) |
 
 Modules 1 and 2 keep their routines taking a single column or a single pair
@@ -4432,6 +4729,7 @@ zero), so specify both: accept when $|a - b| \le \epsilon_{\text{abs}} + \epsilo
 | Component | Suggested tolerance |
 |---|---|
 | Thresholds | $\epsilon_{\text{abs}} \approx 10^{-8}$, $\epsilon_{\text{rel}} \approx 10^{-8}$ |
+| Slopes (conditional mode) | $\epsilon_{\text{abs}} = 10^{-8}$, $\epsilon_{\text{rel}} = 10^{-8}$: the threshold tier (conditional-mode preregistration [V5], 2026-11-10) |
 | Bivariate correlations | $\epsilon_{\text{abs}} \approx 10^{-8}$, $\epsilon_{\text{rel}} \approx 10^{-8}$ |
 | Γ — see the split below | (one row is not enough; a single ^{-5} cannot cover them) |
 | DWLS objective value | $\epsilon_{\text{rel}} \approx 10^{-8}$ |
@@ -4562,6 +4860,7 @@ unachievable tolerance, or passing a test that should have been tight, are both 
 | Within-variable threshold block, empirical vs closed form | The same arithmetic (Section 4.5 identity) | Machine precision | $\epsilon_{\text{abs}} \approx 10^{-12}$, no relative term. A failure is a coding error, never noise. |
 | `dwlsmv` Γ̂ vs `lavInspect(fit,"gamma")`, **at a matched $\hat\rho$** | Two *empirical* constructions from the same $\psi$ | Floating-point | $\epsilon_{\text{abs}} \approx 10^{-12}$, $\epsilon_{\text{rel}} \approx 10^{-12}$. This is the real test of whether the two $\psi_\rho$ agree; $10^{-5}$ would let a genuinely different influence function pass. Measured 1.4e-13 on `case_D`. |
 | `dwlsmv` Γ̂ vs `lavInspect(fit,"gamma")`, **end to end** | The above, *plus* two independently converged $\hat\rho$ | Capped by $\hat\rho$ | $\epsilon_{\text{abs}} \approx 10^{-8}$, $\epsilon_{\text{rel}} \approx 10^{-8}$ — the **bivariate-correlation** tier above, not a loosened Γ tier. Measured 9.1e-10. |
+| `dwlsmv` Γ̂ (Hessian form, conditional mode) vs the tier-1 analytic R reference (`condx_ref_*_gamma.csv`), **end to end** | The same closed forms; two independently converged Stage 1s; `binormal()` against `integrate()` | Capped by $\hat\rho$ and the reference's $Phi_2$ (measured largest error 1.37e-16 at the corners used) | $\epsilon_{\text{abs}} = 10^{-8}$, $\epsilon_{\text{rel}} = 10^{-8}$, every entry (conditional-mode preregistration [V6] (i), 2026-11-10) |
 | Cross-variable entries, empirical Γ̂ vs closed form at the same estimates | A sample proportion estimating $\Phi_2$ | $O(N^{-1/2})$ | Not a fixed number — calibrate per design (see below). At $n=5000$ on a four-indicator model the max gap runs ≈ 0.06. |
 | Analytic Γ vs Monte Carlo $N\cdot\text{Var}(\hat s)$ (Section 7.3) | Sampling variability across $R$ replications | $O(R^{-1/2})$ | Not a fixed number — use $z$ statistics (see 7.3). **$10^{-5}$ here would need $R \approx 2\times10^{10}$ replications.** |
 

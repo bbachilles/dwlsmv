@@ -1,0 +1,14 @@
+{
+    "generated_utc": "2026-11-14 13:58:14 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "set.seed(20261114L) for condx_U.csv; RNGkind Mersenne-Twister/Inversion/Rejection; order: rbinom(N, 1, 0.4), rnorm(2N) for the disturbances, then per item rnorm(N) residuals",
+    "files": {
+      "fixtures/data/condx_U.csv": "15239c71278c1a2bde7bc6c9a98bfefb",
+      "fixtures/expected/condx_ref_U_s.csv": "382e26c67128d4cc54fd066b0d1571e0",
+      "fixtures/expected/condx_ref_U_gamma.csv": "63a8d466ec7b6819c1ab0723e29be4aa",
+      "fixtures/expected/condx_ref_U_theta.csv": "d029dbc2ffcd5f0ecf20f899f5c8458a",
+      "fixtures/expected/condx_ref_U_scalars.csv": "0c30d62ffac35f020d5ac0205dbd5136"
+    },
+    "packages": ["none (base R only)", "R version 4.6.0 (2026-04-24 ucrt)", "development fixture: NOT a preregistered dataset (links 1 to 3 use condx_A, condx_D, condx_link3)", "design: N 600, K 3,2,4,3,2,3; two factors F1 y1-y3 and F2 y4-y6 plus cross-loading y4 <- F1 0.20 (lambda4 0.65); psi12 0.30; gamma 0.5, -0.4; kappa y3 0.4; P(x=1) 0.4; fitted model omits the cross-loading", "qmd sha256 spec/derivations/dwlsmv-derivations.qmd ea61a3d4f57e2fa403d9656b998beb183639cc0e16086fd194441f03817ca980", "qmd chunks run whole, in order: cx-setup, cx-stage1, cxn-psi, cxh-forms, cx-anchor-setup", "run-script md5 docs/notes/condx-sim/condx_sim_run.R fd1de1b177c27876b9ce48a15680f61b", "run-script sha256 docs/notes/condx-sim/condx_sim_run.R ebc26cb8fc936868d5df2cb99890a5f3bfc282088a767cfda2673de03f36a2f9", "run-script definitions used: GN_TOL, GN_MAX, cxs_gn", "common md5 fixtures/generate/00_common.R 6efb6a2c94325067252200a0d9603010 (write_csv_lf, write_manifest, labels; its Phi2/phi2 removed)", "Stage 1, psi, Gamma-hat: cx_stage1, cxh_psi, cx_gamma with cx_K, cx_p, cx_pairs reassigned for six items; W_D = diag(1 / diag(Gamma-hat)); SE and T divisor N - 1", "model map: ca_mod / ca_s / ca_delta (chunk cx-anchor-setup), thresholds prepended with an identity block; Delta by central differences h 1e-6", "Gauss-Newton: cxs_gn, start ref_start(s) (this file), stop max|step| < 1e-10, at most 200 iterations", "diagnostics: Delta central-difference step 1e-6 vs 1e-4 gap 6.106e-11; max |rho-hat| 0.5476", "Phi2: the .qmd's integrate() form, rel.tol 1e-12; phi2: cx_phi2 (plain form)", "condx_U: N 600, 330 patterns, GN 17 iterations, F 0.0372169, T_raw 22.292908, df 11, T3 33.134401, p 0.0005004"]
+  }

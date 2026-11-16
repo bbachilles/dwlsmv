@@ -14,6 +14,7 @@ void dwlsmv_m11_clear()
 {
     rmexternal("dwlsmv_m11_st")
     rmexternal("dwlsmv_m11_Y")
+    rmexternal("dwlsmv_m11_x")
     rmexternal("dwlsmv_m11_txt")
     rmexternal("dwlsmv_m11_rec")
     // the invariance() flow (build step 3, 2026-10-12)

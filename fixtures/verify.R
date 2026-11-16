@@ -41,10 +41,16 @@
 #                                  99h_lavaan_condx.R (optional)
 #   fixtures/MANIFEST_lavaan_condx_fit.json  lavaan conditional.x full fit,
 #                                  99i_lavaan_condx_fit.R (optional)
+#   fixtures/MANIFEST_condx_link3.json  condx gate datasets: 100 link 3 replicates
+#                                  and condx_D, 99m_condx_link3.R (optional)
+#   fixtures/MANIFEST_condx_ref.json  condx analytic reference for link 2,
+#                                  99n_condx_ref.R (optional)
 #   fixtures/MANIFEST_lavaan_mg_fitidx.json  lavaan G = 2 fit indices across levels,
 #                                  99j_lavaan_mg_fitidx.R (optional)
 #   fixtures/MANIFEST_phi2_corners.json  Phi2 corners, MPFR M1 reference
 #                                  certified by M4, 99j_phi2_corners.R (optional)
+#   fixtures/MANIFEST_phi2_flush.json  Investigation D flush-event pairs and
+#                                  their C/M4-certified corners, 99l_phi2_flush_events.R (optional)
 #   fixtures/MANIFEST_efa_data.json  tier 1, geomin EFA data, Cases F and G,
 #                                  91_efa_data.R                   (optional)
 #   fixtures/MANIFEST_lavaan_efa_geomin.json  lavaan oblique geomin, E/F/G,
@@ -171,12 +177,24 @@ optional <- list(
   # Conditional-covariate mode (v0.4.0, item 4b, 2026-10-25): lavaan conditional.x full fit.
   list(file = "MANIFEST_lavaan_condx_fit.json", label = "lavaan conditional.x full fit (estimates, SEs, T3)",
        gen = "99i_lavaan_condx_fit.R"),
+  # Conditional-mode gate (2026-11-10): the link 3 replicates' data and the link 2 D dataset.
+  list(file = "MANIFEST_condx_link3.json", label = "condx gate datasets (100 link 3 replicates, condx_D)",
+       gen = "99m_condx_link3.R"),
+  # Conditional-mode gate (2026-11-10): the analytic R reference for link 2.
+  list(file = "MANIFEST_condx_ref.json", label = "condx analytic reference (Hessian-form Gamma, fit, T3)",
+       gen = "99n_condx_ref.R"),
+  # Conditional-mode development fixture (2026-11-14): data that do not fit exactly; NOT a preregistered dataset.
+  list(file = "MANIFEST_condx_ref_U.json", label = "condx non-exact-fit development reference (condx_U)",
+       gen = "99o_condx_ref_nonexact.R"),
   # G > 1 fit indices and their differences (mg-fitidx-t2, 2026-10-31).
   list(file = "MANIFEST_lavaan_mg_fitidx.json", label = "lavaan G = 2 fit indices across invariance levels",
        gen = "99j_lavaan_mg_fitidx.R"),
   # Numerical reference layer (2026-10-28): Phi2 corners, M1 certified by M4.
   list(file = "MANIFEST_phi2_corners.json", label = "Phi2 corners, MPFR M1/M4 reference",
        gen = "99j_phi2_corners.R"),
+  # Investigation D flush events (2026-11-09): cell 180 pairs, corners C/M4-certified.
+  list(file = "MANIFEST_phi2_flush.json", label = "Phi2 flush-event pairs (Investigation D, cell 180)",
+       gen = "99l_phi2_flush_events.R"),
   # ESEM groundwork: unrotated two-factor EFA on Case E. Own manifest, as above.
   list(file = "MANIFEST_lavaan_efa.json", label = "lavaan unrotated EFA (ESEM step 0)",
        gen = "99g_lavaan_efa.R"),

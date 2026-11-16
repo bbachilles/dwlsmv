@@ -55,13 +55,14 @@ mata:
 struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
                                              struct dwlsmv_statmap vector maps,
                                              struct dwlsmv_stage1 vector st,
-                                             real scalar hasst)
+                                             real scalar hasst,
+                                             | real colvector lno)
 {
     struct dwlsmv_parmap scalar par
     string colvector fac1, ind1, fac, ind, sl
     string rowvector w
     string scalar d, tn
-    real colvector secof, seen, ept, erw, ecl, efr, evl
+    real colvector secof, seen, ept, erw, ecl, efr, evl, lnn, slno
     real colvector Eg, Ept, Er, Ec, Ef, Ev, blk, tf
     real matrix ops, Tl, S
     real scalar G, nl, g, i, j, k, t, q, nt, ngl, cur, pt, b, r, c
@@ -70,6 +71,18 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
 
     tyn = ("lambda", "psi", "beta", "tau", "nu", "omega", "alpha")
 
+    // Line numbers for messages: the caller's (original numbers in the text), else the
+    // position in lines.
+    if (args() >= 5) {
+        lnn = lno
+    }
+    else {
+        lnn = J(rows(lines), 1, .)
+        for (q = 1; q <= rows(lines); q++) {
+            lnn[q] = q
+        }
+    }
+
     // ---- 1. groups and sections (G1) ---------------------------------------
     ngl = 0
     for (nl = 1; nl <= rows(lines); nl++) {
@@ -77,7 +90,7 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
         if (w[1] == "groups") {
             ngl++
             if (ngl > 1) {
-                errprintf("dwls_identify: a second 'groups' line (line %f). Write 'groups G' once.\n", nl)
+                errprintf("dwls_identify: a second 'groups' line (line %f). Write 'groups G' once.\n", lnn[nl])
                 _error("dwls_identify: more than one groups directive")
             }
             G = (cols(w) == 2 ? strtoreal(w[2]) : .)
@@ -102,11 +115,11 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
         if (d == "group") {
             g = (cols(w) == 2 ? strtoreal(w[2]) : .)
             if (missing(g) | g != floor(g) | g < 1 | g > G) {
-                errprintf("dwls_identify: line %f: 'group' needs one integer in 1..%f.\n", nl, G)
+                errprintf("dwls_identify: line %f: 'group' needs one integer in 1..%f.\n", lnn[nl], G)
                 _error("dwls_identify: group number outside 1..G")
             }
             if (seen[g]) {
-                errprintf("dwls_identify: 'group %f' opens a second section (line %f).\n", g, nl)
+                errprintf("dwls_identify: 'group %f' opens a second section (line %f).\n", g, lnn[nl])
                 _error("dwls_identify: a group section appears twice")
             }
             seen[g] = 1
@@ -115,7 +128,7 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
         }
         if (cur == 0) {
             errprintf("dwls_identify: line %f ('%s') lies outside any group section. Every directive but\n",
-                      nl, d)
+                      lnn[nl], d)
             errprintf("'groups' and 'tie' belongs to the section a 'group g' line opens.\n")
             _error("dwls_identify: a directive lies outside any group section")
         }
@@ -162,13 +175,15 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
     Ef  = Eg
     Ev  = Eg
     for (g = 1; g <= G; g++) {
-        sl = J(0, 1, "")
+        sl   = J(0, 1, "")
+        slno = J(0, 1, .)
         for (nl = 1; nl <= rows(lines); nl++) {
             if (secof[nl] == g) {
-                sl = sl \ lines[nl]
+                sl   = sl \ lines[nl]
+                slno = slno \ lnn[nl]
             }
         }
-        dwlsmv_id_parse(sl, maps[g], g, 1, fac, ind, ept, erw, ecl, efr, evl)
+        dwlsmv_id_parse(sl, maps[g], g, 1, fac, ind, ept, erw, ecl, efr, evl, slno)
         if (g == 1) {
             fac1 = fac
             ind1 = ind
@@ -266,7 +281,7 @@ struct dwlsmv_parmap scalar dwlsmv_id_groups(string colvector lines,
         }
         ops = dwlsmv_id_tie(w, fac1, ind1)
         nt++
-        tn = "tie line " + strofreal(nl)
+        tn = "tie line " + strofreal(lnn[nl])
 
         for (q = 1; q <= rows(ops); q++) {
             if (ops[q, 1] != 1 & ops[q, 1] != 4) {

@@ -46,19 +46,30 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
     struct dwlsmv_parmap scalar par
     struct dwlsmv_fit    scalar fit
     string scalar rec, rnote
-    string rowvector ind, fac, sem, built
+    string rowvector ind, fac, sem, built, lines
     string colvector nm, slab, pname
     string matrix stp, bnm
-    real colvector endo, bvec, rho, rep
-    real matrix V, Ev, Cns, A, Gd, Cd, Bd, bnd
-    real scalar i, k, f, t, nfix, P, T, N
-    string scalar txt, nl, a, z, line
+    real colvector endo, bvec, rho, rep, xv
+    real matrix V, Ev, Cns, A, Gd, Cd, Bd, bnd, Cg
+    real scalar i, k, f, t, nfix, P, T, N, cx
+    string scalar txt, nl, a, z, line, cvn
     pointer() scalar p
 
     nl  = char(10)
     st  = *findexternal("dwlsmv_m11_st")
     ind = tokens(indlist)
     fac = tokens(substr(tokens(canon, ";")[1], 8, .))
+    // a conditional fit: the covariate's name, from the canonical `covariate x' line
+    cx  = (dwlsmv_statmap_q(st.map) > 0)
+    cvn = ""
+    if (cx) {
+        lines = tokens(canon, ";")
+        for (i = 1; i <= cols(lines); i++) {
+            if (substr(lines[i], 1, 10) == "covariate ") {
+                cvn = strtrim(substr(lines[i], 11, .))
+            }
+        }
+    }
 
     // the fit and D11's recovery: dwlsmv_m11_estimate (shared with difftest's refit)
     dwlsmv_m11_estimate(canon, metric, st, par, fit, A, Bd, rec, rnote)
@@ -70,6 +81,10 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
     endo = J(cols(fac), 1, 0)
     for (i = 1; i <= par.nall; i++) {
         if (par.ptype[i] == 3) {
+            endo[par.row[i]] = 1
+        }
+        // a factor that x predicts is endogenous too (sem names its error term e.F)
+        if (par.ptype[i] == 8) {
             endo[par.row[i]] = 1
         }
     }
@@ -92,6 +107,12 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
         }
         else if (par.ptype[i] == 3) {
             stp[i, .] = (fac[par.row[i]], fac[par.col[i]])
+        }
+        else if (par.ptype[i] == 8) {
+            stp[i, .] = (fac[par.row[i]], cvn)
+        }
+        else if (par.ptype[i] == 9) {
+            stp[i, .] = (ind[par.row[i]], cvn)
         }
         else {
             a = (endo[par.col[i]] ? "e." : "") + fac[par.col[i]]
@@ -157,6 +178,53 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
         st_matrixcolstripe(cn, stp \ ("", "_r"))
     }
 
+    // ---- a conditional fit posts no e(bound) (Stage 1 has no keep_bound there, the map's
+    // correlation rows start after the slopes), no fit index or baseline (decision 2026-11-13 (a):
+    // omitted, not missing), and posts all four of Module 10's values e(gamma_ratio), e(gamma_ratio_raw),
+    // e(gamma_rank) and e(bread_ratio) (2026-11-15); the notes say what was not computed
+    if (cx) {
+        st_local("N",          strofreal(N, "%21.0g"))
+        st_local("T3",         strofreal(fit.T3, "%21.0g"))
+        st_local("df",         strofreal(fit.T3_df, "%21.0g"))
+        st_local("converged",  strofreal(fit.converged))
+        st_local("iterations", strofreal(fit.iterations))
+        st_local("rank",       strofreal(par.npar))
+        st_local("nfix",       strofreal(nfix))
+        st_local("recovery",   rec)
+        st_local("cov",        cvn)
+        // ---- Module 10 for a conditional fit (decided 2026-11-15, the owner's) -- BEGIN ----
+        // Gamma's rows with (Y, x) patterns, the pooled counts and the counts within each value of x; the
+        // aliasing row is not evaluated; the bread rows are dwlsmv_breaddiag()'s on the conditional Delta
+        // (Bd from dwlsmv_m11_estimate, "Yes, both" 2026-11-15) and print as for an ordinary fit.
+        // e(gamma_ratio), e(gamma_ratio_raw), e(gamma_rank) and e(bread_ratio) are posted.
+        slab  = dwlsmv_m11_slab(st.map, ind, cvn)
+        pname = select(nm, par.free)
+        xv    = *findexternal("dwlsmv_m11_x")
+        Gd    = dwlsmv_gammadiag(st, *findexternal("dwlsmv_m11_Y"), xv)
+        Cd    = dwlsmv_countdiag(*findexternal("dwlsmv_m11_Y"), st.map.K)
+        Cg    = dwlsmv_countcells(*findexternal("dwlsmv_m11_Y"), st.map.K, xv)
+        st_local("gratio",  strofreal(Gd[7, 1] == . ? . : Gd[7, 2], "%21.0g"))
+        st_local("gratior", strofreal(Gd[7, 1] == . ? . : Gd[6, 2], "%21.0g"))
+        st_local("grank",   strofreal(Gd[7, 1] == . ? . : Gd[7, 3], "%21.0g"))
+        st_local("bratio",  strofreal(Bd[4, 1] == . ? . : Bd[4, 2], "%21.0g"))
+        // ---- END ----
+        txt = rnote + dwlsmv_cx_admissnote(A, ind', fac', metric, fit.converged) +
+              dwlsmv_diagadvice(Gd, Cd, Bd, ind', slab, pname, Cg, cvn) +
+              "Not computed for a model with a covariate in this version: the check for thresholds" + nl +
+              "that move together on every observation. An item that is an exact function of another" + nl +
+              "item and " + cvn + " (equal to it at " + cvn + " = 0 and to its reverse at " + cvn + " = 1, say)" + nl +
+              "makes Gamma lose rank exactly and is not named in a note; it shows only as a" + nl +
+              "value near 1e-16 of e(gamma_ratio). Gamma is never inverted, so this does not" + nl +
+              "stop estimation." + nl +
+              "Whether the standard errors and the test statistic are accurate" + nl +
+              "when Gamma has lost rank in this way has not been established." + nl
+        p = crexternal("dwlsmv_m11_txt")
+        if (p == NULL) {
+            p = findexternal("dwlsmv_m11_txt")
+        }
+        *p = txt
+        return
+    }
     // ---- D8d: e(bound), stripe varA:varB ---------------------------------
     T   = st.map.T
     P   = st.map.P

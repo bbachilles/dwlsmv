@@ -1,4 +1,4 @@
-*! version 0.3.0  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
+*! version 0.4.0  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
 *!
 *! Executed under StataMP 18 on 2026-10-04: tests/unit/test_dwlsmv.do;
 *! standardized on 2026-10-05: tests/unit/test_standardized.do.
@@ -35,7 +35,9 @@
 *! abort is caught under capture noisily, followed by the legend and the
 *! pointer line, and rethrown as rc 3498; any later Mata abort is rethrown as
 *! it is. A fit that does not converge is posted with e(converged) = 0 and a
-*! note, as sem does (decided 2026-10-04).
+*! note, as sem does (decided 2026-10-04). EXCEPTION, a model with a covariate
+*! (confirmed by the owner 2026-11-14): e(b) only, no e(V), no e(T3), no e(p_T3); the
+*! header and the table say so and the replay says the same.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -46,6 +48,11 @@ program dwlsmv, eclass
         syntax [, STANDardized Level(cilevel)]
         if "`standardized'" != "" & "`e(efa)'" != "" {
             display as error "standardized is not available with efa(): the rotated loadings are already standardized."
+            exit 198
+        }
+        if "`standardized'" != "" & "`e(covariates)'" != "" {
+            display as error "standardized is not available with a covariate: the standardized solution of a model"
+            display as error "conditional on `e(covariates)' has not been derived."
             exit 198
         }
         _dwlsmv_header
@@ -194,6 +201,18 @@ program dwlsmv, eclass
     local canon    `"`r(canon)'"'
     local ind      `r(ind)'
     local semnames `r(semnames)'
+    local cov      `r(cov)'
+    if "`cov'" != "" {
+        * a model conditional on a binary covariate (decisions 2026-11-13; owner's Stage 2 package 2026-11-14): standardized,
+        * keepbound and efa() are refused (rc 198). keepbound is unavailable with a covariate: a boundary estimate (status 2)
+        * is not treated as ordinary without a derivation of its consequences for estimation, admissibility, covariance and inference.
+        foreach o in standardized keepbound efa {
+            if `"``o''"' != "" {
+                display as error "`o' is not available with a covariate (`cov') in this version. No model was fitted."
+                exit 198
+            }
+        }
+    }
     if `"`efa'"' != "" {
         mata: st_local("canon", dwlsmv_m11_efa_canon(`"`canon'"', `"`efa'"'))
         if `"`efamsg'"' != "" {
@@ -216,6 +235,34 @@ program dwlsmv, eclass
         exit 198
     }
     markout `touse' `ind'
+    * PROVISIONAL P5 (the owner has not confirmed): a covariate is numeric, takes only 0 and 1 in the
+    * estimation sample, and takes both. The same listwise rule as the indicators (one complete-case
+    * N). Stage 1 repeats the coding check at rc 3498 (dwlsmv_cx_check).
+    if "`cov'" != "" {
+        capture confirm numeric variable `cov'
+        if _rc {
+            display as error "the covariate `cov' must be numeric with the values 0 and 1. No model was fitted."
+            exit 198
+        }
+        markout `touse' `cov'
+        quietly count if `touse'
+        local ncx = r(N)
+        if `ncx' == 0 error 2000
+        quietly count if `touse' & `cov' == 0
+        local ncx0 = r(N)
+        quietly count if `touse' & `cov' == 1
+        local ncx1 = r(N)
+        if `ncx0' + `ncx1' != `ncx' {
+            display as error "the covariate `cov' must take only the values 0 and 1 (a binary covariate coded 0/1)."
+            display as error "Recode it; the coding fixes the unit of its effect and the reported thresholds. No model was fitted."
+            exit 198
+        }
+        if `ncx0' == 0 | `ncx1' == 0 {
+            display as error "the covariate `cov' must take both the values 0 and 1 in the estimation sample; it is constant."
+            display as error "A constant covariate has no estimable effect. No model was fitted."
+            exit 198
+        }
+    }
     quietly count if `touse'
     if r(N) == 0 error 2000
     if "`group'" != "" {
@@ -299,7 +346,7 @@ program dwlsmv, eclass
         ereturn local recovery   "none"
         ereturn local indicators "`ind'"
         ereturn local cmdline    `"dwlsmv `0'"'
-        ereturn local version    "0.3.0"
+        ereturn local version    "0.4.0"
         // what difftest refits from at G > 1 (spec Module 12, 2026-10-31):
         // e(canon) and e(canon_configural) (dwlsmv_m11_post_g_e), the group
         // variable, keepbound, and the data signature over the indicators
@@ -321,15 +368,17 @@ program dwlsmv, eclass
     }
 
     local kb = ("`keepbound'" != "")
-    capture noisily mata: dwlsmv_m11_stage1("`touse'", "`ind'", `kb')
+    capture noisily mata: dwlsmv_m11_stage1("`touse'", "`ind'", `kb', "`cov'")
     local rc = _rc
     if `rc' {
         mata: dwlsmv_m11_legend("`ind'")
-        display as error "dwlsmv's default differs from lavaan's and Mplus's here; see"
-        display as error "help dwlsmv, section Comparison with lavaan and Mplus."
+        if "`cov'" == "" {
+            display as error "dwlsmv's default differs from lavaan's and Mplus's here; see"
+            display as error "help dwlsmv, section Comparison with lavaan and Mplus."
+        }
         * only when keepbound would let the data through: Stage 1 rerun with
-        * keep_bound = 1, quietly (decided 2026-10-04)
-        if !`kb' {
+        * keep_bound = 1, quietly (decided 2026-10-04); not with a covariate
+        if !`kb' & "`cov'" == "" {
             capture quietly mata: dwlsmv_m11_stage1("`touse'", "`ind'", 1)
             if !_rc {
                 display as error "keep_bound = 1 above is the dwlsmv option keepbound."
@@ -339,7 +388,9 @@ program dwlsmv, eclass
         exit `rc'
     }
 
-    mata: dwlsmv_m11_legend_note("`ind'", 0)
+    if "`cov'" == "" {
+        mata: dwlsmv_m11_legend_note("`ind'", 0)
+    }
 
     tempname b V C bnd
     capture noisily mata: dwlsmv_m11_fit(`"`canon'"', "`ind'", "`semnames'", ///
@@ -398,23 +449,42 @@ program dwlsmv, eclass
         ereturn local rotation "geomin oblique"
     }
     else {
-        if `nfix' ereturn post `b' `V' `C', esample(`touse') obs(`N')
-        else      ereturn post `b' `V', esample(`touse') obs(`N')
+        if "`cov'" != "" & `converged' == 0 {
+            // OUTSTANDING DECISION (owner, 2026-11-14): an ordinary fit without a covariate that does not converge is unchanged in this
+            // release (it still posts e(V) and T3); its inconsistency with this branch is an explicit outstanding decision, not a policy.
+            // a model with a covariate that did not converge: the last iterate as point estimates only. No
+            // e(V) (the sandwich at a non-solution is not inference), as the EFA block posts e(b) only;
+            // e(Cns_b) (e(Cns) cannot be set without e(V)) is kept so that the table can mark the fixed parameters
+            ereturn post `b', esample(`touse') obs(`N')
+            if `nfix' ereturn matrix Cns_b = `C'   // e(Cns) is reserved: ereturn matrix refuses the name (rc 198, probed 2026-11-14)
+        }
+        else {
+            if `nfix' ereturn post `b' `V' `C', esample(`touse') obs(`N')
+            else      ereturn post `b' `V', esample(`touse') obs(`N')
+        }
     }
-    ereturn matrix bound = `bnd'
+    if "`cov'" == "" ereturn matrix bound = `bnd'
     ereturn scalar rank       = `rank'
-    ereturn scalar T3         = `T3'
     ereturn scalar df_T3      = `df'
-    ereturn scalar p_T3       = cond(`df' > 0, chi2tail(`df', `T3'), .)
-    // fit indices, option A (family S, frozen 2026-10-21); printed by _dwlsmv_header
-    ereturn scalar rmsea_s    = `rmsea_s'
-    ereturn scalar cfi_s      = `cfi_s'
-    ereturn scalar tli_s      = `tli_s'
-    ereturn scalar T3_b       = `T3_b'
-    ereturn scalar df_T3_b    = `df_T3_b'
+    if !("`cov'" != "" & `converged' == 0) {
+        ereturn scalar T3     = `T3'
+        ereturn scalar p_T3   = cond(`df' > 0, chi2tail(`df', `T3'), .)
+    }
+    // fit indices, option A (family S, frozen 2026-10-21); printed by _dwlsmv_header.
+    // Omitted, not posted as missing, for a conditional fit (decision 2026-11-13 (a)): the
+    // header prints them only when posted
+    if "`cov'" == "" {
+        ereturn scalar rmsea_s    = `rmsea_s'
+        ereturn scalar cfi_s      = `cfi_s'
+        ereturn scalar tli_s      = `tli_s'
+        ereturn scalar T3_b       = `T3_b'
+        ereturn scalar df_T3_b    = `df_T3_b'
+    }
     ereturn scalar converged  = `converged'
     ereturn scalar iterations = `iterations'
-    // Module 10's ratios, stored and not printed (2026-10-07); no cutoff
+    // Module 10's ratios, stored and not printed (2026-10-07); no cutoff. A conditional fit posts all four,
+    // as an ordinary one does (2026-11-15: Gamma's three, and the bread's once measured on production's
+    // conditional Delta, "Yes, both"); posted whether or not the fit converged
     ereturn scalar gamma_ratio     = `gratio'
     ereturn scalar gamma_ratio_raw = `gratior'
     ereturn scalar gamma_rank      = `grank'
@@ -422,15 +492,16 @@ program dwlsmv, eclass
     ereturn local metric   "`metric'"
     ereturn local recovery "`recovery'"
     ereturn local indicators "`ind'"
+    if "`cov'" != "" ereturn local covariates "`cov'"
     ereturn local cmdline  `"dwlsmv `0'"'
     // the release; must equal line 1 (test_dwlsmv_gaps.do G14, stage_release.ps1)
-    ereturn local version  "0.3.0"
+    ereturn local version  "0.4.0"
     // what difftest refits from (spec Module 12, D8d addition, 2026-10-23):
     // the canonical text as dwlsmv_m11_fit received it, keepbound, and the
     // data signature that check 2 tests with checkestimationsample
     ereturn local canon     `"`canon'"'
     ereturn local keepbound "`keepbound'"
-    signestimationsample `ind'
+    signestimationsample `ind' `cov'
     ereturn local cmd      "dwlsmv"
 
     _dwlsmv_header
@@ -462,11 +533,37 @@ program _dwlsmv_efatable
     }
 end
 
+* A model with a covariate that did not converge: the last iterate as a plain table, from e(b) and
+* e(Cns_b) alone (replay works). No standard errors, z, p or interval exist to show: e(V) is not posted.
+program _dwlsmv_nctable
+    tempname b C M F
+    matrix `b' = e(b)
+    local nb = colsof(`b')
+    matrix `F' = J(`nb', 1, 0)
+    capture matrix `C' = e(Cns_b)
+    if !_rc {
+        forvalues k = 1/`=rowsof(`C')' {
+            forvalues i = 1/`nb' {
+                if `C'[`k', `i'] == 1 matrix `F'[`i', 1] = 1
+            }
+        }
+    }
+    matrix `M' = `b'' , `F'
+    matrix colnames `M' = Estimate Fixed
+    matlist `M', title("Last iterate, not a solution; no standard errors (Fixed = 1: set by the model)") ///
+        format(%12.5g) border(rows) lines(oneline)
+end
+
 * D7 step (3): standardized replaces the coefficient table; Theta rows appear
 * only here; nothing is stored (D8d). Computed from e() alone, so replay
 * works; the posted results are held and restored around the display.
 program _dwlsmv_table
     syntax [, STANDardized Level(cilevel)]
+    * a model with a covariate that did not converge: point estimates only, no e(V) to display
+    if "`e(covariates)'" != "" & e(converged) == 0 {
+        _dwlsmv_nctable
+        exit
+    }
     if "`standardized'" == "" {
         ereturn display, level(`level')
         exit
@@ -490,6 +587,31 @@ end
 program _dwlsmv_header
     display _n as text "DWLS estimation, WLSMV test (ordinal indicators)" ///
         _col(51) "Number of obs" _col(67) "= " as result %9.0f e(N)
+    * a model with a covariate that did not converge (confirmed by the owner 2026-11-14): said first, in error colour
+    if "`e(covariates)'" != "" & e(converged) == 0 {
+        display as error "convergence not achieved: the optimizer stopped after " e(iterations) " iterations."
+        display as error "The estimates below are the last iterate, not a solution."
+        display as error "No standard errors, T3 or p-value are reported for them."
+        if "`e(metric)'" == "marker" {
+            * recovery (D11) now runs for a conditional marker fit, so a fit still not converged here is
+            * one whose recovery was ineligible or failed (a fit that converged after it is not in this block)
+            if "`e(recovery)'" == "ineligible" {
+                display as error "Refit with metric(unitvariance). No recovery refit was attempted:"
+                display as error "the model is not eligible for it (see the notes)."
+            }
+            else if "`e(recovery)'" == "failed" {
+                display as error "Refit with metric(unitvariance). A recovery refit was attempted"
+                display as error "and failed (see the notes)."
+            }
+            else {
+                display as error "Refit with metric(unitvariance)."
+            }
+        }
+        else {
+            display as error "No further remedy is built for a model with a covariate;"
+            display as error "dwlsmv has no option for other starting values."
+        }
+    }
     if "`e(invariance)'" != "" {
         * build step 4 (2026-10-12); wording (a), approved by the user the same day
         tempname k
@@ -505,9 +627,18 @@ program _dwlsmv_header
         * disturbance variance for an endogenous factor, never its total
         display as text "Metric: factor variances fixed at 1 (for a factor predicted by other factors, its residual variance)"
     }
-    display as text "Scaled-and-shifted test (T3):" _col(51) "chi2(" as result e(df_T3) ///
-        as text ")" _col(67) "= " as result %9.3f e(T3)
-    display as text _col(51) "Prob > chi2" _col(67) "= " as result %9.4f e(p_T3)
+    if "`e(covariates)'" != "" {
+        display as text "Conditional on covariate: " as result "`e(covariates)'" as text ///
+            " (binary 0/1); thresholds are those at " "`e(covariates)'" " = 0, and (y <- " "`e(covariates)'" ") is minus a threshold shift"
+    }
+    if "`e(covariates)'" != "" & e(converged) == 0 {
+        display as text "Scaled-and-shifted test (T3): not reported (not a solution); df = " as result e(df_T3)
+    }
+    else {
+        display as text "Scaled-and-shifted test (T3):" _col(51) "chi2(" as result e(df_T3) ///
+            as text ")" _col(67) "= " as result %9.3f e(T3)
+        display as text _col(51) "Prob > chi2" _col(67) "= " as result %9.4f e(p_T3)
+    }
     * fit indices, option A (family S; F1-F6 frozen 2026-10-21); shown only
     * when posted, so a replay of results without them prints nothing; a
     * missing value (F3, F4) prints as "."
@@ -516,7 +647,10 @@ program _dwlsmv_header
         display as text _col(51) "CFI (scaled)"   _col(67) "= " as result %9.4f e(cfi_s)
         display as text _col(51) "TLI (scaled)"   _col(67) "= " as result %9.4f e(tli_s)
     }
-    if e(converged) == 0 {
+    if "`e(covariates)'" != "" {
+        display as text "Note: no CFI or TLI is defined for a model with a covariate, and RMSEA is not reported in this version."
+    }
+    if e(converged) == 0 & "`e(covariates)'" == "" {
         display as error "convergence not achieved"
     }
 end

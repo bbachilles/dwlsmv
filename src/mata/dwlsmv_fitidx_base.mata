@@ -28,6 +28,9 @@ real rowvector dwlsmv_fitidx_base(struct dwlsmv_stage1 vector st)
     real colvector idx, r, d
     real matrix R
 
+    // Stage 2 does not take a conditional Stage 1 result yet (spec 5.1).
+    dwlsmv_s2_guard_st(st, "dwlsmv_fitidx_base")
+
     G = length(st)
     if (G < 1) {
         _error("dwlsmv_fitidx_base: no group")

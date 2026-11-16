@@ -202,7 +202,7 @@ void dwlsmv_m11_post_g(string scalar canon, string scalar indlist, string scalar
     for (g = 1; g <= G; g++) {
         gd = gd \ (diagonal(sts[g].Gamma) :/ (sts[g].N / N))
     }
-    Bd = dwlsmv_breaddiag(fit.Delta, diag(gd))
+    Bd = dwlsmv_m11_bread(fit.Delta, diag(gd))
 
     conf = subinstr(canon, ";", char(10)) + char(10)
     p = crexternal("dwlsmv_m11_gconf")

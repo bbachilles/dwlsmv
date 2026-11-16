@@ -24,6 +24,9 @@
 *!     lambda_jf -> lambda_jf / c_f
 *!     beta_fg   -> beta_fg * c_f / c_g      (f = row = to, g = col = from)
 *!     psi_fg    -> psi_fg * c_f * c_g       (psi_ff = 1 fixed in paru -> c_f^2)
+*!     gamma_fk  -> gamma_fk * c_f           (ptype 8, row = factor f, col = covariate k; conditional fits,
+*!                                            derivation @sec-condx-recovery Result C1; owner 2026-11-15)
+*!     kappa_jk  -> unchanged                (ptype 9: a direct effect on y*, which is not rescaled)
 *!     tau       -> unchanged
 *! Outputs (overwritten): thetam, npar x 1 in parm's theta order; c, nfac x 1.
 *!
@@ -126,8 +129,20 @@ real scalar dwlsmv_m11_rectransform(struct dwlsmv_parmap scalar parm,
             else if (parm.ptype[i] == 3) {
                 thetam[parm.fidx[i]] = u * c[r] / c[cc]
             }
-            else {
+            else if (parm.ptype[i] == 8) {
+                thetam[parm.fidx[i]] = u * c[r]
+            }
+            else if (parm.ptype[i] == 9) {
+                thetam[parm.fidx[i]] = u
+            }
+            else if (parm.ptype[i] == 2) {
                 thetam[parm.fidx[i]] = u * c[r] * c[cc]
+            }
+            else {
+                // ptypes 5-7 (nu, omega, alpha) cannot occur in a single-group table; none is mapped
+                errprintf("dwlsmv_m11_rectransform: %s has ptype %f, which has no transform.\n",
+                          parm.name[i], parm.ptype[i])
+                _error("dwlsmv: internal error, a parameter type has no marker transform")
             }
         }
     }

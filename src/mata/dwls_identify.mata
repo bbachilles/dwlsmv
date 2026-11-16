@@ -36,6 +36,15 @@
 *!     beta    <to> <from>  free [<start>] | fixed <value>
 *!     psi     <F> <F>      free [<start>] | fixed <value>
 *!     metric  marker <F> <y>  |  unitvariance <F>
+*!     covariate <x>                 (conditional mode; one binary covariate, one group)
+*!     gamma   <F> <x>  free [<start>] | fixed <value>     x -> F   (ptype 8)
+*!     kappa   <y> <x>  free [<start>] | fixed <value>     x -> y*  (ptype 9)
+*!
+*! The three conditional directives are split off by dwlsmv_id_cxsplit() and parsed by
+*! dwlsmv_id_cx() (src/mata/dwlsmv_id_cx.mata); dwlsmv_id_parse() never sees them. A text with no
+*! 'covariate' line is parsed exactly as before. Messages cite the line number in the text as
+*! written (blank and comment lines count). The rank check below runs for covariate models too;
+*! it needs dwls_delta() to know ptypes 8 and 9 (the slope rows).
 *!
 *! WHAT IS GENERATED AND WHAT IS NOT. Threshold rows are generated here, one
 *! free tau per threshold, from the index map -- which knows K. Everything else
@@ -57,7 +66,8 @@
 *! and tests/unit/test_identify.do for the assertion that we implement it.
 *!
 *! THETA'S ORDERING: thresholds first, in Section 4.2's index-map order, then
-*! lambda, beta and psi, each ascending by (row, col). The table itself is
+*! lambda, beta, gamma, kappa and psi, each ascending by (row, col); gamma
+*! and kappa are empty without a covariate. The table itself is
 *! built in that order with fixed rows interleaved in place, and fidx numbers
 *! only the free ones. Thresholds first is what makes Delta's leading block a
 *! literal identity of order T, needing no computation and no permutation to
@@ -158,7 +168,7 @@
 *! dwlsmv_rystar, dwlsmv_corrvec, dwlsmv_delta_cols, dwlsmv_mg_* (five),
 *! dwls_delta, dwlsmv_canon_lines, dwlsmv_canon_find, dwlsmv_canon_status,
 *! dwlsmv_numrank, dwlsmv_id_parse, dwlsmv_id_rank, dwlsmv_id_tie,
-*! dwlsmv_id_groups. (Mata links every referenced function on first call.)
+*! dwlsmv_id_groups, dwlsmv_id_cx. (Mata links every referenced function on first call.)
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -174,11 +184,25 @@ struct dwlsmv_parmap scalar dwls_identify(string scalar modelspec,
     struct dwlsmv_statmap scalar map
     struct dwlsmv_stage1 vector st0
     struct dwlsmv_parmap scalar par
-    string colvector lines, fac, ind
+    string colvector lines, rest, lcx, cvn, fac, ind
     string rowvector w
-    real colvector eptype, erow, ecol, efree, eval
+    real colvector eptype, erow, ecol, efree, eval, lno, lcxno
+    real matrix gmat, kmat
     real scalar nl, i, r, c
-    real scalar nfac, nel, nall, npar, pos, hit
+    real scalar nfac, nel, nall, npar, pos, hit, ncov, covno
+
+    // Conditional covariates (spec, Conditional covariates): split the covariate,
+    // gamma and kappa lines off the raw text (rest holds the other lines, lno their
+    // line numbers in the text as written), and refuse what is not specified yet.
+    dwlsmv_id_cxsplit(modelspec, rest, lno, lcx, lcxno, cvn, covno)
+    ncov = rows(cvn)
+
+    // Stage 2 takes a conditional map only when the text declares the covariate
+    // (spec 5.1). Every other entry point still refuses one.
+    dwlsmv_s2_guard(maps, "dwls_identify", ncov)
+    if (args() >= 3) {
+        dwlsmv_s2_guard_st(st, "dwls_identify", ncov)
+    }
 
     lines = dwlsmv_canon_lines(modelspec)
     if (rows(lines) == 0) {
@@ -192,10 +216,10 @@ struct dwlsmv_parmap scalar dwls_identify(string scalar modelspec,
         w = tokens(lines[nl])
         if (w[1] == "groups") {
             if (args() >= 3) {
-                return(dwlsmv_id_groups(lines, maps, st, 1))
+                return(dwlsmv_id_groups(rest, maps, st, 1, lno))
             }
             st0 = dwlsmv_stage1(0)
-            return(dwlsmv_id_groups(lines, maps, st0, 0))
+            return(dwlsmv_id_groups(rest, maps, st0, 0, lno))
         }
     }
 
@@ -211,14 +235,15 @@ struct dwlsmv_parmap scalar dwls_identify(string scalar modelspec,
 
     // Passes 1-3 and the section checks: dwlsmv_id_parse(), shared with each
     // group section, in single-group mode.
-    dwlsmv_id_parse(lines, map, 1, 0, fac, ind, eptype, erow, ecol, efree, eval)
+    dwlsmv_id_parse(rest, map, 1, 0, fac, ind, eptype, erow, ecol, efree, eval, lno)
     nfac = rows(fac)
+    dwlsmv_id_cx(lcx, lcxno, cvn, covno, fac, ind, eptype, erow, ecol, efree, eval, gmat, kmat)
 
     // =====================================================================
     // Build the table, in theta order: tau, then lambda, beta, psi.
     // =====================================================================
     nel  = rows(eptype)
-    nall = map.T + nel
+    nall = map.T + nel + rows(gmat) + rows(kmat)
 
     par.nall  = nall
     par.name  = J(nall, 1, "")
@@ -283,6 +308,48 @@ struct dwlsmv_parmap scalar dwls_identify(string scalar modelspec,
                 par.col[pos]   = c
                 par.free[pos]  = efree[hit]
                 par.value[pos] = eval[hit]
+            }
+        }
+    }
+
+    // Gamma, ascending by (row, col) = (factor, covariate). ptype 8.
+    for (r = 1; r <= nfac; r++) {
+        for (c = 1; c <= ncov; c++) {
+            hit = 0
+            for (i = 1; i <= rows(gmat); i++) {
+                if (gmat[i, 1] == r & gmat[i, 2] == c) {
+                    hit = i
+                }
+            }
+            if (hit > 0) {
+                pos            = pos + 1
+                par.name[pos]  = "gamma[" + fac[r] + "," + cvn[c] + "]"
+                par.ptype[pos] = 8
+                par.row[pos]   = r
+                par.col[pos]   = c
+                par.free[pos]  = gmat[hit, 3]
+                par.value[pos] = gmat[hit, 4]
+            }
+        }
+    }
+
+    // Kappa, ascending by (row, col) = (indicator, covariate). ptype 9.
+    for (r = 1; r <= map.p; r++) {
+        for (c = 1; c <= ncov; c++) {
+            hit = 0
+            for (i = 1; i <= rows(kmat); i++) {
+                if (kmat[i, 1] == r & kmat[i, 2] == c) {
+                    hit = i
+                }
+            }
+            if (hit > 0) {
+                pos            = pos + 1
+                par.name[pos]  = "kappa[" + ind[r] + "," + cvn[c] + "]"
+                par.ptype[pos] = 9
+                par.row[pos]   = r
+                par.col[pos]   = c
+                par.free[pos]  = kmat[hit, 3]
+                par.value[pos] = kmat[hit, 4]
             }
         }
     }

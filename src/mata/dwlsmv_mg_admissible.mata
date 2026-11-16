@@ -54,6 +54,9 @@ real matrix dwlsmv_mg_admissible(real colvector theta,
     real colvector idx, v, nu, om, al, c, keep
     real scalar i, nf, sing, w, wi
 
+    // Stage 2 does not take a conditional map yet (spec 5.1).
+    dwlsmv_s2_guard(map, "dwlsmv_mg_admissible")
+
     sub = dwlsmv_mg_sub(par, g, idx)
     v   = dwlsmv_parvals(theta, par)[idx]
     nf  = dwlsmv_nfac(sub)

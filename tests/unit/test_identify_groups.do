@@ -872,6 +872,35 @@ void tig_cases(string matrix T)
             tig_join(("groups 2", tig_sec2(1, ("lambda F2 y1 free")),
                       tig_sec2(2, ("lambda F2 y1 free")),
                       "tie lambda 1 F2 y1 lambda 2 F2 y1")), 6, "", "")
+
+    // ---- original line numbers under groups (comment and blank lines above each error) ----
+    // LG1: 1 comment, 2 blank, 3 groups, 4 blank, 5 'group x'.
+    tig_add(T, "LG1", "'group x' on line 5, comment and blank lines above",
+            tig_join(("# c", "", "groups 2", "", "group x")), 1,
+            "group number outside 1..G", "line 5: 'group' needs one integer")
+    // LG2: the second groups line is line 4.
+    tig_add(T, "LG2", "second 'groups' line on line 4",
+            tig_join(("# c", "groups 2", "", "groups 2")), 1,
+            "more than one groups directive", "(line 4)")
+    // LG3: the second 'group 1' is line 5.
+    tig_add(T, "LG3", "second 'group 1' section on line 5",
+            tig_join(("# c", "groups 2", "", "group 1", "group 1")), 1,
+            "a group section appears twice", "opens a second section (line 5)")
+    // LG4: 'factor F' on line 5 lies outside any section.
+    tig_add(T, "LG4", "a directive outside any section, on line 5",
+            tig_join(("# c", "", "groups 2", "", "factor F")), 1,
+            "a directive lies outside any group section", "line 5 ('factor')")
+    // LG5: 1 comment, 2 groups, 3 blank, 4-12 group 1, 13 comment, 14 group 2, 15 factor,
+    // 16 ind, 17 'lambda F y1' (too few tokens). The parser, in group 2's section, must say 17.
+    tig_add(T, "LG5", "parser error in group 2's section cites original line 17",
+            tig_join(("# header", "groups 2", "", s1, "# second group", "group 2",
+                      "factor F", "ind y1 y2 y3 y4 y5", "lambda F y1")), 1,
+            "a parameter directive is incomplete", "line 17: 'lambda' needs two names")
+    // LG6: 4-12 group 1, 13-21 group 2, 22 comment, 23 the tie (two elements of group 1).
+    tig_add(T, "LG6", "tie message cites original line 23",
+            tig_join(("# header", "groups 2", "", s1, tig_s(2, none), "# ties",
+                      "tie lambda 1 F y1 lambda 1 F y2")), 1,
+            "a tie names two elements of one group", "tie line 23 names two elements of group 1")
 }
 
 // ---------------------------------------------------------------------------

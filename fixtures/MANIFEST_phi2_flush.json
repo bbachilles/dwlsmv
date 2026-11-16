@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-11-09 21:53:42 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "study seeds 2026200000 + 1000*180 + run (Investigation D, frozen 05f34e0); none here",
+    "files": {
+      "fixtures/expected/phi2_flush_events.csv": "b6ee41b46876c4fb4bcc425186c12ccc",
+      "fixtures/expected/phi2_flush_corners.csv": "f0069c1ff92234f75e76fbfece567d07"
+    },
+    "packages": ["R version 4.6.0 (2026-04-24 ucrt)", "Rmpfr 1.1.3", "MPFR 4.2.2", "precision 256 bits", "pair inputs and arm 0: extract_pairs.do under StataMP 18 at the generator's commit; src/ identical to 05f34e0", "certified scope (user, 2026-11-09): the 56 corner VALUES only (C and M4 independently, max rel gap 4.4e-43, required 1e-20)", "NOT certified: the arm-1 decision (s1, cl1, ch1, ends, rho1). It came from the study's double-precision Mata solver with the true corners substituted; its only support is the M4 replay, about 1e-12. C certified that decision's inputs and did not reproduce the decision", "arm 0: a characterization of current production, not a correctness claim", "corner reference = Method C (Plackett from rho=-1, tanh-sinh) as double-double; certified by M4 (abs_tol 0)", "C-M4 agreement asserted in MPFR on every corner: |C-M4| <= 1e-20 |M4|", "shared: MPFR and Rmpfr elementary functions; pnorm not shared (C uses none)", "source md5 tools/make_phi2_tail_ref.R a6d8c8f9b5575ea9f1b202ec3b52dfa7", "source md5 tools/phi2_tail_refcheck_m4.R 7525bc6a6e9a7f4a0e9e6ac018445734", "source md5 tools/phi2_plackett_c.R 447a57aaacbec28c2b9c21eba8be187e", "evidence md5 docs/notes/phi2-flush-fixtures/events_insideD.csv d85b2f1d04713b1cee2c5d2008f73a14", "evidence md5 docs/notes/phi2-flush-fixtures/pairs.csv 76a75a0cdc6b9cb5abff827d4ac6ff0c", "evidence md5 docs/notes/phi2-flush-fixtures/corners.csv a04914a5e0dde34c6adc4c428394863c", "evidence md5 docs/notes/phi2-flush-fixtures/extract_pairs.do e6aebd25667aec9807dba8284d998fb8"]
+  }

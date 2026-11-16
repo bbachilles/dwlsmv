@@ -7,7 +7,27 @@
 *! budgets bracketed at 2x-10x and 0.1x-0.5x; five contract violations, rc 3498.
 *!
 *!     real matrix dwlsmv_gammadiag(struct dwlsmv_stage1 scalar st,
-*!                                  real matrix Y)
+*!                                  real matrix Y | real colvector x)
+*!
+*! A CONDITIONAL STAGE 1 RESULT (one binary covariate; decided 2026-11-15, the
+*! owner's, lifting the refusal of 2026-11-12). Pass the N x 1 covariate as the
+*! third argument; the 2-argument call on a conditional result, and the 3-argument
+*! call on an unconditional one, are rc 3498. What changes, row by row:
+*!   3  n_pat is counted on the rows of (Y, x), and D = map.D counts the slopes.
+*!   4  NOT EVALUATED: (., ., 0, 0). v1's cause test does not transfer: with x in the
+*!      score an identical or complementary pair of threshold columns is not an
+*!      exact null of Gamma-hat (derivation @sec-condx-m10 M3), and no other cause is
+*!      established. d_alias is taken as 0 in r*. LIMITATION (the owner, 2026-11-15): an item
+*!      that is an exact function of another item and x (equal at x = 0, reversed at x = 1)
+*!      passes Stage 1 and costs Gamma-hat 2 columns (binary partner) or 3 (ternary) in the R
+*!      reference; it shows only as a ratio near 1e-16 in rows 6-7 (flag .n). An exact detector
+*!      is a later, derived follow-up.
+*!   5  unchanged in form. The item rows are bounded by the item fit's step rule, not
+*!      exactly zero (M2); the pair rows sit at map.T + p + k, which the loop over
+*!      all D entries covers without a pair index. No one-empty-cell exclusion: the
+*!      conditional Stage 1 has no repair.
+*!   6-7 r* = min(D, n_pat - 1), n_pat on (Y, x).
+*! Rows 1-2 see a matrix and are unchanged.
 *!
 *! Spec Section 5, Module 10 and E-060 and E-071. Returns
 *! 7 x 4, one row per condition, always in this order, in the [flag, value,
@@ -73,7 +93,7 @@
 *! A FUNCTION, NOT A FIELD, as dwlsmv_admissible() is. dwls_sample_stats()
 *! does not call it; Module 11 does.
 *!
-*! Requires dwlsmv_types, dwlsmv_asym, dwlsmv_catcounts, dwlsmv_npatterns,
+*! Requires dwlsmv_types, dwlsmv_statmap_q, dwlsmv_asym, dwlsmv_catcounts, dwlsmv_npatterns,
 *! dwlsmv_thralias, dwlsmv_dalias, dwlsmv_crosstab, dwlsmv_emptycell1, dwlsmv_emptycell_pairs.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
@@ -83,12 +103,38 @@ version 16
 
 mata:
 
-real matrix dwlsmv_gammadiag(struct dwlsmv_stage1 scalar st, real matrix Y)
+real matrix dwlsmv_gammadiag(struct dwlsmv_stage1 scalar st, real matrix Y, | real colvector x)
 {
     real matrix A, G, Gs, R
     real rowvector as
     real colvector ev, sv, s, zk, rep
-    real scalar D, bud, npat, da, z, k, rs
+    real scalar D, bud, npat, da, z, k, rs, cx
+
+    // A conditional Stage 1 result (spec 4.8): its map has slope rows. Accepted with its
+    // covariate (2026-11-15); refused without it, since the pattern count needs x. More
+    // than one covariate (q > 1) is not built. Needs dwlsmv_statmap_q.
+    cx = (dwlsmv_statmap_q(st.map) > 0)
+    if (cx & args() < 3) {
+        errprintf("dwlsmv_gammadiag: the Stage 1 result is conditional (index map with q = %g).\n",
+                  dwlsmv_statmap_q(st.map))
+        errprintf("  A pattern is a row of (Y, x); pass the covariate as the third argument.\n")
+        _error("dwlsmv_gammadiag: a conditional Stage 1 result needs the covariate x")
+    }
+    if (dwlsmv_statmap_q(st.map) > 1) {
+        errprintf("dwlsmv_gammadiag: the Stage 1 result has q = %g covariates; one is built.\n",
+                  dwlsmv_statmap_q(st.map))
+        _error("dwlsmv_gammadiag: more than one covariate is not accepted")
+    }
+    if (!cx & args() >= 3) {
+        errprintf("dwlsmv_gammadiag: x was passed but the Stage 1 result is not conditional.\n")
+        _error("dwlsmv_gammadiag: x given for an unconditional Stage 1 result")
+    }
+    if (cx) {
+        if (rows(x) != st.N) {
+            errprintf("dwlsmv_gammadiag: x has %f rows but Stage 1 was built on %f.\n", rows(x), st.N)
+            _error("dwlsmv_gammadiag: x is not the covariate Stage 1 was built on")
+        }
+    }
 
     D = st.map.D
     if (rows(Y) != st.N | cols(Y) != st.map.p) {
@@ -124,25 +170,36 @@ real matrix dwlsmv_gammadiag(struct dwlsmv_stage1 scalar st, real matrix Y)
     A[2, .] = (min(ev) < -bud * max(ev), min(ev) / max(ev), 0, 0)
 
     // ---- 3-4. the structural rows, from Y --------------------------------------
-    npat = dwlsmv_npatterns(Y, st.map.K)
-    A[3, .] = (npat - 1 < D, npat, D, 0)
-    R  = dwlsmv_thralias(Y, st.map.K)
-    da = dwlsmv_dalias(R)
-    if (rows(R)) {
-        A[4, .] = (da > 0, da, R[1, 1], R[1, 2])
+    if (cx) {
+        // the pattern is (y, x); row 4 is not evaluated and d_alias is taken as 0 (header)
+        npat = dwlsmv_npatterns(Y, st.map.K, x)
+        A[3, .] = (npat - 1 < D, npat, D, 0)
+        da = 0
     }
     else {
-        A[4, .] = (0, 0, 0, 0)
+        npat = dwlsmv_npatterns(Y, st.map.K)
+        A[3, .] = (npat - 1 < D, npat, D, 0)
+        R  = dwlsmv_thralias(Y, st.map.K)
+        da = dwlsmv_dalias(R)
+        if (rows(R)) {
+            A[4, .] = (da > 0, da, R[1, 1], R[1, 2])
+        }
+        else {
+            A[4, .] = (0, 0, 0, 0)
+        }
     }
 
     // ---- 5. centring: the first k attaining z ------------------------------------
     s  = sqrt(diagonal(G))
     zk = abs(st.psibar) :/ s
-    // one-empty-cell pairs: their rho entries are excluded (header)
-    rep = dwlsmv_emptycell_pairs(Y, st.map)
-    for (k = 1; k <= st.map.P; k++) {
-        if (rep[k]) {
-            zk[st.map.T + k] = 0
+    // one-empty-cell pairs: their rho entries are excluded (header); the conditional
+    // Stage 1 has no repair, so nothing is excluded there
+    if (!cx) {
+        rep = dwlsmv_emptycell_pairs(Y, st.map)
+        for (k = 1; k <= st.map.P; k++) {
+            if (rep[k]) {
+                zk[st.map.T + k] = 0
+            }
         }
     }
     z  = max(zk)
