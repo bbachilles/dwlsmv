@@ -66,7 +66,8 @@ the models, in any of these cases:
 {phang2}o  a refit does not reproduce the stored fit, or did not converge;{p_end}
 {phang2}o  the models are not nested;{p_end}
 {phang2}o  the fixed values in a model force a boundary, for example a factor correlation fixed at 1;{p_end}
-{phang2}o  the more restricted model's unscaled statistic, T = (N - G)F with G groups, is below the less restricted model's by more than the precision of the fits, (N - G) times the convergence tolerance; a nested model cannot fit better than the model that contains it.{p_end}
+{phang2}o  the more restricted model's unscaled statistic, T = (N - G)F with G groups, is below the less restricted model's by more than the precision of the fits,
+(N - G) times the convergence tolerance; a nested model cannot fit better than the model that contains it.{p_end}
 
 {p 4 4 2}
 Models nested only through a reparameterization (a different marker, for
@@ -135,4 +136,32 @@ active results ({cmd:.}) is not fixed and may change.
 {p 4 8 2}
 Asparouhov, T., and B. Muthén. 2006. Robust chi square difference testing with
 mean and variance adjusted test statistics. Mplus Web Notes: No. 10.
+{p_end}
+
+
+{marker author}{...}
+{title:Author}
+
+{p 4 4 2}
+Erik Ruzek{break}
+ORCID: {browse "https://orcid.org/0000-0002-0931-1951"}{break}
+Source and issues: {browse "https://github.com/bbachilles/dwlsmv"}
+{p_end}
+
+
+{marker acknowledgments}{...}
+{title:Acknowledgments}
+
+{p 4 4 2}
+Development of {cmd:dwlsmv} was assisted by Claude Code (Anthropic), predominantly
+using Claude Opus models. The author reviewed and tested all code and is responsible
+for any errors.
+{p_end}
+
+
+{marker alsosee}{...}
+{title:Also see}
+
+{p 4 13 2}
+Help:  {helpb dwlsmv}
 {p_end}

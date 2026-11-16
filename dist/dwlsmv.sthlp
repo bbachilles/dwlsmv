@@ -1,6 +1,8 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-15 on the 0.4.0 release tree (fcd0048 plus the version bump, R): every example run, including esttab, the two covariate examples and the difftest help example, the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.4.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
-{* *! version 0.4.0  15nov2026}{...}
+{* Executed under StataMP 18 on 2026-11-16 on the 0.4.1 release tree (76be14f plus the difftest help sections and the version bump, R): every example run,}{...}
+{* including esttab, the two covariate examples and the difftest help example,}{...}
+{* the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.4.1, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* *! version 0.4.1  16nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
 {vieweralsosee "[SEM] gsem" "help gsem"}{...}

@@ -8,19 +8,19 @@ polychoric correlations, with robust standard errors and the mean- and variance-
 scaled-and-shifted (T3) test statistic, the approach known as WLSMV. Stata's `sem` and `gsem` do
 not offer this estimator.
 
-Current version: **0.4.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
+Current version: **0.4.1**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
 other platforms have not been checked.
 
 ## Install
 
 ```stata
-net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.0/dist/") replace
+net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.1/dist/") replace
 ```
 
 To get the example datasets, change to the folder where you want them and run:
 
 ```stata
-net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.0/dist/")
+net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.4.1/dist/")
 ```
 
 Then see `help dwlsmv` and `help difftest`.

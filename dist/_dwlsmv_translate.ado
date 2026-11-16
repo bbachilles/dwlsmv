@@ -1,4 +1,4 @@
-*! version 0.4.0  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
+*! version 0.4.1  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
 *!
 *! Internal; called by dwlsmv.ado. Spec Module 11 D1, D2, D9.
 *!
