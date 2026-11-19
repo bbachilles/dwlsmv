@@ -153,7 +153,8 @@ software, so please check results that matter against another program and
 `CITATION.cff` has the citation details, and GitHub's "Cite this repository" button uses it.
 Releases are archived on Zenodo. The DOI
 [10.5281/zenodo.24118857](https://doi.org/10.5281/zenodo.24118857) always resolves to the latest
-version. To cite a particular version, use its own DOI: 0.4.1 is
+version. To cite a particular version, use its own DOI: 0.5.0 is
+[10.5281/zenodo.24371579](https://doi.org/10.5281/zenodo.24371579), 0.4.1 is
 [10.5281/zenodo.24283736](https://doi.org/10.5281/zenodo.24283736), 0.4.0 is
 [10.5281/zenodo.24282230](https://doi.org/10.5281/zenodo.24282230), and 0.3.0 is
 [10.5281/zenodo.24118858](https://doi.org/10.5281/zenodo.24118858).
