@@ -1,0 +1,10 @@
+{
+    "generated_utc": "2026-11-17 17:17:00 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (no RNG: gm_starts is the deterministic GM4 grid)",
+    "files": {
+      "fixtures/expected/rotse_tier1_jacobians.csv": "9c864cb9e4bc9b3d251c84345090d222"
+    },
+    "packages": ["base R only (no lavaan, no mvtnorm)", "R version 4.6.0 (2026-04-24 ucrt)", "qmd md5 spec/derivations/dwlsmv-derivations.qmd e8deb614d4f6b28ac29065bc71d38754 chunks gm-impl, rs-impl, rs-3-rerot (rs_rerot_cs only), function definitions only", "common md5 fixtures/generate/00_common.R 6efb6a2c94325067252200a0d9603010", "input md5 fixtures/expected/lavaan_efa_geomin.csv 57049788e360a17a4b8bc12b0964e5aa", "input md5 fixtures/expected/lavaan_efa_case_E.csv f8297383c42797b2b17aaa473a77dd6b", "input md5 fixtures/data/case_E.csv 98c2f66b81d73718d5dcff7e40ec5359", "input md5 fixtures/data/case_F.csv 105f124379bc973f89c5f16cd1c26b3d", "input md5 fixtures/data/case_G.csv b180c32c2374ba13cd45ee06e2ef9e63", "cases E (p 6, m 2, eps 1e-4), F (p 9, m 3, eps 1e-3), G (p 6, m 2, eps 1e-4); GM4 grid, 30 starts; sign and order rule rs_canon", "points: stall = GPA stall (A3.15), root = Newton-polished (r ~ 1e-15)", "R: complex step h 1e-30 of rs_r; comparator closed form RS4; deciding 1e-12 relative to max|R|", "J: complex step h 1e-20 of re-rotation rs_rerot_cs (Newton on r = 0, forward-difference iteration matrix, R not used); comparator closed form RS3(ii); deciding 1e-10 relative to max|J|", "A derived from committed lavaan_efa_geomin.csv (Lambda, Phi) by Cholesky + LQ, positive diagonal", "threshold columns of R are 0 and threshold rows of J are [I, 0]: omitted; nth in dims", "not certified: calibration, other data, m >= 4, several minima, near ties, empty binary cells, the Stata route, production tolerances; a pass here is not a pass at any other layer"]
+  }

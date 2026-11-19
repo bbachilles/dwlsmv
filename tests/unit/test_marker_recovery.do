@@ -240,7 +240,8 @@ real colvector tmr_firstfit(string scalar canon, string scalar ind, real colvect
     return(fit.theta)
 }
 
-// e(b)'s free entries (columns e(Cns) does not fix), in theta order
+// e(b)'s free entries (columns e(Cns) does not fix), in theta order. A fit that did not converge
+// posts its fixed rows as e(Cns_b) (no e(V), so no e(Cns); spec Module 11, 2026-11-18)
 real colvector tmr_freeb()
 {
     real rowvector b
@@ -250,6 +251,9 @@ real colvector tmr_freeb()
 
     b    = st_matrix("e(b)")
     C    = st_matrix("e(Cns)")
+    if (rows(C) == 0) {
+        C = st_matrix("e(Cns_b)")
+    }
     free = J(cols(b), 1, 1)
     for (j = 1; j <= rows(C); j++) {
         free = free :* (C[j, 1..cols(b)]' :== 0)

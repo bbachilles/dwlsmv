@@ -13,8 +13,8 @@
 *!
 *!     newbn  e(b): rotated loadings y:F (bn's order), the factor correlations
 *!            /cov(F,G) (bn's names), then bn's thresholds /y:cutk unchanged.
-*!            No variances (fixed at 1) and no e(V): rotated SEs are not in
-*!            0.3.0 (spec section 5 Module 12, the user's choice 2026-10-29).
+*!            No variances (fixed at 1). The covariance e(V) is NOT built here: from release A
+*!            (unit A5) dwlsmv_m11_efa_se() builds it, called by dwlsmv.ado after this routine.
 *!     lamn   e(Lambda), p x m, rows the indicators, columns the factors
 *!     phin   e(Phi), m x m
 *!

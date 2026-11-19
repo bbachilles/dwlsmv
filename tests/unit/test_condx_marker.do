@@ -38,7 +38,7 @@
 *!          is NOT exercised (stated in the closing line); Part A2 does not depend on that search.
 *!   (iv)   the same nonconverging data under metric(unitvariance): converged, no qualification, standard errors present.
 *!   (v)    an ordinary (no covariate) fit with e(converged) set to 0 by hand (the only way to force it, spec D8: no
-*!          iteration limit option exists): displayed as before this change, characterized.
+*!          iteration limit option exists): since 2026-11-18 displayed as a conditional one, without its covariate lines.
 *!
 *! WHAT THIS CERTIFIES AND DOES NOT. It certifies the output path (what is displayed and posted). It says nothing about the
 *! estimates, about whether metric(unitvariance) cures any particular failure beyond these data, or about Module 10's
@@ -57,11 +57,12 @@
 *!       about standard errors survives for a nonconverged fit) and, where a note appears, by (i).
 *!   M5  dwlsmv.ado, header, new prominent block: `e(converged) == 0 {` (the block that prints "convergence not achieved:
 *!       the optimizer stopped after") -> `e(converged) == 2 {`. Killed by (i), the replay and the restore.
-*!   M6  dwlsmv.ado, posting: delete the `if "`cov'" != "" & `converged' == 0 {` branch so that e(V) is posted. Killed by
-*!       (i): rows(e(V)) != 0 and a "Std. err." column.
-*!   M7  dwlsmv.ado, scalars: `if !("`cov'" != "" & `converged' == 0) {` -> `if 1 {`. Killed by (i): e(T3) is posted.
-*!   M8  dwlsmv.ado, header, same prominent block: drop `"`e(covariates)'" != "" & ` from its condition. Killed by (v): the
-*!       hand-set ordinary fit shows the new lines (the conditional change leaks into ordinary fits).
+*!   M6  dwlsmv.ado, posting: delete the `if `converged' == 0 {` branch (since 2026-11-18 every fit; was covariate fits only)
+*!       so that e(V) is posted. Killed by (i): rows(e(V)) != 0 and a "Std. err." column.
+*!   M7  dwlsmv.ado, scalars: `if `converged' != 0 {` -> `if 1 {` (was the covariate condition). Killed by (i): e(T3) is
+*!       posted.
+*!   M8  RETIRED 2026-11-18: dropping the covariate condition from the header block is now the rule (owner: non-convergence
+*!       is an inference boundary for every fit); (v) checks the uniform display instead.
 *!   M9  mata/dwlsmv_m11_fit.mata: restore the old two-line "Not computed ... the admissibility" text. Killed by (ii).
 *!   M10 (added 2026-11-15) this file, tm_hit: delete the `if "`phrase'" == "Std. err." {` block (17+ spelling only).
 *!       Killed by the self-check before Part B (a "Std. Err." header gives hit 0).
@@ -821,30 +822,25 @@ else {
     display as text "      none found in 60 seeds: (iii-b) is NOT exercised at the command level (Part A still covers the note)"
 }
 
-* ---- (v) an ordinary fit with e(converged) set to 0 by hand: characterization of today's display ----
+* ---- (v) an ordinary fit with e(converged) set to 0 by hand: since 2026-11-18 (owner: non-convergence is an
+* inference boundary for every fit) it is displayed as a conditional one is, without the covariate's lines.
+* Display only: e(V) is still in e() here (set by hand); the posting is tested on a real fit in test_unconv_post.do
 display as text _n "  (v): ordinary fit, e(converged) set to 0 by hand"
 tm_data2
 quietly dwlsmv (F -> y1 y2 y3 y4)
 tm_cond `=(e(converged) == 1)' "(v): the ordinary fit did not converge before the hand-set"
-mata: st_local("nv0", strofreal(rows(st_matrix("e(V)"))))
 tm_unconv
 tm_run "`LG'" dwlsmv
 tm_cond `=(r(rc) == 0)' "(v): replay gave rc `=r(rc)'"
-tm_expect "`LG'" has "convergence not achieved" "(v)"
-mata: st_local("nl", strofreal(tm_hasline(st_local("LG"), "convergence not achieved")))
-tm_cond `nl' "(v): the line 'convergence not achieved' is not a line of its own"
-mata: st_local("a", strofreal(tm_idx(st_local("LG"), "Prob > chi2")))
-mata: st_local("b", strofreal(tm_idx(st_local("LG"), "convergence not achieved")))
-tm_cond `=(`a' > 0 & `b' > `a')' "(v): the T3 lines are not shown before the convergence line"
-tm_expect "`LG'" has "Std. err." "(v): an ordinary nonconverged fit keeps its coefficient table"
-tm_expect "`LG'" has "chi2(" "(v)"
-tm_expect "`LG'" hasnt "not a solution" "(v)"
-tm_expect "`LG'" hasnt "last iterate" "(v)"
-tm_expect "`LG'" hasnt "not reported" "(v)"
+tm_expect "`LG'" has "convergence not achieved: the optimizer stopped" "(v)"
+tm_expect "`LG'" has "last iterate, not a solution" "(v)"
+tm_expect "`LG'" has "not reported (not a solution)" "(v)"
+tm_expect "`LG'" has "Refit with metric(unitvariance)." "(v): the marker remedy"
+tm_expect "`LG'" hasnt "Std. err." "(v): an ordinary nonconverged fit shows the last-iterate table"
+tm_expect "`LG'" hasnt "Prob > chi2" "(v)"
+tm_expect "`LG'" hasnt "RMSEA (scaled)" "(v)"
+tm_expect "`LG'" hasnt "No further remedy is built for a model with a covariate" "(v)"
 tm_expect "`LG'" hasnt "No recovery refit" "(v)"
-tm_expect "`LG'" hasnt "Refit with metric" "(v)"
-mata: st_local("nv", strofreal(rows(st_matrix("e(V)"))))
-tm_cond `=(`nv' == `nv0' & `nv' > 0 & "`e(T3)'" != "")' "(v): e(V) or e(T3) not kept for an ordinary fit"
 * a real ordinary fit: nothing of the conditional text is printed
 quietly dwlsmv (F -> y1 y2 y3 y4)
 tm_run "`LG'" dwlsmv (F -> y1 y2 y3 y4)

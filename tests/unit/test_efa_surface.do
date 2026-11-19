@@ -1,3 +1,4 @@
+*! UPDATED 2026-11-17 for release A (e(V) now posted; check 2); executed after that update, StataMP 18.
 *! The EFA surface (0.3.0, Unit 6): dwlsmv (F1 F2 -> y1-y6), efa(F1 F2).
 *!
 *! Executed under StataMP 18 on 2026-10-29 and it passes. Worst ratios to tier: Lambda/Phi
@@ -23,7 +24,8 @@
 *!   1  per case: rc 0; e(Lambda), e(Phi) vs lavaan; T3, df, fit indices vs
 *!      lavaan; e(rot_eps) the Mplus rule; e(rot_starts) 30
 *!   2  Case E: e(b) holds the rotated loadings, the correlation and the
-*!      thresholds, matching e(Lambda) and e(Phi); no e(V) (rc 111); e(efa)
+*!      thresholds, matching e(Lambda) and e(Phi); e(V) posted from release A (25 x 25, same
+*!      stripe as e(b), e(rank) 23, no e(rot_nose)); values: test_rotse_post.do; e(efa)
 *!   3  epsilon(.001) and rstarts(40) reach e(rot_eps) and e(rot_starts)
 *!   4  df = 0 (Case E, one factor on y1-y3) is fitted and the note is printed
 *!   5  replay prints the rotated table; replay with standardized is rc 198
@@ -162,11 +164,25 @@ forvalues i = 1/3 {
         local ok = `ok' & reldif(`b'[1, colnumb(`b', "y3:F2")], `L'[3, 2]) == 0
         local ok = `ok' & reldif(`b'[1, colnumb(`b', "/:cov(F1,F2)")], `P'[2, 1]) == 0
         local ok = `ok' & "`e(efa)'" == "F1 F2"
+        * release A (unit A5): e(V) is posted over every rotated e(b) column, with e(b)'s stripe,
+        * symmetric, e(rank) = n_u = 12 + 11 = 23 (A3.14), nothing withheld (e(rot_nose) empty).
+        * Values against lavaan: test_rotse_post.do.
         capture confirm matrix e(V)
         local vrc = _rc
-        display as text "  case E: e(b) has `nb' columns; e(V) confirm rc `vrc'"
-        if !`ok' | `vrc' != 111 {
-            display as error "test_efa_surface 2: e(b)/e(V)/e(efa) not as specified"
+        tempname V
+        if `vrc' == 0 {
+            matrix `V' = e(V)
+        }
+        else {
+            matrix `V' = J(1, 1, .)
+        }
+        local ok = `ok' & (`vrc' == 0) & rowsof(`V') == `nb' & colsof(`V') == `nb'
+        local ok = `ok' & "`: colfullnames `V''" == "`: colfullnames `b''"
+        local ok = `ok' & "`: rowfullnames `V''" == "`: colfullnames `b''"
+        local ok = `ok' & e(rank) == 23 & "`e(rot_nose)'" == ""
+        display as text "  case E: e(b) has `nb' columns; e(V) confirm rc `vrc'; e(rank) " e(rank)
+        if !`ok' {
+            display as error "test_efa_surface 2: e(b)/e(V)/e(rank)/e(efa) not as specified"
             local ++nfail
         }
         estimates store efaE
@@ -302,5 +318,5 @@ if `nfail' {
     display as error _n "test_efa_surface: `nfail' failure(s)"
     exit 9
 }
-display as result "test_efa_surface: efa() fits E, F, G and matches lavaan's rotated Lambda, Phi, T3 and fit indices; e(b) without e(V); overrides, df = 0, replay, refusals and difftest hold"
+display as result "test_efa_surface: efa() fits E, F, G and matches lavaan's rotated Lambda, Phi, T3 and fit indices; e(b) with its e(V) (release A); overrides, df = 0, replay, refusals and difftest hold"
 exit 0

@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-11-18 14:07:27 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": ["20261201", "20261183"],
+    "files": {
+      "fixtures/expected/lavaan_efa_tie.csv": "ec41a1abe47aaa5f7c0e30579fce659f",
+      "fixtures/expected/lavaan_efa_tie_vcov.csv": "05f00d560ede4d8f5c4bb02c625f5598"
+    },
+    "packages": ["lavaan 0.7.3 from separate library %LOCALAPPDATA%/R/lib-lavaan-0.7-3 (default library holds 0.7-2); owner decision 2026-11-17; lavaan commit 55786b9 in 0.7-3", "numDeriv 2016.8.1.1", "design and criterion: docs/notes/efa-se/a4-neartie/criterion.md (declared 2026-11-17 before any data); options identical to 99p_lavaan_efa_se.R", "estimator WLSMV, parameterization delta, test scaled.shifted", "zero.add c(0.5, 0), zero.keep.margins TRUE (as 99g_, 99h_, 99p_)", "rotation geomin, oblique; geomin_epsilon by Mplus's rule (m = 2: .0001)", "rotation.args: rstarts 30 (seeded per case), row_weights none, std_ov FALSE (comparator setting, A3.10; not a dwlsmv convention), gpa_tol 1e-12, gpa_algorithm bb (0.7-3 default; gpa_fwindow 0 default), max_iter 10000, order_lv_by index, orthogonal FALSE, algorithm gpa, reflect TRUE, jac_init_rot TRUE (default), tol 1e-8 (default, pairwise only)", "rotation.se bordered (default); Jacobian numDeriv::jacobian Richardson, numDeriv defaults, not settable in lavaan; diagnostic re-evaluation d 1e-5, r 6 recorded as quantity diag", "se robust.sem; information expected; information.bread expected (lavaan 0.7-3 default is observed; set explicitly); vcov(fit) is singular by construction (rank n_u), not regularised", "quantity tie: diagnostics only (n_near_cutoff, ratio_fk=~yj within 10% of 0.8*column max, both_index_4.5, index_gap); not used for any choice", "selected random start is not exposed by lavaan 0.7-3 and is not recorded; criterion value Q of the posted solution is (quantity rot)", "no reseeding: non-convergence or any warning stops the generator", "inputs: efatie_T.csv, efatie_B.csv (92_efa_tie_data.R)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

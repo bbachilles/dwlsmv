@@ -1,12 +1,14 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-16 on the 0.4.1 release tree (76be14f plus the difftest help sections and the version bump, R): every example run,}{...}
-{* including esttab, the two covariate examples and the difftest help example,}{...}
-{* the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.4.1, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
-{* *! version 0.4.1  16nov2026}{...}
+{* Executed under StataMP 18 on 2026-11-18 on the 0.5.0 release tree (814ba9c plus the version bump, first R e313374): every example run,}{...}
+{* including esttab, the two covariate examples, the difftest and dwlsmv_nf help examples. At the re-cut R (dwlsmv_nf renamed efacompare)}{...}
+{* dwlsmv changed only in comments and help links, so its examples were not re-run; the efacompare examples were,}{...}
+{* the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.5.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* *! version 0.5.0  18nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
 {vieweralsosee "[SEM] gsem" "help gsem"}{...}
 {vieweralsosee "difftest" "help difftest"}{...}
+{vieweralsosee "efacompare" "help efacompare"}{...}
 {viewerjumpto "Syntax" "dwlsmv##syntax"}{...}
 {viewerjumpto "Description" "dwlsmv##description"}{...}
 {viewerjumpto "Options" "dwlsmv##options"}{...}
@@ -45,14 +47,14 @@ One observed variable may appear as a {it:covariate}: a binary variable coded 0 
 {cmd:(}{it:y}{cmd: <- }{it:x}{cmd:)}. The model is then fitted conditional on {it:x}: the
 thresholds are those at {it:x} = 0, {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:)} is the effect of {it:x}
 on the factor, and {cmd:(}{it:y}{cmd: <- }{it:x}{cmd:)} is its direct effect on the indicator's
-latent response (minus a threshold shift). A path written with {cmd:@}, as in {cmd:(}{it:F}{cmd: <-
-}{it:x}{cmd:@.4)}, fixes that coefficient at the value, which is a number in the model's own units, not a
+latent response (minus a threshold shift). A path written with {cmd:@}, as in {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:@.4)},
+fixes that coefficient at the value, which is a number in the model's own units, not a
 standardized coefficient: {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:@}{it:c)} fixes the effect of {it:x} = 1 against
 {it:x} = 0 on the factor at {it:c} factor units (with {cmd:metric(unitvariance)}, {it:c} disturbance standard
 deviations; with the marker metric, units of the marker indicator's latent response), and
 {cmd:(}{it:y}{cmd: <- }{it:x}{cmd:@}{it:c)} fixes the direct effect on {it:y}'s latent response, whose
-conditional variance is 1, at {it:c}, so the threshold shift is {it:-c}. A fixed path is shown in the table as
-constrained, with no standard error and a row in {cmd:e(Cns)}; it is not an estimated parameter, so it
+conditional variance is 1, at {it:c}, so the threshold shift is {it:-c}. A fixed path is shown in the table, under
+Covariates, as its value followed by {cmd:(constrained)}, with no standard error and a row in {cmd:e(Cns)}; it is not an estimated parameter, so it
 adds one degree of freedom. {cmd:(}{it:F}{cmd: <- }{it:x}{cmd:@0)} is dropped by {cmd:sem} and adds no row: it is the
 same model as no effect of {it:x} on {it:F}. A path fixed at a value other than 0 also fixes the factor's
 orientation under {cmd:metric(unitvariance)}: the loadings are not reflected to make the first one positive. A limitation follows: if the sign of the fixed value
@@ -83,6 +85,12 @@ of these factors, with oblique geomin rotation{p_end}
 factors{p_end}
 {synopt:{opt rstarts(#)}}number of rotation starts; default is
 {cmd:rstarts(30)}{p_end}
+{synopt:{opt se}}with {opt efa()}, display the standard errors of the rotated
+loadings and factor correlations{p_end}
+{synopt:{opt ci}}with {opt efa()}, display Wald confidence intervals for them{p_end}
+{synopt:{opt thresholds}}display the thresholds, which are hidden by default
+unless {opt invariance()} constrains them{p_end}
+{synopt:{opt nothresholds}}hide the thresholds{p_end}
 {synopt:{opt keepbound}}keep polychoric pairs at the bound instead of
 aborting; see {help dwlsmv##keepbound:keepbound}{p_end}
 {synopt:{opt standardized}}display the standardized solution, with the
@@ -93,12 +101,12 @@ see {help dwlsmv##semopts:sem options}{p_end}
 {synoptline}
 
 {p 8 15 2}
-{cmd:dwlsmv} [{cmd:,} {opt standardized} {opt l:evel(#)}]
+{cmd:dwlsmv} [{cmd:,} {opt standardized} {opt l:evel(#)} {opt se} {opt ci} {opt thresholds} {opt nothresholds}]
 
 {p 4 6 2}
 Typing {cmd:dwlsmv} without a model redisplays the header and coefficient
-table of the last {cmd:dwlsmv} fit, standardized if you ask (the notes block
-is not redisplayed).{p_end}
+table of the last {cmd:dwlsmv} fit, standardized if you ask, with the display
+options above (the notes block is not redisplayed).{p_end}
 
 
 {marker description}{...}
@@ -162,7 +170,9 @@ available. See {help dwlsmv##invariance:Measurement invariance}.
 be one block in which every factor in {it:namelist} loads on every indicator,
 as in {cmd:dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)}, and {it:namelist} must name
 every latent variable. dwlsmv fits the block, then rotates the loadings by
-oblique geomin. Only point estimates are reported in this version. See
+oblique geomin. The rotated loadings and factor correlations are shown without
+standard errors unless you ask for them with {opt se} or {opt ci}; the
+covariance is stored in {cmd:e(V)} either way. See
 {help dwlsmv##efa:Exploratory factor analysis}.
 
 {phang}
@@ -173,6 +183,27 @@ more. It requires {opt efa()}.
 {phang}
 {opt rstarts(#)} sets how many starting rotations are tried; the default is
 30. It requires {opt efa()}.
+
+{phang}
+{opt se} displays the standard errors of the rotated loadings and factor
+correlations, as matrices after the estimates. It requires {opt efa()}. The
+caveat in {help dwlsmv##efase:Remarks on rotated standard errors} applies to
+every number it shows.
+
+{phang}
+{opt ci} displays Wald confidence intervals, the estimate plus or minus z times
+its standard error with z from {opt level()}, in brackets beside each estimate.
+It requires {opt efa()}. With {opt efa()} no intervals are shown unless you give
+{opt ci}. The intervals are not truncated, so the interval for a factor
+correlation can extend beyond -1 or 1, and the output says so when it does. The
+same caveat applies. {opt se} and {opt ci} may be combined.
+
+{phang}
+{opt thresholds} and {opt nothresholds} show or hide the thresholds in the
+output of any fit. By default they are hidden, and shown when {opt invariance()}
+constrains them across groups ({cmd:thresholds}, {cmd:metric} or
+{cmd:scalar}). Hiding changes only what is displayed: {cmd:e(b)} and
+{cmd:e(V)} are the same.
 
 {marker keepbound}{...}
 {phang}
@@ -546,22 +577,63 @@ dwlsmv never uses or changes the random-number state. A larger
 {opt rstarts()} keeps the first 30 starts and adds more, so it can only find
 an equal or better solution.
 
+{marker efaorder}{...}
 {pstd}
 {it:Sign and order.} A rotation determines the factors only up to their signs
-and order. dwlsmv reverses any factor whose loadings sum to a negative number,
-then orders the factors by where their largest loadings fall in the indicator
-list, as lavaan does. List the indicators in the order you expect the factors,
-and the factors come out in that order. The names in {opt efa()} are attached
-to the factors in that final order.
+and order. dwlsmv reverses any factor whose loadings sum to a negative number
+(a sum of exactly zero is left as it is), then orders the factors by where their
+largest loadings fall in the indicator list, as lavaan does: for each factor it
+takes the mean position of the indicators whose loading is at least 0.8 times the
+factor's largest absolute loading, and puts the factor with the smaller mean first.
+List the indicators in the order you expect the factors, and the factors come out in
+that order. The names in {opt efa()} are attached to the factors in that final order.
 
 {pstd}
-{it:What is reported.} The rotated loadings, the factor correlations, the
-thresholds, the test statistic and the fit indices. {bf:Standard errors of the}
-{bf:rotated estimates are not available in this version}; no standard errors
-are shown, and {cmd:e(V)} is not stored, so {cmd:test} and {cmd:lincom} cannot
-be used after an EFA. When the rotation finds more than one distinct solution
-among its starts, the output says how many, and how many starts reached the
-reported one.
+{it:Ties in the order.} The order is fully determined. If two factors have exactly
+the same mean position, dwlsmv decides by further rules, each used only when the
+previous one does not separate them: the factor with the larger sum of squared
+loadings first; then the factor with the larger loading at the first indicator
+where their loadings differ; then, if their loadings are identical, the order that
+gives the larger factor correlations, compared along the lower triangle row by row.
+If even that does not separate them, the factors have the same loadings and
+correlations, so the order changes no estimate. Whenever the first rule ties, the
+output names the two factors and the rule that decided. The order never depends on
+which starting point of the rotation was reported. Reordering the factors reorders the
+rows and columns of the loadings, the factor correlations and {cmd:e(V)} accordingly
+and changes nothing else.
+
+{pstd}
+{it:Scree plot.} After {cmd:efa()}, {cmd:e(Ev)} holds the eigenvalues of the
+polychoric (or tetrachoric) correlation matrix of the indicators, largest first,
+and {cmd:e(properties)} includes {cmd:eigen}, so Stata's {helpb screeplot} plots
+them: type {cmd:screeplot} after the fit. They are not printed. They come from the
+correlation matrix alone, so they are the same for any number of factors and do not
+depend on the rotation. The matrix is estimated pair by pair and need not be
+positive definite, so an eigenvalue can be negative; none is clipped. The plot is
+a picture to look at when choosing the number of factors; dwlsmv applies no rule
+to it. To see the fit and the rotated diagnostics for several numbers of factors side by side,
+see {helpb efacompare}.
+
+{pstd}
+{it:What is reported.} The rotated loadings and the factor correlations, the test
+statistic and the fit indices. The thresholds are stored but not displayed unless
+you give {opt thresholds}. Standard errors and intervals are displayed with
+{opt se} and {opt ci}. The covariance of the rotated estimates is stored in
+{cmd:e(V)}, so {cmd:test} and {cmd:lincom} can be used after an EFA; see
+{help dwlsmv##efase:Remarks on rotated standard errors} for what those results
+mean. When the rotation finds more than one distinct solution among its starts,
+the output says how many, and how many starts reached the reported one.
+
+{pstd}
+If the covariance cannot be computed, because the unrotated fit did not converge
+or is inadmissible, because the rotated model's weighted Jacobian is rank
+deficient (smallest to largest singular value below 1e-8), or because the geomin
+criterion has a degenerate critical point at the solution, the rotated estimates
+are shown without standard errors, {cmd:e(V)} is not stored, the output says why
+in error colour, and {cmd:e(rot_nose)} names the reason. The test statistic and the
+fit indices are still reported, except when the unrotated fit did not converge:
+then, as for any fit that does not converge, no inference is reported (see
+{help dwlsmv##unconverged:A fit that does not converge}).
 
 {pstd}
 {it:When the rotation does not converge.} If none of the starting points
@@ -574,6 +646,79 @@ inadmissible (an indicator's communality above 1): try fewer factors.
 p(p-1)/2 - (pm - m(m-1)/2) degrees of freedom. A model with negative degrees
 of freedom is refused. With zero, it fits exactly: the test is not informative,
 and the fit indices are shown as missing.
+
+{marker efase}{...}
+{pstd}
+{it:Remarks on rotated standard errors.} What is and is not established.
+
+{pstd}
+{it:What is computed.} The covariance of the rotated loadings and factor
+correlations is obtained from the covariance of the unrotated estimates by the
+delta method, evaluated at the rotated solution that dwlsmv reports. It is a
+local first-order approximation, and it is conditional on that solution: the
+rotation is not re-run for each sample, and the covariance does not describe the
+variation of the rotation itself. Rotation does not change the thresholds, T3 or
+the fit indices; their standard errors and test results are those of the
+unrotated fit, and the cautions here do not apply to them.
+
+{pstd}
+{it:How good the approximation is.} Its accuracy depends on how far a loading is
+from zero, measured against the square root of the geomin epsilon (.01 at the
+default with two factors, about .032 with three), and on the sample size. Loadings
+near zero are where the approximation is least accurate. Beyond this, no rule is
+established for deciding which standard errors can be trusted: dwlsmv does not
+flag any loading and applies no cutoff.
+
+{pstd}
+{it:What was tested.} The standard errors were checked in a simulation study of
+six cases: three populations, each at N = 500 and N = 2000. The populations were a
+two-factor model with ten ordinal indicators of three categories, a three-factor
+model with twelve ordinal indicators of three categories, and a two-factor model
+with ten binary indicators, all at the default epsilon. Coverage below is over
+about 4,000 samples per estimate. Nothing is claimed beyond these cases: not for
+larger N, for more than three factors, for other epsilon values, or for designs
+where every indicator has sizeable cross-loadings.
+
+{pstd}
+{it:What the simulation showed.}
+
+{phang2}
+{c -} Of 84 clearly nonzero loadings and factor correlations, 95% intervals from
+the standard errors covered the true value in 92.6% to 97.5% of the samples. Seven
+of them, which covered 92.6% to 93.8%, could not be classified as calibrated or
+not by the study's rule; the others were classified as calibrated. None was
+classified as miscalibrated.
+
+{phang2}
+{c -} Near zero, coverage was lower and uneven. Of 36 loadings that were exactly
+zero in the population, 34 were covered in 93% or more of the samples and two
+(three-factor model, N = 2000) in 88%. Of 36 loadings set at 0.5 to 6 times the
+square root of epsilon, coverage ranged from 79% to 98%, and 18 were below 92.5%.
+In the two-factor populations, loadings at 2, 4 and 6 times the square root of
+epsilon (.02, .04 and .06) were covered in 79% to 91% of the samples, at both
+N = 500 and N = 2000.
+
+{phang2}
+{c -} Four candidate measures of closeness to zero were tried as a way of saying
+which standard errors to trust. None was shown to work: three were rejected and
+the fourth could not be decided, so dwlsmv makes no flag, cutoff or narrowing of
+the claim.
+
+{pstd}
+So: for loadings and factor correlations that are clearly nonzero, intervals from
+these standard errors performed close to nominal in the cases tested. For loadings
+near zero, treat standard errors and intervals as approximate, with coverage
+sometimes well below nominal. The size of the shortfall in the tested cases does
+not carry over to other models.
+
+{pstd}
+{it:Several minima.} Geomin rotation can have more than one local minimum. When
+the starts reach more than one, the output says how many, and
+{cmd:e(rot_minima)}, {cmd:e(rot_atbest)} and {cmd:e(rot_gap)} hold the same
+facts. The standard errors are conditional on the reported solution: another
+minimum, when it exists, has its own standard errors, which can differ from those
+reported. Whether having several minima goes with poorer coverage has not been
+studied.
 
 {pstd}
 {it:Not available with efa() in this version:} other paths, a second or
@@ -588,9 +733,31 @@ standardized), and {helpb difftest}.
 {p 4 4 2}
 The header gives the number of observations, the metric line, T3 with its
 degrees of freedom and p-value, the scaled RMSEA, CFI and TLI (see
-{help dwlsmv##fitindices:Fit indices}), and "convergence not achieved" when
-the fit did not converge. The coefficient table follows; parameters fixed by
-the model are shown as {cmd:(constrained)}.
+{help dwlsmv##fitindices:Fit indices}). When the fit did not converge it says so
+first and reports no T3, p-value or fit index (see
+{help dwlsmv##unconverged:A fit that does not converge}). The coefficient table
+follows, in sections: {cmd:Loadings on} {it:F} (one per factor), {cmd:Structural}
+({it:F2} {cmd:<-} {it:F1}), {cmd:Covariates} ({it:F} {cmd:<-} {it:x},
+{it:y4} {cmd:<-} {it:x}), {cmd:Variances}, {cmd:Covariances}, and, with
+{opt invariance()}, the intercepts, scales and factor means of the groups, then
+the thresholds, one block per item; an empty section is not printed. The columns
+are Estimate, Std. err., z, P>|z| and the Wald interval at {opt level()}
+(normal theory). Each row is labelled by the parameter's name without the
+leading slash, so it can be found in {cmd:_b[]}. The marker loading shows as
+{cmd:1  (marker)}; any other parameter you fixed (for example
+{cmd:y2@.8} beside the marker's {cmd:y1@1}, or {cmd:cov(F1*F2@.2)}) shows as its value followed by
+{cmd:(constrained)}. Parameters that the metric fixes are not listed: under
+{cmd:metric(unitvariance)} the variance of each factor fixed at 1 (the
+disturbance variance of a factor predicted by other factors), which the metric
+line of the header states. The thresholds are not shown unless
+{opt invariance()} constrains them or you give {opt thresholds}; a one-line note
+says when they are hidden, and they are always in {cmd:e(b)}. The table is
+display only: {cmd:e(b)}, {cmd:e(V)} and {cmd:e(Cns)} are unchanged, and
+{cmd:r(table)} (the layout of {cmd:ereturn display}: rows
+{cmd:b se z pvalue ll ul df crit eform}) holds every parameter of {cmd:e(b)}, hidden ones included,
+after a replay. The table is 78 columns wide, and the label column grows with
+the longest label up to {cmd:linesize} - 62; a longer label is cut with a
+{cmd:~}.
 
 {p 4 4 2}
 After the table comes a single notes block, in this order:
@@ -620,19 +787,22 @@ warning or an admissibility check.{p_end}
 {p 4 4 2}
 {bf:With {cmd:invariance()}.} The header names the level and the number of
 groups and says that the factor variances are fixed at 1 in the first group
-(the reference group). The table lists every group's parameters at every
-level, in blocks: thresholds, loadings and factor variances, then the
-latent-response intercepts, the latent-response scales and the factor means,
-each group by group. Names follow {cmd:sem}'s {cmd:group()} form:
+(the reference group). The table has one sub-table per group, titled
+{cmd:Group} {it:k} {cmd:(}{it:varname} {cmd:=} {it:value}{cmd:)}, each with
+its loadings, variances and covariances and, where the level estimates them,
+the latent-response intercepts, scales and factor means; the thresholds
+(hidden under {cmd:configural} unless you give {opt thresholds}) follow as one
+table, one block per item, each threshold labelled with its group. A parameter
+constrained equal across groups appears in every group with the same estimate
+and standard error. The parameters a level fixes, which are conventions and not
+results, are not listed, and a line under the table says so: the factor
+variances fixed at 1, the intercepts fixed at 0, the scales fixed at 1 and the
+means fixed at 0. They are in {cmd:e(b)} and {cmd:e(Cns)}. Names follow
+{cmd:sem}'s {cmd:group()} form:
 {cmd:y1:2.g#c.F} is y1's loading on F in the group with g = 2,
 {cmd:/y1:2.g#c.cut1} its first threshold, {cmd:y1:2.g} its latent-response
 intercept, {cmd:/scale(y1)#2.g} its latent-response scale and
-{cmd:/mean(F)#2.g} the mean of F; the first group's tag reads {cmd:1bn.g}. A
-parameter the level does not estimate is shown at its fixed value, so the
-table has the same rows at every level. Stata's table labels intercepts fixed
-at 0 {cmd:(omitted)}: they are fixed at 0 by the level, not dropped from the
-model. A parameter constrained equal across groups appears in every group with
-the same estimate and standard error.
+{cmd:/mean(F)#2.g} the mean of F; the first group's tag reads {cmd:1bn.g}.
 
 {p 4 4 2}
 The notes block then lists, under {cmd:Group} {it:g} {cmd:(}{it:varname}
@@ -660,25 +830,31 @@ do not change. If that also fails, the first attempt is reported. A
 {cmd:metric(marker)} fit takes no such retry; it has
 {help dwlsmv##recovery:recovery} instead.
 
+{marker unconverged}{...}
 {p 4 4 2}
-A fit that does not converge is still posted, as {cmd:sem} does: {cmd:e(b)},
-{cmd:e(V)} and T3 are at the last iterate and {cmd:e(converged)} is 0. Under
+A fit that does not converge is posted for inspection, with no inference:
+inference is reported only for a converged solution, whether the model is a CFA,
+an {cmd:efa()} fit, has several groups or a covariate. Under
 {cmd:metric(marker)} such a fit is first put through
-{help dwlsmv##recovery:recovery}.
+{help dwlsmv##recovery:recovery}; a fit whose recovery succeeds converges and is
+reported as any fit.
 
 {p 4 4 2}
-{bf:A model with a covariate that does not converge} is reported differently, and this difference from a model without a covariate is an open decision, not a permanent rule. A
+{bf:A fit that does not converge} is reported as follows. A
 line in error colour directly under the title says that the optimizer did not
 converge, that the estimates are the last iterate and not a solution, and, under
 {cmd:metric(marker)}, to refit with {cmd:metric(unitvariance)}, adding that the
 recovery refit was not attempted (the model is ineligible) or failed, as the notes
-say; a model with a covariate whose recovery succeeds converges and is
-reported as any fit. Otherwise {cmd:dwlsmv} has no option for other
-starting values. No standard errors, T3 or p-value are reported. Only {cmd:e(b)}
+say. Otherwise {cmd:dwlsmv} has no option for other
+starting values. No standard errors, T3, p-value or fit index is reported. Only {cmd:e(b)}
 (and {cmd:e(Cns_b)}, which marks the fixed parameters) is posted, with
-{cmd:e(df_T3)}, {cmd:e(converged)} and {cmd:e(iterations)}; {cmd:e(V)}, {cmd:e(T3)}
-and {cmd:e(p_T3)} are not, so {cmd:test}, {cmd:lincom} and {cmd:nlcom} have nothing
-to work from. The table lists the last iterate and the replay says the same.
+{cmd:e(df_T3)}, {cmd:e(converged)}, {cmd:e(iterations)} and what identifies the model
+and the sample; {cmd:e(V)}, {cmd:e(T3)}, {cmd:e(p_T3)}, the fit indices and the
+baseline's T3 are not, so {cmd:test}, {cmd:lincom} and {cmd:nlcom} have nothing
+to work from. The table lists the last iterate, in the sections of the coefficient table but
+with an Estimate column only: the marker loading shows as {cmd:(marker)} and any other fixed parameter as
+{cmd:(constrained)}, under the title {cmd:Last iterate, not a solution; no standard errors}. The replay says the same;
+{cmd:standardized} is not available for such a fit.
 
 {p 4 4 2}
 {bf:Admissibility with a covariate.} The admissibility check is run on every fit
@@ -754,7 +930,8 @@ rescales by the factor standard deviations only, sqrt(Phi_FF), where
 Phi = (I-B)^-1 Psi (I-B)^-T is the factor covariance matrix. A loading
 becomes lambda*sqrt(Phi_FF), a path beta*sqrt(Phi_FF/Phi_TT), and
 thresholds are unchanged. The table shown by {opt standardized} has the same
-rows and names as the coefficient table, plus:
+sections, rows and labels as the coefficient table (every loading, structural
+path, variance and covariance, with its standard error), plus:
 
 {p2colset 8 12 12 2}{...}
 {p2col:o}{cmd:/var(e.}{it:y}{cmd:)}, the residual variance of each
@@ -769,7 +946,8 @@ factor is not shown; the path is.{p_end}
 
 {p 4 4 2}
 An exogenous factor's {cmd:/var(}{it:F}{cmd:)} is 1, and a covariance fixed
-at 0 stays 0; both are shown as {cmd:(constrained)}. Standard errors are the
+at 0 stays 0. Rows the standardization makes constant are not shown; a line above
+the table says so. Standard errors are the
 delta method's, with the analytic Jacobian of the map. This is lavaan's
 {cmd:std.all}; on the example data the standardized values and standard errors match
 lavaan 0.7.2's, both metrics, structural and correlated models.
@@ -781,8 +959,9 @@ omega*tau, an intercept omega*nu, a factor mean alpha/sqrt(Phi_FF), and
 {cmd:/var(e.}{it:y}{cmd:)} is 1 - omega^2*(Lambda Phi Lambda')_jj. The
 {cmd:/scale()} row is the constant 1. So equal raw parameters can have different
 standardized values across groups, and the table says so wherever parameters are
-tied. Constant rows stay in the table: {cmd:(constrained)}, or Stata's
-{cmd:0 (omitted)} for a constant 0. These match lavaan 0.7.2's {cmd:std.all}; Mplus's
+tied. The constant rows are not shown (an exogenous factor's {cmd:/var(}{it:F}{cmd:)},
+the {cmd:/scale()} rows, and the intercepts and means the level fixes at 0; the
+title line of the table says so); each has a standard error of exactly 0. These match lavaan 0.7.2's {cmd:std.all}; Mplus's
 STDYX with groups has not been compared. If a factor variance is at or below 0 in
 a group, the solution is not defined and {opt standardized} stops with an error.
 
@@ -932,8 +1111,8 @@ thresholds between the groups beyond what the factor explains{p_end}
 {p2col 5 20 24 2: Scalars}{p_end}
 {synopt:{cmd:e(N)}}number of observations{p_end}
 {synopt:{cmd:e(rank)}}number of free parameters{p_end}
-{synopt:{cmd:e(T3)}}scaled-and-shifted test statistic; not posted, nor {cmd:e(p_T3)}, for a
-model with a covariate whose fit did not converge{p_end}
+{synopt:{cmd:e(T3)}}scaled-and-shifted test statistic; not posted, nor {cmd:e(p_T3)}, the fit
+indices, {cmd:e(T3_b)}, {cmd:e(df_T3_b)} or {cmd:e(V)}, for a fit that did not converge{p_end}
 {synopt:{cmd:e(df_T3)}}degrees of freedom of T3{p_end}
 {synopt:{cmd:e(p_T3)}}p-value of T3 (missing if df is 0){p_end}
 {synopt:{cmd:e(rmsea_s)}}RMSEA from T3 (missing if df is 0){p_end}
@@ -963,7 +1142,8 @@ not evaluated{p_end}
 {synopt:{cmd:e(recovery)}}{cmd:none}, {cmd:recovered}, {cmd:ineligible} or
 {cmd:failed}; see {help dwlsmv##recovery:recovery}{p_end}
 {synopt:{cmd:e(indicators)}}indicators, in {cmd:sem}'s {cmd:e(oyvars)} order{p_end}
-{synopt:{cmd:e(properties)}}{cmd:b V}{p_end}
+{synopt:{cmd:e(properties)}}{cmd:b V}; {cmd:b} for a fit that did not converge;
+with {cmd:efa()}, {cmd:b V eigen} or {cmd:b eigen}{p_end}
 {synopt:{cmd:e(canon)}}the model that was fitted, written out; {helpb difftest} refits from it{p_end}
 {synopt:{cmd:e(keepbound)}}{cmd:keepbound} if specified{p_end}
 {synopt:{cmd:e(datasignature)}}the signature of the indicators in the estimation sample, which {helpb difftest} checks{p_end}
@@ -979,10 +1159,11 @@ or {cmd:e(bound)}; it does post {cmd:e(gamma_ratio)}, {cmd:e(gamma_ratio_raw)},
 loadings, regressions, factor (co)variances; a fixed parameter carries its
 value{p_end}
 {synopt:{cmd:e(V)}}variance-covariance matrix of the estimates, exactly zero
-in fixed rows and columns; not posted for a model with a covariate whose fit did not
-converge{p_end}
+in fixed rows and columns; not posted for a fit that did not converge{p_end}
 {synopt:{cmd:e(Cns)}}one row per fixed parameter, selecting that column at its
 value (posted only when some parameter is fixed){p_end}
+{synopt:{cmd:e(Cns_b)}}the same rows, posted instead of {cmd:e(Cns)} for a fit
+that did not converge (Stata keeps {cmd:e(Cns)} for results with {cmd:e(V)}){p_end}
 {synopt:{cmd:e(bound)}}1 x P, one column per polychoric pair; 1 for a pair
 included at the bound under {opt keepbound}, else 0{p_end}
 
@@ -1010,8 +1191,11 @@ cannot be used there.)
 
 {p 4 4 2}
 {bf:With {cmd:efa()}.} {cmd:e(b)} holds the rotated loadings, the factor
-correlations and the thresholds, and there is no {cmd:e(V)} (so
-{cmd:e(properties)} is {cmd:b}). In addition:
+correlations and the thresholds. {cmd:e(V)} is the covariance of these rotated
+estimates, over every column of {cmd:e(b)}; it is posted except when
+{cmd:e(rot_nose)} is set, and then {cmd:e(properties)} is {cmd:b eigen} rather
+than {cmd:b V eigen}. {cmd:e(rank)} is the number of free parameters of the
+unrotated model that was fitted, which is also the rank of {cmd:e(V)}. In addition:
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Scalars}{p_end}
@@ -1024,15 +1208,35 @@ correlations and the thresholds, and there is no {cmd:e(V)} (so
 {synopt:{cmd:e(rot_eps)}}geomin epsilon used{p_end}
 {synopt:{cmd:e(rot_gap)}}criterion gap to the next distinct minimum; missing if
 there is only one{p_end}
+{synopt:{cmd:e(rot_cond)}}condition number of the matrix used to compute the rotated
+covariance; stored for inspection, with no cutoff; it does not indicate how well
+the intervals cover{p_end}
 
 {p2col 5 20 24 2: Matrices}{p_end}
 {synopt:{cmd:e(Lambda)}}rotated loadings, indicators by factors{p_end}
 {synopt:{cmd:e(Phi)}}factor correlations{p_end}
+{synopt:{cmd:e(Ev)}}eigenvalues of the indicators' polychoric correlation matrix,
+largest first, 1 x p; used by {helpb screeplot}{p_end}
 
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:e(efa)}}the factors named in {opt efa()}{p_end}
 {synopt:{cmd:e(rotation)}}{cmd:geomin oblique}{p_end}
+{synopt:{cmd:e(rot_nose)}}set only when no covariance is stored: {cmd:unconverged},
+{cmd:inadmissible}, {cmd:rank}, {cmd:critical} or {cmd:acov}, naming why{p_end}
 {p2colreset}{...}
+
+{p 4 4 2}
+{bf:e(V) after efa().} The rotated covariance is singular by construction: it has
+m(m-1) more rows than its rank, {cmd:e(rank)}, and it is not regularized.
+{cmd:test} and {cmd:lincom} work as usual for ordinary combinations of the rotated
+loadings and factor correlations. A combination that moves the rotated solution
+along its own family of equivalent rotations (it mixes loadings and factor
+correlations in a particular way) has variance zero; tests and intervals for such a
+combination have no meaning, and Stata's handling of them depends on the sign of a
+rounding residue, so it differs between computers: the constraint is dropped on
+some and reported as decisive on others. Do not interpret them. The standard errors
+in {cmd:e(V)} carry the caveat in
+{help dwlsmv##efase:Remarks on rotated standard errors}.
 
 {p 4 4 2}
 {bf:With {cmd:invariance()}.} {cmd:e(b)} holds every group's parameters at
@@ -1117,5 +1321,5 @@ for any errors.
 {title:Also see}
 
 {p 4 13 2}
-Help:  {manhelp sem SEM}, {manhelp gsem SEM}, {manhelp nlcom R}, {helpb difftest}
+Help:  {manhelp sem SEM}, {manhelp gsem SEM}, {manhelp nlcom R}, {helpb difftest}, {helpb efacompare}
 {p_end}

@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-11-18 14:07:23 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": ["20261201", "20261183"],
+    "files": {
+      "fixtures/data/efatie_T.csv": "ff5eff4d4fbf51b37d981ea48b78a387",
+      "fixtures/data/efatie_B.csv": "cae7372b7d81fdea9cb4621df949c91b"
+    },
+    "packages": ["none (base R only)", "N 5000", "design and criterion: docs/notes/efa-se/a4-neartie/criterion.md (declared 2026-11-17 before any data)", "thresholds (all items, both cases): -1.036433  0.000000  0.841621", "case T Lambda (column-major 8x2): 0.7 0.0 0.0 0.7 0.7 0.0 0.0 0.7 0.0 0.7 0.7 0.0 0.0 0.7 0.7 0.0", "case B Lambda (column-major 8x2): 0.70 0.00 0.00 0.70 0.70 0.00 0.00 0.56 0.00 0.70 0.70 0.00 0.00 0.70 0.70 0.00", "Phi (column-major 2x2, both cases): 1.0 0.3 0.3 1.0", "f1 loads items 1 4 5 8; f2 loads items 2 3 6 7; case B y8 on f1 = .56 = 0.8 * .70"]
+  }

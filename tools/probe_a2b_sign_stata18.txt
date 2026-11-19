@@ -1,0 +1,12 @@
+. *!     grep -E "^SG|dropped" probe_a2b_sign.log | diff - tools/probe_a2b_sign
+SGENV stata_version 18
+SG k1'Vk1 as built  1.94484e-17
+SG k1'Vp k1  1.94487e-17   k1'Vm k1 -1.01036e-17
+SG p test rc 0 chi2 2.665e+15 df 1 drop 0
+SG p test_shift rc 0 chi2 5.107e+15 df 1 drop 0
+SG p lincom rc 0 est -.26014958 se 5.039e-09
+       Constraint 1 dropped
+SG m test rc 0 chi2 . df 0 drop 1
+       Constraint 1 dropped
+SG m test_shift rc 0 chi2 . df 0 drop 1
+SG m lincom rc 0 est -.26014958 se .

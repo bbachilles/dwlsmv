@@ -1,18 +1,20 @@
 dwlsmv release build provenance (written by tools/stage_release.ps1)
-Date:            20261116
+Date:            20261118
 Built under:     StataMP 16.1, serial [milestone] (milestone machine, Windows ARM, x86 build under emulation)
-Checked out at:  9d7696b54fcb486c488f8470aeecb66fbf16b1a5
-src/mata last changed in: a5a84569dada7f8a46fe870b28fb8d6a14f05a59
-ldwlsmv.mlib:    1317788 bytes, MD5 D62A0AE24731E34BBA21208C7E471A07, 249 functions, 149 source files
+Checked out at:  2dca9f1595deb904432910a15952862d335b0d0a
+src/mata last changed in: c1f706ad461458af2e8bfd02e9674cd38dae816e
+ldwlsmv.mlib:    1420496 bytes, MD5 2BC43AE04AE12A32917684260D2B8E51, 282 functions, 155 source files
 
 dist/ file MD5s:
-  4B4F0CC4C2F189B932C9A6D38D2F2AE4  difftest.ado  7179 bytes
+  8260F648A3D64B4ABA7FD1D83C853225  difftest.ado  7179 bytes
   BD00E8582B93EF09AC13383C22B13502  difftest.sthlp  6646 bytes
-  C0181C86216617133B81ACE5B12C2954  dwlsmv.ado  31564 bytes
-  F25A5CDBA48B2FA66D2625739ECE7065  dwlsmv.pkg  680 bytes
-  58C869205776C575E5D8F3402ED350C5  dwlsmv.sthlp  57306 bytes
-  9C62C4D427FA27176F7F910655F3F2E1  dwlsmv_example.dta  38782 bytes
-  CDB9617CEA1C1728C95083587685DEED  dwlsmv_example_mg.dta  29257 bytes
-  D62A0AE24731E34BBA21208C7E471A07  ldwlsmv.mlib  1317788 bytes
-  4B2768CA955B04B0DD4C8B7D8764CB1F  stata.toc  116 bytes
-  32C26E66619CF013FA066E67D393D80A  _dwlsmv_translate.ado  5712 bytes
+  1996A2B817D518B4818C8EBB5BD8DA40  dwlsmv.ado  52566 bytes
+  A8790DE084E048F6B938012FF3315288  dwlsmv.pkg  716 bytes
+  7535DC5FD3DAE09BBD36BF87B7AF8FD6  dwlsmv.sthlp  70160 bytes
+  58923E49769B836EABC47DCB545CED0F  dwlsmv_example.dta  38782 bytes
+  54589468451DA502977FE20E9FC93AE7  dwlsmv_example_mg.dta  29257 bytes
+  7DB4662B1D44B4147BA8324A446D73C2  efacompare.ado  12974 bytes
+  BCDBFE53CDAEA35AB4136546C0558352  efacompare.sthlp  9548 bytes
+  2BC43AE04AE12A32917684260D2B8E51  ldwlsmv.mlib  1420496 bytes
+  562F9D0AFD40984BA27D258C8E1FCCFF  stata.toc  116 bytes
+  8C7F53F2C91F28B8EFA1E0CD8561C8D3  _dwlsmv_translate.ado  5712 bytes

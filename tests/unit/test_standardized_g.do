@@ -2,6 +2,8 @@
 *! @sec-standardize-mg, tier 2 fixtures/expected/lavaan_mg_std*.csv).
 *!
 *! Executed under StataMP 18 on 2026-11-01 and it passes. Mutants: E-074, 2026-11-01.
+*! REVISED 2026-11-18 (C2 (a), compact table; drafted by a read-only agent): check 5 expects the constant rows left out and the title clause.
+*! Run 2026-11-18 in this form.
 *!
 *! Two comparisons with lavaan 0.7.2, kept apart because their errors differ:
 *!   1  the map alone: lavaan's own theta-hat and vcov go through
@@ -18,9 +20,10 @@
 *!      1e-6 relative on nonzero diagonals (chosen before the first run);
 *!   4  lambda*^2 + Theta* = 1 on one-factor designs, 1e-12; group 1's tau and
 *!      lambda rows equal the raw estimate exactly (omega = 1, psi = 1);
-*!   5  display: constant rows kept (Q-D (a)); Stata prints a zero-valued one as
-*!      "0 (omitted)", the rest as (constrained), as the raw table; the tie note
-*!      (Q-C (a)) past configural only, e() restored, replay the same;
+*!   5  display: the constant rows are NOT shown (C2 (a), owner 2026-11-18, which reverses Q-D (a)); the
+*!      title line says so; the planner reports exactly nfixs rows omitted as "standardized"; no
+*!      "(constrained)" or "(omitted)" in the table; the tie note (Q-C (a)) past configural only,
+*!      e() restored, replay the same;
 *!   6  groups 0 and 7 with shuffled rows, and G = 3;
 *!   7  fail closed: each malformed input gives rc 3498 and its own message.
 *!
@@ -356,6 +359,22 @@ real scalar tsg_const(string scalar bs, string scalar vs, string scalar cs_n, re
     return(nom == 0 | nz != nfix | rows(C) != nfix)
 }
 
+// check 5: how many rows the compact table plan leaves out as constants of the standardization
+real scalar tsg_nstd(string scalar bn, string scalar vn, string scalar cn)
+{
+    real matrix V, C, pnum, tab
+    string matrix K_s, ptxt, otxt
+    real colvector oidx
+
+    V   = st_matrix(vn)
+    C   = st_matrix(cn)
+    K_s = st_matrixrowstripe("e(K)")
+    dwlsmv_ct_plan(st_matrixcolstripe(bn), st_matrix(bn), V, 1, C, 1, st_global("e(metric)"),
+                   st_global("e(canon)"), tokens(st_global("e(indicators)")), K_s[., 2]',
+                   st_global("e(groupvar)"), 1, 1, 95, ptxt, pnum, otxt, oidx, tab)
+    return(sum(otxt[., 2] :== "standardized"))
+}
+
 // check 7: the i-th malformed input
 void tsg_bad(real scalar c)
 {
@@ -541,14 +560,16 @@ foreach lv in configural metric {
     mata: st_local("nc", strofreal((strlen(TSGLOG) - strlen(subinstr(TSGLOG, "(constrained)", ""))) / 13))
     mata: st_local("nt", strofreal(strpos(TSGLOG, "Equal raw") + strpos(TSGLOG, "equal raw parameters") > 0))
     mata: st_local("nb", strofreal(strpos(TSGLOG, "var(e.y5)") > 0))
+    mata: st_local("nn", strofreal(strpos(TSGLOG, "Constant rows (fixed by the level or by the standardization) are not shown.") > 0))
+    mata: st_local("ns", strofreal(tsg_nstd("`bs'", "`Vs'", "`Cs'")))
     mata: st_local("no", strofreal((strlen(TSGLOG) - strlen(subinstr(TSGLOG, "(omitted)", ""))) / 9))
     local want = cond("`lv'" == "configural", 0, 1)
-    if `tsg_rc' | `nc' + `no' != `nfixs' | `nc' == 0 | `nt' != `want' | !`nb' | "`e(cmd)'" != "dwlsmv" | ///
+    if `tsg_rc' | `nc' != 0 | `no' != 0 | `ns' != `nfixs' | !`nn' | `nt' != `want' | !`nb' | "`e(cmd)'" != "dwlsmv" | ///
         mreldif(`b0', e(b)) != 0 | mreldif(`V0', e(V)) != 0 {
-        display as error "  5 `lv' FAILED (rc `tsg_rc', constrained `nc' plus omitted `no' of `nfixs', note `nt', Theta `nb')"
+        display as error "  5 `lv' FAILED (rc `tsg_rc', constrained `nc', omitted `no', planner-omitted `ns' of `nfixs', title clause `nn', note `nt', Theta `nb')"
         local ++nfail
     }
-    else display as text "  5 `lv': ok, `nc' constrained and `no' zero rows, note `nt'"
+    else display as text "  5 `lv': ok, `ns' constant rows left out and said so, note `nt'"
 }
 tsg_log "dwlsmv `m1', group(g) invariance(scalar) metric(unitvariance) standardized"
 mata: TSGFIT = TSGLOG

@@ -55,6 +55,14 @@
 #                                  91_efa_data.R                   (optional)
 #   fixtures/MANIFEST_lavaan_efa_geomin.json  lavaan oblique geomin, E/F/G,
 #                                  99h_lavaan_efa_geomin.R         (optional)
+#   fixtures/MANIFEST_rotse_tier1.json  tier 1, rotated-EFA R and J, E/F/G,
+#                                  99q_tier1_rot_jacobians.R       (optional)
+#   fixtures/MANIFEST_lavaan_efa_se.json  lavaan rotated SEs and vcov, E/F/G,
+#                                  99p_lavaan_efa_se.R             (optional)
+#   fixtures/MANIFEST_efa_tie_data.json  tier 1, near-tie EFA data, Cases T and B,
+#                                  92_efa_tie_data.R               (optional)
+#   fixtures/MANIFEST_lavaan_efa_tie.json  lavaan rotated EFA at a column-order tie, T/B,
+#                                  99r_lavaan_efa_tie.R            (optional)
 #
 # Tiers 2 and 3 are optional because they need lavaan and Mplus respectively,
 # and the whole point of the tier split is that tier 1 regenerates on any
@@ -203,7 +211,20 @@ optional <- list(
   list(file = "MANIFEST_efa_data.json", label = "tier 1: geomin EFA data (Cases F, G)",
        gen = "91_efa_data.R"),
   list(file = "MANIFEST_lavaan_efa_geomin.json", label = "lavaan oblique geomin EFA reference",
-       gen = "99h_lavaan_efa_geomin.R")
+       gen = "99h_lavaan_efa_geomin.R"),
+  # Release A (A4, 2026-11-17): tier 1, base R. Constraint Jacobian R (complex step) and
+  # rotation-map Jacobian J (re-rotation) of the rotated geomin EFA, Cases E, F, G.
+  list(file = "MANIFEST_rotse_tier1.json", label = "tier 1: rotated-EFA R and J (complex step, re-rotation)",
+       gen = "99q_tier1_rot_jacobians.R"),
+  # Release A (A4, 2026-11-17): tier 2, lavaan 0.7-3 from a separate library.
+  list(file = "MANIFEST_lavaan_efa_se.json", label = "lavaan rotated-EFA SEs and full covariance (release A, A4)",
+       gen = "99p_lavaan_efa_se.R"),
+  # Release A (A4 near-tie, 2026-11-17): tier 1 data for Cases T and B (declared design,
+  # E-109, A4 near-tie criterion), then lavaan 0.7-3 on them. Own manifests, as above.
+  list(file = "MANIFEST_efa_tie_data.json", label = "tier 1: near-tie EFA data (Cases T, B)",
+       gen = "92_efa_tie_data.R"),
+  list(file = "MANIFEST_lavaan_efa_tie.json", label = "lavaan rotated EFA at a column-order tie (release A, A4)",
+       gen = "99r_lavaan_efa_tie.R")
 )
 
 for (t in optional) {

@@ -1,0 +1,22 @@
+A2BDENV stata_version 18 processors 6
+A2BD fit converged 1 npar 23 nall 27 D 27 T 12 P 15
+A2BD rotation converged 30 of 30 starts, Q   0.06290450, gpnorm  7.37e-09
+A2BD dims sel 25 (thresholds 12, loadings 12, covariances 1); D rows 27
+A2BD sel fixed rows 2 free rows 23 (expect fixed = m(m-1) = 2)
+A2BD tau positions Coff+col vs dwlsmv_pos_tau max diff 0
+A2BD sigma independent vs dwlsmv_corrvec at vals*, max abs diff  0.00e+00 (diagnostic)
+A2BD D1 dims 27 x 25
+A2BD max|D1-D3|  7.60e-12 (deciding)
+A2BD max|D1-D2|  7.22e-12 (diagnostic, FD step .0001)
+A2BD max|D2-D3|  4.84e-13 (diagnostic)
+A2BD max|D1|     1.00e+00
+A2BD D1 threshold block vs identity max abs  0.00e+00; threshold rows of the structural columns max abs  0.00e+00
+A2BD D1 non-threshold rows of the threshold columns max abs  0.00e+00
+A2BD D1-D3 on the loading columns  7.60e-12, on the covariance columns  5.33e-12
+A2BD rank D1 23 of 25 columns (RS2.1 predicts n_u = 23); sigma_min/sigma_max  1.89e-13
+A2BD rank D3 23, rank D2 23
+A2BD unrotated point: 23 free shared columns, D1u vs dwls_delta max abs diff  0.00e+00; dwls_delta dims 27 x 23
+A2BD unrotated point: fixed columns of D1u (anchor zero and psi) max abs  6.36e-01
+A2BD rank D1u (sel columns) 23; rank Dfree 23 of 23
+A2BD VERDICT pass: max|D1-D3|  7.60e-12 against criterion 1.0000e-08
+A2BD run rc 0

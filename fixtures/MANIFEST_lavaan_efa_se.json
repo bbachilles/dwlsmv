@@ -1,0 +1,11 @@
+{
+    "generated_utc": "2026-11-17 17:29:42 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": ["20261186", "20261187", "20261188"],
+    "files": {
+      "fixtures/expected/lavaan_efa_se.csv": "bbfcde3a3bfadb03d98feedf0c528f82",
+      "fixtures/expected/lavaan_efa_se_vcov.csv": "e653715a03abb7e5fab0d33566612f54"
+    },
+    "packages": ["lavaan 0.7.3 from separate library %LOCALAPPDATA%/R/lib-lavaan-0.7-3 (default library holds 0.7-2); owner decision 2026-11-17; lavaan commit 55786b9 in 0.7-3", "numDeriv 2016.8.1.1", "estimator WLSMV, parameterization delta, test scaled.shifted", "zero.add c(0.5, 0), zero.keep.margins TRUE (as 99g_, 99h_)", "rotation geomin, oblique; geomin_epsilon by Mplus's rule (E .0001, F .001, G .0001)", "rotation.args: rstarts 30 (seeded per case), row_weights none, std_ov FALSE (comparator setting, A3.10; not a dwlsmv convention), gpa_tol 1e-12, gpa_algorithm bb (0.7-3 default; gpa_fwindow 0 default), max_iter 10000, order_lv_by index, orthogonal FALSE, algorithm gpa, reflect TRUE, jac_init_rot TRUE (default), tol 1e-8 (default, pairwise only)", "rotation.se bordered (default); Jacobian numDeriv::jacobian Richardson, numDeriv defaults (eps 1e-4, d 1e-4, r 4, v 2), not settable in lavaan; diagnostic re-evaluation d 1e-5, r 6 recorded as quantity diag", "se robust.sem; information expected; information.bread expected (lavaan 0.7-3 default is observed; set explicitly, see generator header); vcov(fit) is singular by construction (rank n_u), not regularised", "inputs: case_E.csv (10_fixtures.R), case_F.csv and case_G.csv (91_efa_data.R)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

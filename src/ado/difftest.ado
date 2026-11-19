@@ -1,4 +1,4 @@
-*! version 0.4.1  difftest -- scaled-and-shifted difference test between nested dwlsmv models
+*! version 0.5.0  difftest -- scaled-and-shifted difference test between nested dwlsmv models
 *!
 *!   difftest name1 [name2 ...]
 *!

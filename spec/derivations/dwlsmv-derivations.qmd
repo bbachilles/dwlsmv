@@ -27068,6 +27068,925 @@ lavaan fits.
   up to both. lavaan reflects columns with negative sums and orders by the row position of the large
   loadings (`"index"`); E-070 sketches sum-positive plus sum-of-squares order.
 
+## EFA: standard errors of the rotated solution {#sec-rot-se}
+
+*Added 2026-11-17, roadmap unit A2 (E-108 §4.1, hypotheses RS1 to RS7), derivation
+first.* Nothing in `src/` or `tests/` depends on this section. It derives the covariance of the
+geomin-rotated estimate of @sec-geomin: the rotated estimator as a constrained minimum (RS1), its
+bordered sandwich covariance (RS2), the equivalence with the delta method through the rotation map
+and what that equivalence does and does not test (RS3), the constraint Jacobian in closed form
+(RS4), invariants (RS5), where the covariance exists and what it approximates (RS6), and the routes
+by which the code can obtain it (RS7). It settles no convention: what is posted, the inferential
+scope near zero loadings, several minima, a bad unrotated fit and tolerances are unit A3's owner
+gate. New chunk names start with `rs-` and every new R name with `rs_`; the chunks reuse `gm_`
+functions of @sec-geomin and call lavaan only as `gm-lavaan` does (unrotated input, and one
+comparison target in `rs-2`).
+
+### Setting and notation
+
+The unrotated fit is the echelon CFA of @sec-geomin: $\theta_u=(\tau,a)$, $a$ the free entries of
+the $p\times m$ matrix $A$ ($A_{ij}=0$ for $i<j$), $\Phi=I$, $n_u$ free parameters, with
+$\Delta_u=\partial\sigma/\partial\theta_u'$ of full column rank and
+$\operatorname{ACOV}_u=(\Delta_u'W\Delta_u)^{-1}\Delta_u'W\Gamma W\Delta_u(\Delta_u'W\Delta_u)^{-1}$
+(@sec-acov). The rotated parameter vector is
+$$\theta^*=(\tau,\ \operatorname{vec}\Lambda,\ \phi),\qquad \phi=\text{the strict lower triangle of }\Phi,$$
+with $n^*=n_u+m(m-1)$ entries (every loading free, $m(m-1)/2$ correlations, against
+$m(m-1)/2$ anchors). $\sigma(\theta^*)=(\tau,\ \text{off-diagonal of }\Lambda\Phi\Lambda')$ under
+the delta parameterization, and $\Delta^*=\partial\sigma/\partial\theta^{*\prime}$. The rotation of
+GM1 is the map
+$$g(\theta_u,T)=\bigl(\tau,\ A(T')^{-1},\ T'T\bigr),\qquad \operatorname{diag}(T'T)=1,$$
+and $\sigma(g(\theta_u,T))=\sigma(\theta_u)$ for every $T$ (GM1). Tangent vectors at $T$ are
+written $dT=(T')^{-1}Y$ with $\operatorname{diag}(Y)=0$: since $Y=T'dT$, the condition
+$\operatorname{diag}(T'dT)=0$ is $\operatorname{diag}(Y)=0$, so the $m(m-1)$ off-diagonal
+entries of $Y$ are coordinates of the tangent space. In them,
+$$d\Lambda=-\Lambda Y'\Phi^{-1},\qquad d\Phi=Y+Y',$$
+from $d\Lambda=-\Lambda\,dT'(T')^{-1}$ and $d\Phi=dT'T+T'dT$. Write $G_u=\partial g/\partial\theta_u'$
+at fixed $T$ ($d\Lambda=dA\,(T')^{-1}$) and $G_T=\partial g/\partial Y$, an $n^*\times m(m-1)$
+matrix, and $G=[G_u,\ G_T]$, which is square.
+
+### Result RS1: the estimator
+
+With $M=\Lambda'G_Q$ ($G_Q$ of GM2) define the $m\times m$ matrix and the stationarity function
+$$E=M-\operatorname{diag}(M)\,\Phi,\qquad r(\theta^*)=\bigl(E_{jk}\bigr)_{j\neq k}\in\mathbb R^{m(m-1)},$$
+ordered column by column. Its diagonal is zero by construction since $\operatorname{diag}\Phi=1$.
+
+**Lemma RS1.1.** For every feasible $T$, with $\Lambda=A(T')^{-1}$, $\Phi=T'T$ and $G_p$ of GM3,
+$$E=-G_p'\,T .$$
+*Proof.* GM2 gives $G'=-\Lambda'G_QT^{-1}$, so $M=-G'T$. Put $D=\operatorname{diag}(T'G)$; GM3
+reads $G=G_p+TD$, so $M=-G_p'T-D\Phi$. Since $G_p$ is tangent, $\operatorname{diag}(G_p'T)=0$, so
+$\operatorname{diag}(M)=-D$ and $E=M+D\Phi=-G_p'T$. $\square$
+
+Since $T$ is nonsingular, $r=0$ exactly when $G_p=0$: **$r=0$ is the first-order condition of the
+geomin criterion on the oblique manifold** (GM2, GM3), with $m(m-1)$ conditions, and at a GPA
+stall $\lvert r\rvert\le\lVert G_p\rVert_F\lVert T\rVert_2$.
+
+**Lemma RS1.2 (the fiber is the orbit).** If $A$ has full column rank, every $\theta^*$ with
+$\Lambda\Phi\Lambda'=AA'$ and $\Phi$ a positive definite correlation matrix is $g(\theta_u,T)$ for
+some feasible $T$. *Proof.* With $C$ the Cholesky factor of $\Phi=CC'$, $(\Lambda C)(\Lambda C)'=AA'$,
+so $\Lambda C=AO$ for an orthogonal $O$; put $T'=CO'$. Then $T'T=CC'=\Phi$ and
+$A(T')^{-1}=AOC^{-1}=\Lambda$. $\square$
+
+So the DWLS objective $F(\theta^*)$ is minimized on the whole orbit of $\hat\theta_u$, and
+$\hat\theta^*$ minimizes $F$ subject to $r(\theta^*)=0$. That does not determine it: $r=0$ holds at
+every stationary point of the criterion on the orbit, minima of any depth, saddles and maxima.
+**The estimator is the stationary point the existing procedure selects**: the GM4 start grid, the
+best converged start by $Q$, then the sign and order rule (spec Module 12). Everything below is a
+local statement at that point. That the selection is stable under sampling needs the population's
+selected minimum to be strictly lower than every other (no tie in $Q$) and nondegenerate (RS6).
+What is reported when the starts reach several distinct minima is unit A3's item, not settled here.
+
+### Result RS2: the bordered covariance
+
+**Lemma RS2.1 (rank of $\Delta^*$).** Let $A$ have full column rank. (a) $\Delta^*G_u=\Delta_u$ and
+$\Delta^*G_T=0$. (b) $G_T$ has full column rank $m(m-1)$, so
+$\operatorname{rank}\Delta^*\le n_u$. (c) If $\Delta_u$ has full column rank then $G$ is
+nonsingular, $\operatorname{rank}\Delta^*=n_u$, and $\operatorname{null}\Delta^*=\operatorname{range}G_T$:
+the null space of $\Delta^*$ is exactly the $m(m-1)$ directions along which a rotation moves
+$\theta^*$.
+
+*Proof.* (a) differentiates $\sigma(g(\theta_u,T))=\sigma(\theta_u)$. (b) If $G_Ty=0$ then
+$\Lambda Y'\Phi^{-1}=0$, so $Y=0$ as $\Lambda$ has full column rank. (c) Suppose $Gv=0$,
+$v=(v_u,y)$. Then $G_uv_u=-G_Ty$: the echelon direction $v_u$, carried to the rotated point,
+coincides with a rotation of the solution, and by (a) $\Delta_uv_u=\Delta^*G_uv_u=0$, so
+$v_u=0$, then $y=0$ by (b). With $G$ nonsingular, $[\Delta_u,0]=\Delta^*G$ gives
+$\operatorname{rank}\Delta^*=\operatorname{rank}\Delta_u=n_u$ and
+$\operatorname{null}\Delta^*=G\,\operatorname{null}[\Delta_u,0]=\operatorname{range}G_T$. $\square$
+
+Let $R=\partial r/\partial\theta^{*\prime}$ ($m(m-1)\times n^*$, RS4) and $Z$ a basis of
+$\operatorname{null}R$.
+
+**Result RS2.** If $R$ has full row rank and $Z'\Delta^{*\prime}W\Delta^*Z$ is nonsingular, then
+$$\boxed{\;\operatorname{ACOV}(\hat\theta^*)=V\,\Delta^{*\prime}W\Gamma W\Delta^*\,V,\qquad
+V=Z\,(Z'\Delta^{*\prime}W\Delta^*Z)^{-1}Z'\;}$$
+with $\Delta^*$ at $\hat\theta^*$ and the divisor of @sec-acov, $e(V)=\operatorname{ACOV}/(N-1)$.
+$V$ does not depend on the choice of $Z$, nor on any row scaling of $R$ (only
+$\operatorname{null}R$ enters), and equals the leading $n^*\times n^*$ block of
+$\bigl[\begin{smallmatrix}\Delta^{*\prime}W\Delta^*&R'\\R&0\end{smallmatrix}\bigr]^{-1}$ whenever
+that matrix is nonsingular, which is the same condition.
+
+*Derivation.* By the implicit function theorem $\{r=0\}$ is near $\hat\theta^*$ a manifold
+$\theta^*=\theta^*_0+Zu+O(\lVert u\rVert^2)$. On it the problem is an unconstrained minimum
+distance problem in $u$ with Jacobian $\Delta^*Z$, and @sec-acov's linearization applies with
+$\Delta$ replaced by $\Delta^*Z$; mapping back by $Z$ gives the box. Its conditions are those of
+@sec-acov (correct specification, expected information as bread) plus the two in the statement,
+which RS6 characterizes. RS3 reaches the same matrix by a second argument.
+
+### Result RS3: the delta method, and what agreement tests
+
+**(ii) The derivative of the rotation map.** Let $R\,G_T$ be nonsingular. Then
+$\Psi(\theta_u,Y)=r(g(\theta_u,T))$ has a nonsingular derivative in $Y$, so by the implicit
+function theorem the selected stationary point continues smoothly: there is a $C^1$ map
+$\rho$ with $r(\rho(\theta_u))=0$ near $\hat\theta_u$, and
+$$J=\frac{\partial\rho}{\partial\theta_u'}=\bigl(I-G_T(RG_T)^{-1}R\bigr)G_u .$$
+Differentiating $r(\rho)=0$ gives $RJ=0$, and by RS2.1(a) $\Delta^*J=\Delta^*G_u=\Delta_u$. Every
+$\tilde J$ with $\Delta^*\tilde J=\Delta_u$ and $R\tilde J=0$ equals $J$, because the columns of
+$J-\tilde J$ lie in $\operatorname{null}\Delta^*\cap\operatorname{null}R=\{0\}$ (RS6). So $J$ is
+also the unique solution of the stacked system $[\Delta^*;R]\,J=[\Delta_u;0]$. Both statements need
+$R$ to be the true derivative of $r$: with any other $\tilde R$ the stacked solution $\tilde J$ still
+satisfies $\Delta^*\tilde J=\Delta_u$, but it is not $\partial\rho/\partial\theta_u'$.
+
+**(i) An algebraic identity.** Let $\Delta_u$ have full column rank and let $\tilde R$ be *any*
+$m(m-1)\times n^*$ matrix of full row rank with $\operatorname{null}\tilde R\cap\operatorname{null}\Delta^*=\{0\}$,
+$\tilde Z$ a basis of its null space, $\tilde V$ as in RS2, and $\tilde J$ any matrix with
+$\Delta^*\tilde J=\Delta_u$ and $\tilde R\tilde J=0$. Then
+$$\tilde J\operatorname{ACOV}_u\tilde J'=\tilde V\,\Delta^{*\prime}W\Gamma W\Delta^*\,\tilde V .$$
+*Proof.* $\tilde J=\tilde ZB$ for an $n_u\times n_u$ matrix $B$ ($\dim\operatorname{null}\tilde R=n_u$),
+and $\Delta^*\tilde ZB=\Delta_u$ forces $B$ nonsingular. Then
+$\tilde J(\Delta_u'W\Delta_u)^{-1}\Delta_u'W=\tilde ZB(B'\tilde Z'\Delta^{*\prime}W\Delta^*\tilde ZB)^{-1}B'\tilde Z'\Delta^{*\prime}W
+=\tilde V\Delta^{*\prime}W$, and both sides are this matrix times $\Gamma$ times its transpose. $\square$
+
+The identity holds exactly for the sample quantities, not only in the limit, and it holds for a
+wrong $\tilde R$. **Agreement of the bordered and delta-method covariances therefore does not
+validate $R$** (E-109, prototype; the negative control below). What ties
+the covariance to the rotation is (ii) with the true $R$, verified below against a re-rotation
+that does not use $R$.
+
+**The statistical statement.** If the population's selected stationary point is a strict, unique
+lowest minimum of $Q$ on its orbit and nondegenerate, then for $N$ large the selected sample
+solution is $\rho(\hat\theta_u)$ with probability tending to one, and the delta method gives
+$\sqrt N(\hat\theta^*-\theta_0^*)\to N(0,J\operatorname{ACOV}_uJ')$, the matrix of RS2. Neither
+condition is checkable from one sample; unit A3 decides what is said when the starts find several
+minima.
+
+### Result RS4: the constraint Jacobian in closed form
+
+With $\ell_{ij}=\lambda_{ij}^2+\varepsilon$, $h_{ij}=\lambda_{ij}/\ell_{ij}$,
+$h'_{ij}=(\varepsilon-\lambda_{ij}^2)/\ell_{ij}^2$, $Q_i$ the $i$-th summand of GM2 and
+$(G_Q)_{ij}=\tfrac2m h_{ij}Q_i$, the Hessian of $Q_i$ in row $i$ is
+$$H_i[k,l]=\frac{\partial (G_Q)_{ik}}{\partial\lambda_{il}}=\frac2m\,Q_i\Bigl(\delta_{kl}h'_{ik}+\frac2m\,h_{ik}h_{il}\Bigr).$$
+From $M_{jk}=\sum_i\lambda_{ij}(G_Q)_{ik}$, for the row of $r$ at $(j,k)$, $j\ne k$:
+$$\frac{\partial r_{jk}}{\partial\lambda_{il}}=\delta_{lj}(G_Q)_{ik}+\lambda_{ij}H_i[k,l]
+-\Phi_{jk}\bigl(\delta_{lj}(G_Q)_{ij}+\lambda_{ij}H_i[j,l]\bigr),\qquad
+\frac{\partial r_{jk}}{\partial\phi_{\{jk\}}}=-M_{jj},$$
+zero for every other correlation and for every threshold. Each loading enters $R$ through
+$h'_{ij}$, which is $1/\varepsilon$ at $\lambda_{ij}=0$ and changes sign at
+$\lvert\lambda_{ij}\rvert=\sqrt\varepsilon$; RS6 returns to this. Production uses the closed form; a
+numerical Jacobian is an oracle only.
+
+### Result RS5: invariants
+
+(a) *Threshold block.* $\rho$ leaves $\tau$ unchanged, so $J$'s threshold rows are $[I,0]$ and the
+rotated threshold block equals $\operatorname{ACOV}_{u,\tau\tau}$, which is $\Gamma_{\tau\tau}$
+(@sec-acov).
+
+(b) *Rotation-invariant functions.* If $h(\theta^*)$ is constant on orbits, $\nabla h\,G_T=0$ and
+$\nabla h\,G_u=\nabla h_u$, so $\nabla h\,J=\nabla h_u$ and
+$\nabla h\operatorname{ACOV}^*\nabla h'=\nabla h_u\operatorname{ACOV}_u\nabla h_u'$. In particular
+$\Delta^*\operatorname{ACOV}^*\Delta^{*\prime}=\Delta_u\operatorname{ACOV}_u\Delta_u'$. This needs no
+property of $R$ beyond RS3's conditions.
+
+(c) *Signed column permutation.* For a signed permutation $P$, $\pi(\theta^*)=(\tau,\Lambda P,P'\Phi P)$
+is linear with matrix $\Pi$. $G_Q(\Lambda P)=G_Q(\Lambda)P$ ($h$ is odd, $Q_i$ invariant), so
+$M\mapsto P'MP$ and $r(\pi\theta^*)=S\,r(\theta^*)$ for a signed permutation $S$ of the rows. Hence
+$\Delta^*(\pi\theta^*)\Pi=\Delta^*(\theta^*)$, $R(\pi\theta^*)\Pi=SR(\theta^*)$, the null basis
+maps to $\Pi Z$, and the covariance recomputed at $\pi\hat\theta^*$ is
+$\Pi\operatorname{ACOV}^*\Pi'$. The sign and order rule can be applied before or after the
+covariance is formed.
+
+### Result RS6: where it exists, and what it approximates
+
+Three questions are kept apart: whether the bordered system is nonsingular, how well conditioned it
+is, and whether the SEs are calibrated. Only the first is answered by a theorem.
+
+**(i) Nonsingularity.** Let $A$ have full column rank. Then
+$$Z'\Delta^{*\prime}W\Delta^*Z\ \text{nonsingular}\iff
+\operatorname{rank}\Delta^*=n_u\ \text{and}\ RG_T\ \text{nonsingular},$$
+and when $G$ is nonsingular, $\operatorname{rank}\Delta^*=n_u$ is the same as $\Delta_u$ having full
+column rank (the unrotated bread nonsingular). *Proof.* $W$ is positive definite, so the left side
+is $\operatorname{rank}(\Delta^*Z)=$ number of columns of $Z$. (Numerically the rank is taken of
+$W^{1/2}\Delta^*Z$, not of its cross-product, whose squared singular values would move spec §4.8's
+$10^{-8}$ cut.) If it holds,
+$\dim\operatorname{null}R\ge n^*-m(m-1)=n_u$ forces $\operatorname{rank}\Delta^*\ge n_u$, hence
+$=n_u$ (RS2.1b), $R$ has full row rank, and $\operatorname{null}R\cap\operatorname{range}G_T=\{0\}$,
+i.e. $RG_T$ is nonsingular. Conversely, $RG_T$ nonsingular gives $R$ full row rank and, with
+$\operatorname{null}\Delta^*=\operatorname{range}G_T$ (which holds when $\operatorname{rank}\Delta^*=n_u$,
+by RS2.1b), $\Delta^*Z$ injective. The last clause is $[\Delta_u,0]=\Delta^*G$. $\square$
+
+$G$ is singular exactly when an echelon direction coincides with a rotation (proof of RS2.1c), that
+is when the echelon chart itself is degenerate, as with $a_{11}=0$ at $m=2$; then $\Delta_u$ is
+rank deficient while the rotated system can be regular (`rs-6`, matrix S2). A singular unrotated
+bread is expected to stop the unrotated fit before any rotation; that has not been run on such a
+case, and what is said there is A3's item. $m=1$ is the
+case without constraints: $R$ has no rows, $Z=I$, $J=G_u$ is the sign of the single column, and the
+rotated covariance is the unrotated one.
+
+*What $RG_T$ is.* At a stationary point, differentiating Lemma RS1.1 along $dT$ gives
+$dE=-(dG_p)'T$, because the term $G_p'dT$ vanishes; and $dG_p$ is tangent there (differentiate
+$\operatorname{diag}(G_p'T)=0$). $dG_p$ is then the Riemannian Hessian of $f(T)=Q(A(T')^{-1})$
+applied to $dT$. So $RG_T$ is that Hessian seen through $T'$, and **$RG_T$ is nonsingular exactly
+when the selected solution is a nondegenerate critical point of the criterion**: it holds at a
+minimum with positive definite Hessian, and fails where two minima merge or a direction is flat.
+Large condition numbers of the bordered system at poorer local minima
+(E-109, regularity) are consistent with near-degenerate critical points;
+that reading is not established for those cases.
+
+**(ii) What the covariance approximates.** RS3 makes the covariance the first-order (delta-method)
+covariance of $\rho(\hat\theta_u)$. It describes the sampling distribution of $\hat\theta^*$ when
+$\rho$ is close to linear over the region where $\hat\theta_u$ falls. The criterion fixes the scale
+on which $\rho$ is close to linear in a loading near zero. Each loading enters $R$, and so $J$,
+through $h'(\lambda)=(\varepsilon-\lambda^2)/(\lambda^2+\varepsilon)^2$, and
+$$\frac{h'(\lambda_0+\delta)}{h'(\lambda_0)}\Big|_{\lambda_0=0}=\frac{1-u}{(1+u)^2},\qquad u=\delta^2/\varepsilon:$$
+the weight the criterion puts on a loading at zero falls by half at $\lvert\delta\rvert\approx0.4\sqrt\varepsilon$
+and changes sign at $\lvert\delta\rvert=\sqrt\varepsilon$. So $J$ is roughly constant over the
+sampling range of a loading only if that range is small against $\sqrt\varepsilon$, and the
+relative error of the first-order term is of order $s/\sqrt\varepsilon$, with $s$ the sampling
+spread of the loading. Three consequences follow from the derivation, and they are statements about
+the approximation, not results about coverage:
+
+- For fixed $\varepsilon>0$ and a nondegenerate selected minimum the covariance is asymptotically
+  correct, since $s\propto N^{-1/2}$. The sample size at which the approximation becomes accurate
+  near a zero loading grows like $1/\varepsilon$: dividing $\varepsilon$ by 100 multiplies it by 100.
+  Improvement between $N=500$ and $N=2000$ need not be visible at $\varepsilon=10^{-4}$.
+- A loading whose population value is within a few $\sqrt\varepsilon$ of zero and whose spread is
+  comparable to $\sqrt\varepsilon$ is where $J$ changes most over the sampling range. The reported
+  SE, evaluated at the estimate, then moves with the estimate.
+- A loading held near zero with spread much smaller than $\sqrt\varepsilon$ sits where
+  $h'\approx1/\varepsilon$ is nearly constant, and one far from zero ($\lvert\lambda\rvert\gg\sqrt\varepsilon$,
+  spread $\ll\lvert\lambda\rvert$) where $h'\approx-1/\lambda^2$ varies slowly. That is a statement
+  about each loading's own weight only. $R$ couples every parameter of the block through the
+  rotation, and its rows are dominated by the near-zero loadings (`regularity/finding.md`), so a
+  loading far from zero can still inherit nonlinearity from small loadings in the same solution:
+  `rs-6-ill` shows it on Case E.
+
+These are consistent with the descriptive findings (E-109, calibration map),
+which were not used to derive them. They do not predict a coverage figure, locate a boundary, or
+justify a threshold, a change of $\varepsilon$, a floor on SEs or another interval.
+**Status: the scale of the approximation is derived; its quantitative link to coverage is not
+established.** Not explained by this derivation, and left open: the two-sided misses at loadings
+generated as zero at $m=3$, $\varepsilon=10^{-3}$, $N=2000$ (mean SE close to the empirical SD,
+so not the one-sided mechanism above; whether several minima are involved is not established), and
+the undercoverage of clearly nonzero cross-loadings and a factor correlation at $N=500$ in one
+population, which goes away with $N$ and is not near zero, so not this mechanism.
+
+**(iii) Computable quantities.** The derivation yields one family of quantities that measure the
+mechanism in (ii) on the observed sample: how much $\rho$ departs from linear, and how much the
+SE changes, when $\hat\theta_u$ is moved by one SE in the direction that moves a given loading
+(the chunk `rs-6-ill`), together with $\lvert\hat\lambda\rvert/\sqrt\varepsilon$ and
+$\mathrm{SE}/\sqrt\varepsilon$. They are computable without simulation. **Whether any of them
+separates calibrated from miscalibrated intervals, and at what value, is not established**; that
+needs a study preregistered under `docs/prereg-template.md` §3a before it touches data, and the
+calibration map's records are not to be searched for it. The condition number of the bordered
+system is not among them: (i) shows it measures closeness to a degenerate critical point or a
+singular unrotated bread, which is a different question.
+
+### Result RS7: how the code can obtain the covariance
+
+Three routes, equal by RS2 and RS3:
+
+| Route | Computes | Needs |
+|---|---|---|
+| 1. Bordered, $\Delta^*$ from Δ | $\Delta^*$ by `dwlsmv_delta_cols()` at $\hat\theta^*$ on the echelon table with every block loading and factor covariance selected (fixed rows included), then RS2 | $\hat\theta^*$, the parameter table, $R$, $W$, $\Gamma$ |
+| 2. Bordered, $\Delta^*$ by the chain rule | $\Delta^*=[\Delta_u,\ 0]\,G^{-1}$ (RS2.1), then RS2 | fitted $\Delta_u$, $A$, $\hat\Lambda,\hat\Phi$, $(T')^{-1}$, $R$, $W$, $\Gamma$ |
+| 3. Delta method | $J=(I-G_T(RG_T)^{-1}R)G_u$, then $J\operatorname{ACOV}_uJ'$ | $\operatorname{ACOV}_u$, $A$, $\hat\Lambda,\hat\Phi$, $(T')^{-1}$, $R$; no $\Delta$, $W$ or $\Gamma$ |
+
+Since $\hat\Lambda=A(T')^{-1}$ and $A$ has full column rank, $(T')^{-1}=(A'A)^{-1}A'\hat\Lambda$,
+so the rotation matrix need not be returned by `dwlsmv_geomin()`. Route 1 is the one a source reading
+supports (E-109, architecture); it has never been exercised with fixed
+rows, and unit A2b probes it in Stata. None of the three calls `dwls_identify()`,
+`dwls_inference()` or `dwlsmv_acov()` on rotated quantities, and none touches a locked signature.
+Which route production computes, and therefore what the A3 snapshot holds, is A3's item. A test
+oracle should differ from production in route; by RS3(i) the oracle for $R$ itself is the complex
+step, and for $J$ the re-rotation.
+
+### Verification
+
+**§3a form** (`docs/prereg-template.md`; the roadmap's §4.3 reading, for the owner to confirm at
+A3). The layers are certified separately: a pass at one is not evidence for another.
+
+| Layer | Deciding criterion (fixed before running) | Comparator and its independence | Shares |
+|---|---|---|---|
+| $R$ (RS4) | closed form against complex step, $10^{-12}$ relative | different representation (derivative formula against differentiated $r$) and algorithm | $r$, i.e. GM2's gradient |
+| $J$ (RS3 ii) | closed form against the complex step of a re-rotation, $10^{-10}$ relative | different representation (implicit root of $r=0$ against a linear formula), no use of $R$ | $r$, $g$ |
+| Bordered covariance (RS2) | lavaan's own pieces reproduce its `vcov`, $10^{-12}$; own pieces at lavaan's point within spec §7.2's SE row | lavaan: independent in code, shares the method | the method, W, Γ, the unrotated fit |
+| Identity (RS3 i) | $100\,u\,\kappa$ | none: it is algebra, and passes with a wrong $R$ | everything |
+
+Domain: Cases E ($m=2$, $\varepsilon=10^{-4}$), F ($m=3$, $10^{-3}$), G (binary, $m=2$, $10^{-4}$),
+lavaan 0.7.2, each at its selected solution, plus $m=1$ on Case E and two constructed loading
+matrices for RS6(i). **Not certified:** calibration of the SEs (A3, A6); other data, $m\ge4$,
+several minima, near ties in the ordering statistic, empty binary cells; the Stata code route
+(A2b); tolerances against lavaan and Mplus for production (A3); the GPA stall point as against the
+Newton-polished point beyond the diagnostic printed in `rs-7`.
+
+**Provenance.** The main session wrote `rs-impl` to `rs-4` and the three `rs-3` chunks from the
+formulas above. A read-only drafting agent (Sonnet-class) wrote `rs-5`, `rs-6`, `rs-6-ill` and
+`rs-7` from a specification the main session gave it; the main session read them against this
+section and reran them (a reproduction of the agent's code, with identical output, not an
+independent implementation). The R prototype (E-109) was used only to
+check the algebra; no number here is taken from it.
+
+**Implementation and inputs.** lavaan supplies the unrotated fit only. The rotation is
+`gm_geomin()` (GM4 grid, 30 starts) followed by Newton on $r=0$ from the selected start, then the
+sign and order rule. Newton is used so that the checks below are not limited by the GPA stall;
+`rs-7` reports how far the stall point is from the polished one.
+
+```{r rs-impl}
+# Rotated covariance (@sec-rot-se), written from the formulas of this section.
+# theta* = (tau, vec(Lambda) column-major, phi = strict lower triangle of Phi column-major).
+# theta_u = (tau, a), a = the free echelon loadings A[row >= col], column-major.
+# r = off-diagonal entries of E = M - diag(M) Phi, M = Lambda' G_Q, column-major.
+rs_off   <- function(m) which(row(diag(m)) != col(diag(m)), arr.ind = TRUE)
+rs_low   <- function(p) which(lower.tri(diag(p)), arr.ind = TRUE)
+rs_phidx <- function(a, b, m) {                 # position of phi_ab in phi
+  lw <- rs_low(m); which(lw[, 1] == max(a, b) & lw[, 2] == min(a, b))
+}
+rs_Phi <- function(phi, m) {                    # complex-safe, no conjugation
+  P <- matrix(0 * phi[1], m, m); if (m > 1) P[lower.tri(P)] <- phi
+  P <- P + t(P); diag(P) <- 1; P
+}
+rs_unpack <- function(x, p, m, nth) {
+  list(L = matrix(x[nth + seq_len(p * m)], p, m),
+       Phi = rs_Phi(x[nth + p * m + seq_len(m * (m - 1) / 2)], m))
+}
+rs_pack <- function(tau, L, Phi) c(tau, as.vector(L), Phi[lower.tri(Phi)])
+rs_sig  <- function(L, Phi) { S <- L %*% Phi %*% t(L); S[rs_low(nrow(L))] }
+rs_Emat <- function(L, Phi, eps) {
+  M <- t(L) %*% gm_dQ(L, eps); M - diag(diag(M), ncol(L)) %*% Phi
+}
+rs_r <- function(L, Phi, eps) { E <- rs_Emat(L, Phi, eps); E[rs_off(ncol(L))] }
+
+# Result RS4: the closed-form Jacobian R = dr/dtheta*'.
+rs_R <- function(L, Phi, eps, nth) {
+  p <- nrow(L); m <- ncol(L); off <- rs_off(m)
+  l2 <- L^2 + eps; Qi <- exp(rowSums(log(l2)) / m)
+  Gq <- (2 / m) * L / l2 * Qi; h <- L / l2; hp <- (eps - L^2) / l2^2
+  M <- t(L) %*% Gq
+  H <- function(k, l) (2 / m) * Qi * ((k == l) * hp[, k] + (2 / m) * h[, k] * h[, l])
+  R <- matrix(0, nrow(off), nth + p * m + m * (m - 1) / 2)
+  for (q in seq_len(nrow(off))) {
+    j <- off[q, 1]; k <- off[q, 2]
+    for (l in 1:m) {
+      dMjk <- (l == j) * Gq[, k] + L[, j] * H(k, l)
+      dMjj <- (l == j) * Gq[, j] + L[, j] * H(j, l)
+      R[q, nth + (l - 1) * p + 1:p] <- dMjk - Phi[j, k] * dMjj
+    }
+    R[q, nth + p * m + rs_phidx(j, k, m)] <- -M[j, j]
+  }
+  R
+}
+
+# Delta* (all of Lambda and phi) and Delta_u (echelon free loadings, Phi = I).
+rs_Dstar <- function(L, Phi, nth) {
+  p <- nrow(L); m <- ncol(L); lw <- rs_low(p); LP <- L %*% Phi
+  D <- matrix(0, nth + nrow(lw), nth + p * m + m * (m - 1) / 2)
+  D[cbind(seq_len(nth), seq_len(nth))] <- 1
+  for (s in seq_len(nrow(lw))) {
+    a <- lw[s, 1]; b <- lw[s, 2]
+    for (j in 1:m) {
+      D[nth + s, nth + (j - 1) * p + a] <- LP[b, j]
+      D[nth + s, nth + (j - 1) * p + b] <- LP[a, j]
+    }
+    if (m > 1) for (q in seq_len(m * (m - 1) / 2)) {
+      j <- rs_low(m)[q, 1]; k <- rs_low(m)[q, 2]
+      D[nth + s, nth + p * m + q] <- L[a, j] * L[b, k] + L[a, k] * L[b, j]
+    }
+  }
+  D
+}
+rs_free <- function(p, m) as.vector(row(matrix(0, p, m)) >= col(matrix(0, p, m)))
+rs_ucols <- function(p, m, nth) c(seq_len(nth), nth + which(rs_free(p, m)))
+rs_Du <- function(A, nth) rs_Dstar(A, diag(ncol(A)), nth)[, rs_ucols(nrow(A), ncol(A), nth)]
+
+# G = [G_u, G_T]: derivatives of g(theta_u, T) = (tau, A T'^-1, T'T) at the rotated point.
+# G_u at fixed T: dLambda = dA T'^-1. G_T in the coordinates Y = T' dT, diag(Y) = 0:
+# dLambda = -Lambda Y' Phi^-1, dPhi = Y + Y'; one column per off-diagonal (a, b), as r.
+rs_Gu <- function(L, Minv, nth) {               # Minv = T'^-1
+  p <- nrow(L); m <- ncol(L); fr <- which(rs_free(p, m))
+  G <- matrix(0, nth + p * m + m * (m - 1) / 2, nth + length(fr))
+  G[cbind(seq_len(nth), seq_len(nth))] <- 1
+  for (c in seq_along(fr)) {
+    i <- (fr[c] - 1) %% p + 1; j <- (fr[c] - 1) %/% p + 1
+    dL <- matrix(0, p, m); dL[i, ] <- Minv[j, ]
+    G[nth + seq_len(p * m), nth + c] <- as.vector(dL)
+  }
+  G
+}
+rs_GT <- function(L, Phi, nth) {
+  p <- nrow(L); m <- ncol(L); off <- rs_off(m); Pi <- solve(Phi)
+  G <- matrix(0, nth + p * m + m * (m - 1) / 2, nrow(off))
+  for (q in seq_len(nrow(off))) {
+    Y <- matrix(0, m, m); Y[off[q, 1], off[q, 2]] <- 1
+    G[nth + seq_len(p * m), q] <- as.vector(-L %*% t(Y) %*% Pi)
+    G[nth + p * m + rs_phidx(off[q, 1], off[q, 2], m), q] <- 1
+  }
+  G
+}
+
+# The three covariances (ACOV scale; e(V) = ACOV / (N - 1), @sec-acov).
+rs_acov_u <- function(Du, W, Gam) {
+  Bi <- solve(crossprod(Du * sqrt(W))); X <- W * Du
+  Bi %*% crossprod(X, Gam %*% X) %*% Bi
+}
+rs_nullbasis <- function(R, n) {                # orthonormal basis of null(R)
+  if (nrow(R) == 0) return(diag(n))
+  s <- svd(t(R), nu = n); s$u[, (nrow(R) + 1):n, drop = FALSE]
+}
+rs_bordered <- function(Ds, R, W, Gam) {        # Result RS2
+  Z <- rs_nullbasis(R, ncol(Ds)); X <- W * Ds
+  V <- Z %*% solve(crossprod(Ds %*% Z * sqrt(W)), t(Z))
+  list(acov = V %*% crossprod(X, Gam %*% X) %*% V, V = V, Z = Z)
+}
+rs_J <- function(R, Gu, GT) {                   # Result RS3: dρ/dθ_u, no Delta, W or Gamma
+  if (ncol(GT) == 0) return(Gu)
+  Gu - GT %*% solve(R %*% GT, R %*% Gu)
+}
+
+# Newton on r over the oblique manifold, Y-coordinates, retraction = column scaling.
+rs_polish <- function(A, T, eps, maxit = 50, tol = 1e-14) {
+  m <- ncol(A); off <- rs_off(m); it <- 0
+  if (m > 1) for (it in 1:maxit) {
+    Minv <- solve(t(T)); L <- A %*% Minv; Phi <- crossprod(T)
+    rv <- rs_r(L, Phi, eps)
+    if (max(abs(rv)) <= tol * max(1, max(abs(gm_dQ(L, eps))))) break
+    K <- rs_R(L, Phi, eps, 0) %*% rs_GT(L, Phi, 0)
+    Y <- matrix(0, m, m); Y[off] <- -solve(K, rv)
+    T <- gm_unit(T + solve(t(T), Y))
+  }
+  Minv <- solve(t(T))
+  list(T = T, L = A %*% Minv, Phi = crossprod(T), Minv = Minv, it = it,
+       res = max(0, abs(rs_r(A %*% Minv, crossprod(T), eps))))
+}
+
+# The project's sign and order rule (spec Module 12): reflect negative-sum columns,
+# then order by the mean row index of the loadings with |lambda| >= 0.8 max |lambda|.
+rs_canon <- function(L, Phi, T) {
+  s <- ifelse(colSums(L) < 0, -1, 1); S <- diag(s, ncol(L))
+  L <- L %*% S; T <- T %*% S; Phi <- S %*% Phi %*% S
+  ix <- sapply(seq_len(ncol(L)), function(j) {
+    a <- abs(L[, j]); mean(which(a >= 0.8 * max(a)))
+  })
+  o <- order(ix)
+  list(L = L[, o, drop = FALSE], Phi = Phi[o, o, drop = FALSE], T = T[, o, drop = FALSE])
+}
+
+# Complex-step Jacobian of a vector function (no subtractive cancellation).
+rs_csjac <- function(f, x, h = 1e-30) {
+  sapply(seq_along(x), function(k) {
+    z <- x + 0i; z[k] <- z[k] + 1i * h; Im(f(z)) / h
+  })
+}
+rs_relmax <- function(X, Y) max(abs(X - Y)) / max(abs(Y))
+rs_cond   <- function(X) { d <- svd(X)$d; max(d) / min(d) }
+rs_nrank  <- function(X) { d <- svd(X)$d; sum(d > 1e-8 * max(d)) }   # spec §4.8's criterion
+```
+
+```{r rs-setup}
+# Cases E (m = 2), F (m = 3) and G (binary, m = 2) at the spec's epsilon rule.
+# lavaan supplies only the unrotated echelon fit: A, tau, W (WLS.VD), Gamma (NACOV), N.
+library(lavaan)
+rs_root  <- file.path("..", "..")
+rs_read  <- function(cs) {
+  d <- read.csv(file.path(rs_root, "fixtures", "data", paste0("case_", cs, ".csv")))
+  d[] <- lapply(d, ordered); d
+}
+rs_eps   <- c(E = 1e-4, F = 1e-3, G = 1e-4)
+rs_m     <- c(E = 2, F = 3, G = 2)
+rs_prep  <- function(cs, m = rs_m[[cs]], eps = rs_eps[[cs]]) {
+  dat <- rs_read(cs)
+  f0  <- gm_fit(dat, m, "none")
+  stopifnot(lavInspect(f0, "converged"))
+  A   <- unname(lavInspect(f0, "est")$lambda)
+  stopifnot(all(A[!rs_free(nrow(A), m)] == 0))           # echelon anchors
+  tau <- as.numeric(f0@implied$th[[1]]); nth <- length(tau)
+  W   <- as.numeric(f0@SampleStats@WLS.VD[[1]]); Gam <- f0@SampleStats@NACOV[[1]]
+  N   <- f0@SampleStats@ntotal
+  Du  <- rs_Du(A, nth)
+  g   <- if (m > 1) gm_geomin(A, eps = eps, nstart = 30) else list(T = diag(1), s = 0)
+  pz  <- rs_polish(A, g$T, eps)                          # Newton from the selected start
+  cn  <- rs_canon(pz$L, pz$Phi, pz$T)
+  Minv <- solve(t(cn$T)); L <- A %*% Minv; Phi <- crossprod(cn$T)
+  Ds  <- rs_Dstar(L, Phi, nth); R <- rs_R(L, Phi, eps, nth)
+  Gu  <- rs_Gu(L, Minv, nth); GT <- rs_GT(L, Phi, nth)
+  list(cs = cs, m = m, eps = eps, dat = dat, A = A, tau = tau, nth = nth, W = W,
+       Gam = Gam, N = N, p = nrow(A), g = g, pz = pz, T = cn$T, L = L, Phi = Phi,
+       Minv = Minv, Ds = Ds, Du = Du, R = R, Gu = Gu, GT = GT,
+       acov_u = rs_acov_u(Du, W, Gam))
+}
+rs_cases <- lapply(c(E = "E", F = "F", G = "G"), rs_prep)
+print(t(sapply(rs_cases, function(x) c(m = x$m, eps = x$eps, N = x$N,
+  n_star = ncol(x$Ds), n_u = ncol(x$Du), constraints = nrow(x$R),
+  newton_its = x$pz$it, gpa_Gp = x$g$s))))
+```
+
+**RS1.** The identity of Lemma RS1.1 at feasible $T$ far from stationarity, where $E$ and $G_p$ are
+$O(1)$; at the GPA stall, the bound on $\lvert r\rvert$; after Newton, $r$ at rounding. *The first
+run tested the identity at the stall, normalized by $\max\lvert G_p\rvert\approx10^{-8}$: it failed
+at $10^{-10}$ because $E$ there is a difference of $O(1)$ terms whose rounding is $10^{-16}$ of
+those terms, not of $G_p$. The normalizer was wrong, not the identity; the check was moved to
+non-stationary $T$ with the normalizer $\max\lvert E\rvert$ after that run (2026-11-17), the
+tolerance unchanged.*
+
+```{r rs-1}
+# RS1: E = -G_p' T holds for every feasible T, so r = 0 exactly when G_p = 0.
+# (a) The identity at feasible T far from stationarity (20 random T per case), where
+#     E and G_p are O(1): 1e-12 relative to max|E|, fixed before running.
+# (b) At the GPA stall the bound |r| <= ||G_p||_F ||T||_2, and after Newton |r| < 1e-13.
+set.seed(20261117)
+rs1 <- t(sapply(rs_cases, function(x) {
+  id <- max(sapply(1:20, function(k) {
+    T0 <- gm_unit(matrix(rnorm(x$m^2), x$m, x$m))
+    E  <- rs_Emat(gm_rot(x$A, T0), crossprod(T0), x$eps)
+    Gp <- gm_proj(T0, gm_G(x$A, T0, x$eps))
+    max(abs(E + t(Gp) %*% T0)) / max(abs(E))
+  }))
+  T0 <- x$g$T; rS <- max(abs(rs_r(gm_rot(x$A, T0), crossprod(T0), x$eps)))
+  Gp <- gm_proj(T0, gm_G(x$A, T0, x$eps))
+  c(identity = id, Gp_stall = sqrt(sum(Gp^2)), r_stall = rS,
+    bound_ok = rS <= sqrt(sum(Gp^2)) * norm(T0, "2"), r_polished = x$pz$res)
+}))
+print(signif(rs1, 3))
+stopifnot(rs1[, "identity"] < 1e-12, rs1[, "bound_ok"] == 1, rs1[, "r_polished"] < 1e-13)
+```
+
+**RS4.** Closed-form $R$ and $\Delta^*$ against the complex step.
+
+```{r rs-4}
+# RS4: closed-form R against the complex step of r; Delta* against the complex step
+# of sigma. Tolerance 1e-12 relative to the largest entry, fixed before running (as GM2).
+rs4 <- t(sapply(rs_cases, function(x) {
+  th <- rs_pack(x$tau, x$L, x$Phi); p <- x$p; m <- x$m; nth <- x$nth
+  rf <- function(z) { u <- rs_unpack(z, p, m, nth); rs_r(u$L, u$Phi, x$eps) }
+  sf <- function(z) { u <- rs_unpack(z, p, m, nth); c(z[seq_len(nth)], rs_sig(u$L, u$Phi)) }
+  c(R_vs_cs = rs_relmax(x$R, rs_csjac(rf, th)),
+    Dstar_vs_cs = rs_relmax(x$Ds, rs_csjac(sf, th)),
+    rank_R = rs_nrank(x$R), rows_R = nrow(x$R))
+}))
+print(signif(rs4, 3))
+stopifnot(rs4[, "R_vs_cs"] < 1e-12, rs4[, "Dstar_vs_cs"] < 1e-12,
+          rs4[, "rank_R"] == rs4[, "rows_R"])
+```
+
+**RS2.** Against lavaan with `std_ov = FALSE`. (a) is the statement that lavaan computes RS2's
+formula; (b) puts the own $\Delta^*$ and closed-form $R$ in lavaan's place at lavaan's estimate.
+Expected: (a) near $10^{-16}$; (b) near $10^{-10}$, limited by lavaan's Richardson Jacobian. The
+diagnostics compare the own polished solution with lavaan's, whose rotation stops at
+`gpa_tol` $10^{-6}$ (its $r$ is printed), so they measure lavaan's stopping point and decide nothing.
+
+```{r rs-2}
+# RS2 against lavaan 0.7.2 (std_ov = FALSE, the comparator setting of A1).
+# (a) lavaan's own Delta, W, Gamma and constraint Jacobian through RS2's formula
+#     reproduce vcov(fit): 1e-12 relative to the largest entry, fixed before running.
+# (b) Own Delta* and own closed-form R at lavaan's rotated estimate, lavaan's W and
+#     Gamma: SEs against vcov(fit) within spec §7.2's SE row, 1e-8 + 1e-5 |b|.
+# Diagnostic only: own rotated point and SEs against lavaan's.
+rs2_one <- function(x) {
+  set.seed(20261117)                            # lavaan's random rotation starts
+  fr <- gm_fit(x$dat, x$m, "geomin",
+               rotation.args = list(geomin_epsilon = x$eps, rstarts = 30,
+                                    gpa_tol = 1e-6, std_ov = FALSE))
+  stopifnot(lavInspect(fr, "converged"))
+  ra <- lavInspect(fr, "options")$rotation.args
+  stopifnot(identical(ra$std_ov, FALSE), ra$geomin_epsilon == x$eps)
+  Vl <- unclass(lavInspect(fr, "vcov")); N <- fr@SampleStats@ntotal
+  Dl <- lavTech(fr, "delta")[[1]]; Wl <- as.numeric(fr@SampleStats@WLS.VD[[1]])
+  Gl <- fr@SampleStats@NACOV[[1]]; Jl <- fr@Model@ceq.efa.JAC
+  a  <- rs_relmax(rs_bordered(Dl, Jl, Wl, Gl)$acov / (N - 1), Vl)
+  # own pieces at lavaan's point, mapped to lavaan's free-parameter order
+  est <- lavInspect(fr, "est"); Ll <- unname(est$lambda); Pl <- unname(est$psi)
+  pt <- parTable(fr); lv <- lavNames(fr, "lv"); ov <- lavNames(fr, "ov")
+  thr <- pt$id[pt$op == "|"]                     # thresholds in statistic order
+  ix <- sapply(order(pt$free)[pt$free[order(pt$free)] > 0], function(k) {
+    o <- pt$op[k]
+    if (o == "=~") return(x$nth + (match(pt$lhs[k], lv) - 1) * x$p + match(pt$rhs[k], ov))
+    if (o == "|") return(match(pt$id[k], thr))
+    if (o == "~~" && pt$lhs[k] != pt$rhs[k])
+      return(x$nth + x$p * x$m + rs_phidx(match(pt$lhs[k], lv), match(pt$rhs[k], lv), x$m))
+    NA
+  })
+  stopifnot(!anyNA(ix), !anyDuplicated(ix), length(ix) == ncol(x$Ds))
+  own <- rs_bordered(rs_Dstar(Ll, Pl, x$nth), rs_R(Ll, Pl, x$eps, x$nth), Wl, Gl)$acov /
+         (N - 1)
+  own <- own[ix, ix]; se_o <- sqrt(diag(own)); se_l <- sqrt(diag(Vl))
+  b_ok <- all(abs(se_o - se_l) <= 1e-8 + 1e-5 * se_l)
+  # diagnostic: own selected and polished point, own SEs
+  own2 <- rs_bordered(x$Ds, x$R, x$W, x$Gam)$acov[ix, ix] / (x$N - 1)
+  c(lav_pieces = a, own_at_lav_se = max(abs(se_o - se_l) / se_l), b_ok = b_ok,
+    own_at_lav_cov = rs_relmax(own, Vl), lav_r = max(abs(rs_r(Ll, Pl, x$eps))),
+    diag_dL = max(abs(x$L - Ll)), diag_se = max(abs(sqrt(diag(own2)) - se_l) / se_l))
+}
+rs2 <- t(sapply(rs_cases, rs2_one))
+print(signif(rs2, 3))
+stopifnot(rs2[, "lav_pieces"] < 1e-12, rs2[, "b_ok"] == 1)
+```
+
+**RS3 (i).** Expected from the condition numbers (the prototype's rule): $100\,u\,\kappa$, about
+$10^{-12}$ on E and G and $5\times10^{-10}$ on F, whose unrotated bread has condition number about
+$2\times10^4$.
+
+```{r rs-3}
+# RS3 (i): the bordered and delta-method covariances are one matrix, given only
+# Delta* J = Delta_u and R J = 0. Tolerance 100 u kappa, kappa the largest condition
+# number among Z'Delta*'W Delta* Z, the unrotated bread and R G_T: rule fixed before running.
+rs3 <- t(sapply(rs_cases, function(x) {
+  B  <- rs_bordered(x$Ds, x$R, x$W, x$Gam)
+  J  <- rs_J(x$R, x$Gu, x$GT)
+  Js <- qr.solve(rbind(x$Ds, x$R), rbind(x$Du, matrix(0, nrow(x$R), ncol(x$Du))),
+                 tol = 1e-12)
+  kap <- max(rs_cond(crossprod(x$Ds %*% B$Z * sqrt(x$W))),
+             rs_cond(crossprod(x$Du * sqrt(x$W))), rs_cond(x$R %*% x$GT))
+  c(kappa = kap, tol = 100 * .Machine$double.eps * kap,
+    DJ_minus_Du = rs_relmax(x$Ds %*% J, x$Du),
+    RJ = max(abs(x$R %*% J)) / (max(abs(x$R)) * max(abs(J))),
+    J_closed_vs_stacked = rs_relmax(J, Js),
+    bordered_vs_delta = rs_relmax(B$acov, J %*% x$acov_u %*% t(J)))
+}))
+print(signif(rs3, 3))
+stopifnot(rs3[, 3:6] < rs3[, "tol"])
+```
+
+**RS3 (ii).** Expected: $\lesssim10^{-13}$ relative ($R G_T$ is well conditioned). The real
+re-rotation diagnostic should show the first-order error falling about 100-fold per decade of the
+step.
+
+```{r rs-3-rerot}
+# RS3 (ii): J is the derivative of the rotation map. Comparator: the complex step of an
+# actual re-rotation. The perturbed loadings are a + i h e_c; Newton on r = 0 in
+# coordinates of the oblique manifold, with an iteration matrix from forward differences
+# of the real map (R is not used). Tolerance 1e-10 relative to max|J|, fixed before running.
+rs_rerot_cs <- function(x, h = 1e-20) {
+  m <- x$m; T0 <- x$T; nc <- m * (m - 1)
+  Bs <- lapply(1:m, function(j) qr.Q(qr(cbind(T0[, j], diag(m))))[, -1, drop = FALSE])
+  Tof <- function(cv) {
+    X <- T0 + 0 * cv[1]
+    for (j in 1:m) X[, j] <- T0[, j] + Bs[[j]] %*% cv[(j - 1) * (m - 1) + seq_len(m - 1)]
+    gm_unit(X)
+  }
+  Ff <- function(cv, A) { T <- Tof(cv); rs_r(A %*% solve(t(T)), crossprod(T), x$eps) }
+  K <- sapply(1:nc, function(k) {
+    e <- numeric(nc); e[k] <- 1e-7; (Ff(e, x$A) - Ff(numeric(nc), x$A)) / 1e-7
+  })
+  sapply(which(rs_free(x$p, m)), function(c) {
+    A <- x$A + 0i; A[c] <- A[c] + 1i * h; cv <- complex(nc)
+    for (it in 1:12) cv <- cv - solve(K, Ff(cv, A))
+    T <- Tof(cv); L <- A %*% solve(t(T)); P <- crossprod(T)
+    Im(c(as.vector(L), P[lower.tri(P)])) / h
+  })
+}
+for (cs in names(rs_cases)) {
+  x <- rs_cases[[cs]]
+  rs_cases[[cs]]$J   <- rs_J(x$R, x$Gu, x$GT)
+  rs_cases[[cs]]$Jcs <- rs_rerot_cs(x)
+}
+rs_Jrot <- function(x, J) J[-seq_len(x$nth), -seq_len(x$nth), drop = FALSE]
+rs3b <- sapply(rs_cases, function(x) rs_relmax(rs_Jrot(x, x$J), x$Jcs))
+print(signif(rs3b, 3))
+stopifnot(rs3b < 1e-10)
+# Diagnostic: a real re-rotation at t and t/10 along one direction; the first-order
+# error should fall about 100-fold (quadratic remainder).
+set.seed(20261119)
+rs3c <- t(sapply(rs_cases, function(x) {
+  e <- rnorm(sum(rs_free(x$p, x$m))); e <- e / sqrt(sum(e^2))
+  th0 <- c(as.vector(x$L), x$Phi[lower.tri(x$Phi)])
+  err <- sapply(c(1e-3, 1e-4), function(t) {
+    A <- x$A; A[rs_free(x$p, x$m)] <- A[rs_free(x$p, x$m)] + t * e
+    z <- rs_polish(A, x$T, x$eps)
+    max(abs(c(as.vector(z$L), z$Phi[lower.tri(z$Phi)]) - th0 - t * x$Jcs %*% e))
+  })
+  c(err_1e3 = err[1], err_1e4 = err[2], ratio = err[1] / err[2])
+}))
+print(signif(rs3c, 3))
+```
+
+**The negative control.** A wrong $R$ passes (i) and fails (ii); RS4's complex-step check fails it
+too (`R_vs_R` is its distance from the true $R$). The SEs it produces differ from the true ones by
+factors up to `se_ratio_max`.
+
+```{r rs-3-wrong}
+# Negative control: R replaced by R plus noise of 0.3 max|R| (threshold columns kept 0).
+# Expected: the identity of (i) still holds to its tolerance; the re-rotation check of (ii)
+# and the complex-step check of RS4 both fail by orders of magnitude.
+set.seed(20261118)
+rs3w <- t(sapply(rs_cases, function(x) {
+  Rw <- x$R; cl <- -seq_len(x$nth)
+  Rw[, cl] <- Rw[, cl] + 0.3 * max(abs(x$R)) * rnorm(length(Rw[, cl]))
+  Bw <- rs_bordered(x$Ds, Rw, x$W, x$Gam)
+  Jw <- rs_J(Rw, x$Gu, x$GT)
+  kap <- max(rs_cond(crossprod(x$Ds %*% Bw$Z * sqrt(x$W))),
+             rs_cond(crossprod(x$Du * sqrt(x$W))), rs_cond(Rw %*% x$GT))
+  se <- sqrt(diag(rs_bordered(x$Ds, x$R, x$W, x$Gam)$acov)); sw <- sqrt(diag(Bw$acov))
+  c(identity = rs_relmax(Bw$acov, Jw %*% x$acov_u %*% t(Jw)),
+    tol = 100 * .Machine$double.eps * kap,
+    rerot = rs_relmax(rs_Jrot(x, Jw), x$Jcs), R_vs_R = rs_relmax(Rw, x$R),
+    se_ratio_max = max(sw / se), se_ratio_min = min(sw / se))
+}))
+print(signif(rs3w, 3))
+stopifnot(rs3w[, "identity"] < rs3w[, "tol"], rs3w[, "rerot"] > 1e-3)
+```
+
+**RS5.**
+
+```{r rs-5}
+# RS5 (invariants of the bordered covariance Bc = rs_bordered(Ds, R, W, Gamma)):
+# (a) Bc[tau, tau] = acov_u[tau, tau];  (b) Ds Bc Ds' = Du acov_u Du';
+# (c) equivariance under a signed column permutation P: with L2 = L P, Phi2 = P' Phi P,
+#     B2 = Pi Bc Pi' (Pi the linear map on theta*), and max|r| at (L2, Phi2) at rounding.
+# Expected: all differences at rounding times kappa. Tolerance 100 u kappa (kappa as in rs3,
+# at the original point), relative to the largest entry; max|r| < 1e-13: fixed before running.
+rs_P <- function(m) {
+  o <- if (m == 2) c(2, 1) else c(2, 3, 1); s <- if (m == 2) c(-1, 1) else c(-1, 1, -1)
+  P <- matrix(0, m, m); P[cbind(o, seq_len(m))] <- s; P
+}
+rs_Pi <- function(P, p, m, nth) {               # linear map on theta* (off-diagonal phi only)
+  n <- nth + p * m + m * (m - 1) / 2
+  sapply(seq_len(n), function(k) {
+    e <- numeric(n); e[k] <- 1
+    P0 <- matrix(0, m, m); P0[lower.tri(P0)] <- e[nth + p * m + seq_len(m * (m - 1) / 2)]
+    P0 <- P0 + t(P0)
+    Lm <- matrix(e[nth + seq_len(p * m)], p, m)
+    c(e[seq_len(nth)], as.vector(Lm %*% P), (t(P) %*% P0 %*% P)[lower.tri(P0)])
+  })
+}
+rs5 <- t(sapply(rs_cases, function(x) {
+  B  <- rs_bordered(x$Ds, x$R, x$W, x$Gam); Bc <- B$acov; tt <- seq_len(x$nth)
+  kap <- max(rs_cond(crossprod(x$Ds %*% B$Z * sqrt(x$W))),
+             rs_cond(crossprod(x$Du * sqrt(x$W))), rs_cond(x$R %*% x$GT))
+  P <- rs_P(x$m); L2 <- x$L %*% P; Phi2 <- t(P) %*% x$Phi %*% P
+  Ds2 <- rs_Dstar(L2, Phi2, x$nth); R2 <- rs_R(L2, Phi2, x$eps, x$nth)
+  B2 <- rs_bordered(Ds2, R2, x$W, x$Gam)$acov
+  Pi <- rs_Pi(P, x$p, x$m, x$nth)
+  c(kappa = kap, tol = 100 * .Machine$double.eps * kap,
+    a_tau_block = rs_relmax(Bc[tt, tt], x$acov_u[tt, tt]),
+    b_DsBDs = rs_relmax(x$Ds %*% Bc %*% t(x$Ds), x$Du %*% x$acov_u %*% t(x$Du)),
+    c_perm = rs_relmax(B2, Pi %*% Bc %*% t(Pi)),
+    c_sigma = rs_relmax(Ds2 %*% Pi, x$Ds),
+    c_maxr = max(abs(rs_r(L2, Phi2, x$eps))))
+}))
+print(signif(rs5, 3))
+stopifnot(rs5[, 3:6] < rs5[, "tol"], rs5[, "c_maxr"] < 1e-13)
+```
+
+**RS6 (i).** $m=1$; then the theorem's equivalence on E, F, G and two constructed loading matrices
+(population level, $W=I$, no thresholds). S1: the second factor has two indicators, so the
+unrotated bread is singular by one with $G$ nonsingular; predicted: the bordered system singular.
+S2: $a_{11}=0$, so the echelon chart is degenerate ($G$ singular); the theorem predicts nothing about
+$\Delta_u$ there, and the rotated system turns out regular. Last, $RG_T$ against the Riemannian
+Hessian of the criterion, by the complex step.
+
+```{r rs-6}
+# RS6(i): nonsingularity. With A of full column rank:
+#   Z'Ds'W Ds Z nonsingular  <=>  rank(Ds) = n_u  AND  R G_T nonsingular;
+#   and G = [G_u, G_T] nonsingular  =>  rank(Ds) = rank(Du).
+# "Nonsingular" is numerical rank (singular value > 1e-8 max, spec 4.8's criterion), applied
+# to Ds Z sqrt(W) (the square root of Z'Ds'W Ds Z, so the squared ratio is not what is cut).
+# Tolerances are exact rank equalities; fixed before running.
+# (a) m = 1 on Case E: no constraints, bordered = delta method with the sign map, 1e-12.
+x1 <- rs_prep("E", m = 1, eps = 1e-4)
+s1 <- x1$T[1, 1]; Pi1 <- diag(c(rep(1, x1$nth), rep(s1, x1$p)))
+rs6a <- c(rows_R = nrow(x1$R), sign = s1,
+          bordered_vs_Pi_acov_u = rs_relmax(rs_bordered(x1$Ds, x1$R, x1$W, x1$Gam)$acov,
+                                            Pi1 %*% x1$acov_u %*% t(Pi1)))
+print(signif(rs6a, 3))
+stopifnot(rs6a["rows_R"] == 0, rs6a["bordered_vs_Pi_acov_u"] < 1e-12)
+
+# (b) the three cases and two constructed ones (population, W = 1, nth = 0).
+rs_mkcase <- function(A, eps, nth = 0) {
+  p <- nrow(A); m <- ncol(A)
+  g <- gm_geomin(A, eps = eps, nstart = 30)
+  pz <- tryCatch(rs_polish(A, g$T, eps), error = function(e) NULL)
+  T0 <- if (is.null(pz)) g$T else pz$T
+  L0 <- A %*% solve(t(T0)); cn <- rs_canon(L0, crossprod(T0), T0)
+  Minv <- solve(t(cn$T)); L <- A %*% Minv; Phi <- crossprod(cn$T)
+  Ds <- rs_Dstar(L, Phi, nth)
+  list(A = A, p = p, m = m, nth = nth, eps = eps, T = cn$T, L = L, Phi = Phi,
+       Ds = Ds, Du = rs_Du(A, nth), R = rs_R(L, Phi, eps, nth), W = rep(1, nrow(Ds)),
+       Gu = rs_Gu(L, Minv, nth), GT = rs_GT(L, Phi, nth),
+       polished = !is.null(pz), maxr = max(abs(rs_r(L, Phi, eps))))
+}
+rs_S1 <- rs_mkcase(cbind(c(.7, .6, .7, .6, .5, .6), c(0, 0, 0, 0, .6, .5)), 1e-4)
+rs_S2 <- rs_mkcase(cbind(c(0, .6, .7, .6, .5, .6), c(0, .5, .4, 0, .3, .5)), 1e-4)
+rs6_info <- function(x) {
+  nst <- ncol(x$Ds); nu <- ncol(x$Du); nr <- nrow(x$R); mm <- x$m * (x$m - 1)
+  Z <- rs_nullbasis(x$R, nst); DZ <- x$Ds %*% Z * sqrt(x$W)
+  Bm <- crossprod(DZ); RG <- x$R %*% x$GT; G <- cbind(x$Gu, x$GT)
+  KKT <- rbind(cbind(crossprod(x$Ds * sqrt(x$W)), t(x$R)), cbind(x$R, matrix(0, nr, nr)))
+  sr <- function(X) { d <- svd(X)$d; min(d) / max(d) }
+  c(n_star = nst, n_u = nu, rank_Du = rs_nrank(x$Du), rank_Ds = rs_nrank(x$Ds),
+    rank_R = rs_nrank(x$R), m_m1 = mm, rank_RGT = rs_nrank(RG),
+    rank_G = rs_nrank(G), rank_DsZ = rs_nrank(DZ), rank_Bm = rs_nrank(Bm),
+    rank_KKT = rs_nrank(KKT), KKT_dim = nrow(KKT),
+    sv_Du = sr(x$Du), sv_Ds = sr(x$Ds), sv_RGT = sr(RG), sv_G = sr(G), sv_DsZ = sr(DZ),
+    sv_KKT = sr(KKT), maxr = max(abs(rs_r(x$L, x$Phi, x$eps))))
+}
+rs6b_cases <- c(rs_cases, list(S1 = rs_S1, S2 = rs_S2))
+rs6b <- t(sapply(rs6b_cases, rs6_info))
+print(signif(rs6b, 3))
+rs6b_chk <- t(apply(rs6b, 1, function(v) {
+  v <- unname(v) |> setNames(colnames(rs6b)); lhs <- unname(v["rank_DsZ"] == v["n_u"])
+  rhs <- unname(v["rank_Ds"] == v["n_u"] && v["rank_RGT"] == v["m_m1"])
+  Gnon <- unname(v["rank_G"] == v["n_star"])
+  c(lhs = lhs, rhs = rhs, equiv = lhs == rhs, G_nonsing = Gnon,
+    G_implies_rank = unname(!Gnon || v["rank_Ds"] == v["rank_Du"]))
+}))
+print(rs6b_chk)
+stopifnot(rs6b_chk[, "equiv"] == 1, rs6b_chk[, "G_implies_rank"] == 1,
+          rs6b_chk[c("E", "F", "G"), "lhs"] == 1,
+          rs6b["S1", "rank_Bm"] < rs6b["S1", "n_u"], rs6b_chk["S1", "G_nonsing"] == 1)
+
+# (c) R G_T[, q] = vecoff(-(dGp_q)' T): the Riemannian Hessian seen through T'.
+# Complex step along xi_q = T'^-1 Y_q. Stationary point: x$T of each case. 1e-10 relative to
+# max|R G_T|, fixed before running.
+rs6c <- sapply(c(rs_cases, list(S1 = rs_S1)), function(x) {
+  off <- rs_off(x$m); T <- x$T; h <- 1e-30
+  RG <- x$R %*% x$GT
+  H <- sapply(seq_len(nrow(off)), function(q) {
+    Y <- matrix(0, x$m, x$m); Y[off[q, 1], off[q, 2]] <- 1
+    Tz <- T + 1i * h * solve(t(T), Y)
+    dGp <- Im(gm_proj(Tz, gm_G(x$A, Tz, x$eps))) / h
+    (-t(dGp) %*% T)[off]
+  })
+  rs_relmax(RG, H)
+})
+print(signif(rs6c, 3))
+stopifnot(rs6c < 1e-10)
+```
+
+**RS6 (ii) and (iii): an illustration, not a criterion.** For each rotated loading of Case E,
+$\hat\theta_u$ is moved by the direction that moves that loading by one SE to first order, in both
+senses, and the solution re-rotated. `ratio_plus`, `ratio_minus` are the actual moves in units of
+the SE (1 if $\rho$ were linear); `se_plus`, `se_minus` the SE recomputed there over the SE at the
+estimate. Expected before running: at $\varepsilon=10^{-4}$ departures of order one for loadings
+within a few $\sqrt\varepsilon$ of zero with SE comparable to $\sqrt\varepsilon$, and small ones at
+$\varepsilon=10^{-2}$. Nothing is asserted, and no value here is a threshold.
+
+```{r rs-6-ill}
+# Illustration only (no assertions): how far the first-order SE is from the true local
+# behaviour of the re-rotated loading. delta moves each rotated loading by one SE to first
+# order (delta = Vu g' / SE, g = row of J, Vu = ACOV_u / (N - 1) of the free loadings).
+rs_ill <- function(x) {
+  p <- x$p; m <- x$m; nth <- x$nth; fr <- which(rs_free(p, m)); a <- nth + seq_along(fr)
+  Vu <- x$acov_u[a, a] / (x$N - 1); J <- rs_J(x$R, x$Gu, x$GT)
+  se_at <- function(z, c, g0 = NULL) {
+    J2 <- rs_J(rs_R(z$L, z$Phi, x$eps, nth), rs_Gu(z$L, z$Minv, nth), rs_GT(z$L, z$Phi, nth))
+    g <- J2[nth + c, a]; sqrt(drop(g %*% Vu %*% g))
+  }
+  do.call(rbind, lapply(seq_len(p * m), function(c) {
+    g <- J[nth + c, a]; se <- sqrt(drop(g %*% Vu %*% g)); d <- drop(Vu %*% g) / se
+    mv <- function(sg) { A2 <- x$A; A2[fr] <- A2[fr] + sg * d; rs_polish(A2, x$T, x$eps) }
+    zp <- mv(1); zm <- mv(-1)
+    data.frame(row = (c - 1) %% p + 1, fac = (c - 1) %/% p + 1,
+               lam_sqeps = x$L[c] / sqrt(x$eps), se_sqeps = se / sqrt(x$eps),
+               ratio_plus = (zp$L[c] - x$L[c]) / se, ratio_minus = (x$L[c] - zm$L[c]) / se,
+               se_plus = se_at(zp, c) / se, se_minus = se_at(zm, c) / se,
+               res = max(zp$res, zm$res))
+  }))
+}
+for (e in c(1e-4, 1e-2)) {
+  xi <- if (e == rs_cases$E$eps) rs_cases$E else rs_prep("E", eps = e)
+  cat("\nCase E, eps =", e, "\n"); print(signif(rs_ill(xi), 3))
+}
+```
+
+**RS7.** The chain-rule $\Delta^*$ against the analytic one; route 3 against the bordered form built
+on the chain-rule $\Delta^*$; and, as a diagnostic, the SEs at the GPA stall point (which is what
+production would rotate to) against the Newton-polished point.
+
+```{r rs-7}
+# RS7: routes to Delta*. (1) analytic Ds; (2) chain rule Ds = [Du, 0] G^-1, G = [Gu, GT];
+# (3) J (no Delta, W or Gamma) vs the bordered covariance with the chain-rule Ds.
+# Tolerances: (2) 100 u cond(G), relative; (3) 100 u kappa as in rs3 (cond(G) not included):
+# fixed before running. Diagnostic (no assertion): SEs by route 3 at the unpolished GPA stall
+# point (production's estimate) against the polished point.
+rs7 <- t(sapply(rs_cases, function(x) {
+  G <- cbind(x$Gu, x$GT); Dch <- cbind(x$Du, matrix(0, nrow(x$Du), ncol(x$GT))) %*% solve(G)
+  B <- rs_bordered(x$Ds, x$R, x$W, x$Gam)
+  kap <- max(rs_cond(crossprod(x$Ds %*% B$Z * sqrt(x$W))),
+             rs_cond(crossprod(x$Du * sqrt(x$W))), rs_cond(x$R %*% x$GT))
+  J <- rs_J(x$R, x$Gu, x$GT)
+  Bch <- rs_bordered(Dch, x$R, x$W, x$Gam)$acov
+  # diagnostic: stall point
+  Ts <- x$g$T; cn <- rs_canon(x$A %*% solve(t(Ts)), crossprod(Ts), Ts)
+  Mi <- solve(t(cn$T)); Ls <- x$A %*% Mi; Ps <- crossprod(cn$T)
+  Js <- rs_J(rs_R(Ls, Ps, x$eps, x$nth), rs_Gu(Ls, Mi, x$nth), rs_GT(Ls, Ps, x$nth))
+  se1 <- sqrt(diag(J %*% x$acov_u %*% t(J)) / (x$N - 1))
+  se2 <- sqrt(diag(Js %*% x$acov_u %*% t(Js)) / (x$N - 1))
+  c(condG = rs_cond(G), tol2 = 100 * .Machine$double.eps * rs_cond(G),
+    chain_vs_Ds = rs_relmax(Dch, x$Ds),
+    kappa = kap, tol3 = 100 * .Machine$double.eps * kap,
+    J_vs_chainbordered = rs_relmax(J %*% x$acov_u %*% t(J), Bch),
+    diag_stall_L = max(abs(Ls - x$L)), diag_stall_se_maxrel = max(abs(se2 - se1) / se1))
+}))
+print(signif(rs7, 3))
+stopifnot(rs7[, "chain_vs_Ds"] < rs7[, "tol2"], rs7[, "J_vs_chainbordered"] < rs7[, "tol3"])
+```
+
+Measured 2026-11-17 (R 4.6.0, lavaan 0.7.2): see the printed output above; in brief, RS1's identity
+$\le4\times10^{-15}$, $\lvert r\rvert$ after Newton $\le7\times10^{-15}$; RS4 $\le3.2\times10^{-16}$;
+RS2 (a) $\le8.2\times10^{-15}$, (b) SEs within $1.2\times10^{-10}$ relative; RS3 (i) within its
+tolerance on all three cases (F $8.1\times10^{-12}$ against $5.1\times10^{-10}$), (ii)
+$\le5.5\times10^{-15}$, the wrong-$R$ control passing (i) and failing (ii) by 0.87 to 3.7; RS5
+$\le6.7\times10^{-12}$; RS6 (i) as predicted on all five matrices; RS7 chain rule
+$\le5.3\times10^{-15}$; SEs at the stall point within $1.1\times10^{-7}$ relative of the polished
+point. In `rs-6-ill` at $\varepsilon=10^{-4}$ the near-zero loadings move by 0.64 to 2.19 SEs and
+their SEs by factors 0.27 to 3.8, and the large loadings' SEs by up to 17%; at $\varepsilon=10^{-2}$
+every ratio is within 0.93 to 1.09. These figures are one-off measurements; the assertions are in
+the chunks.
+
+### What this leaves for unit A3 (none settled here)
+
+Listed with the reasons in E-109: the production route (RS7) and so the
+snapshot's contents; the inferential scope, now with RS6 (ii)'s scale argument and RS6 (iii)'s
+candidate quantities; what is posted for a singular covariance; several minima; the stall point
+against tolerances; a singular bread or a degenerate echelon chart.
+
 ## References
 
 Bibliographic details are from memory and should be checked before they reach package

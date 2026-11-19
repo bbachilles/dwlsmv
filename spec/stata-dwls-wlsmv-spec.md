@@ -131,8 +131,10 @@ on SSC or in official Stata.
   observed covariate to a factor requires that covariate's covariance with the factor's ordinal
   indicators, which is a polyserial-correlation problem — i.e. the same mixed-type sample-statistics
   extension already deferred below, not a special case that avoids it.
-- ESEM (Module 12, described below for architectural continuity; planned for v3, after v2's
-  extensions).
+- ESEM (Module 12, described below for architectural continuity). Its order is the owner's plan
+  of record of 2026-11-16 (E-112; E-108): rotated SEs for EFA
+  (release A), second-order factors (release B), then one ordinal exploratory block inside a
+  structural model (release C). This replaces the earlier "v3, after v2's extensions".
   Exception: single-group EFA with geomin point estimates is pulled into 0.3.0 (user,
   2026-10-26; Section 5, Module 12 release plan).
 - Bifactor-ESEM, higher-order factor rotation.
@@ -1780,8 +1782,9 @@ free parameters, verified against lavaan 0.7.2 and Result I4 (design E, `inv-alg
   `@sec-standardize-mg` (draft Q, corrected to P and (b)); its failed preregistered assertions are
   kept as a record that asserts they reproduce; `std-mg-frozen` (written after measuring) verifies
   the frozen map against lavaan 0.7.2 `std.all`, points and SEs, designs A–E × four levels. **Q-C
-  and Q-D decided 2026-11-01 (user), both (a).** Q-C: every group's row is shown with its own value
-  and SE, with one table note past configural. Q-D: constant rows stay, as `(constrained)`, or Stata's
+  and Q-D decided 2026-11-01 (user), both (a); Q-D reversed 2026-11-18 (owner, C2 (a): the constant
+  rows are not shown, at every G; D7, D8e).** Q-C: every group's row is shown with its own value
+  and SE, with one table note past configural. Q-D (2026-11-01, superseded): constant rows stay, as `(constrained)`, or Stata's
   `0 (omitted)` for a constant 0. **Built 2026-11-01** (`dwlsmv_m11_std_g`): from `e()` alone, and it
   fails closed at rc 3498 unless every row has one group and one kind, the rows are `e(K)`'s complete
   table, `e(canon)`'s ties agree with `e(b)`, `e(V)` and `e(rank)`, and `e(V)` fits `e(b)` (user). A β
@@ -2869,7 +2872,7 @@ arrow direction), and a model ports exactly as sem reads it.
   enters the listwise sample; Stage 1's own coding check (rc 3498) remains. `dwlsmv_m11_stage1`
   takes the covariate's name as an optional fourth argument and calls `dwls_sample_stats_cx(Y, K,
   x)` with the same D9 recode of the indicators; `keepbound` has no meaning there (no `keep_bound`
-  in this mode) and the output side refuses it. **Decided (owner, 2026-11-14):** `keepbound` is unavailable with a covariate, and a boundary estimate (status 2) is not treated as an ordinary one without a derivation of its consequences for estimation, admissibility, covariance and inference. One covariate only; a second is refused explicitly. `standardized`, `keepbound` and `efa()` are refused with a covariate. `difftest` is refused with a covariate pending finite-sample size evidence (not because the difference test is undefined). Only T3, its df and p are reported: no baseline model, and no conditional CFI, TLI or RMSEA without their own derivation and validation. An ordinary (no-covariate) fit that does not converge is unchanged in this release; its inconsistency with the conditional case, which suppresses T3 and p, is an explicit outstanding decision, not a permanent policy. The diagnostics the owner calls P3 and P4 (not the P3 above) are deferred, outside core validation; their definitions and derivations are reviewed before any implementation.
+  in this mode) and the output side refuses it. **Decided (owner, 2026-11-14):** `keepbound` is unavailable with a covariate, and a boundary estimate (status 2) is not treated as an ordinary one without a derivation of its consequences for estimation, admissibility, covariance and inference. One covariate only; a second is refused explicitly. `standardized`, `keepbound` and `efa()` are refused with a covariate. `difftest` is refused with a covariate pending finite-sample size evidence (not because the difference test is undefined). Only T3, its df and p are reported: no baseline model, and no conditional CFI, TLI or RMSEA without their own derivation and validation. A non-converged fit reports no inference, with or without a covariate (owner, 2026-11-18, resolving the outstanding decision recorded here on 2026-11-14; Module 11, *Non-convergence is an inference boundary*). The diagnostics the owner calls P3 and P4 (not the P3 above) are deferred, outside core validation; their definitions and derivations are reviewed before any implementation.
 - **Carried to other D-items.** A fixed non-unit loading (`y2@.5`) is sem's normalisation for
   its factor, so the factor gets no `metric` line and `dwls_identify()` aborts (rc 3498, "a
   factor has no metric constraint"); Module 11's message for it belongs to D3. `ind` order is
@@ -2961,7 +2964,10 @@ grammar beyond D1's token scan, against D1, and would accept a model sem refuses
 - **`e(V)`** is `dwlsmv_ev(ACOV, N)` embedded with **exact zeros** in the fixed rows and columns.
 - **`e(rank)`** is the number of free parameters, posted by Module 11 (`ereturn post` does not
   set it). Its relation to `e(b)` is fixed by the contract: **columns of `e(b)` = free + fixed;
-  `e(rank)` = free only.**
+  `e(rank)` = free only.** For a rotated EFA with `e(V)` (release A, Module 12), the free
+  parameters are those of the fitted echelon model, $n_u$, which is the rank of the singular
+  rotated `e(V)`; the rotated `e(b)` has $n^* = n_u + m(m-1)$ columns (owner, 2026-11-17, A3.14).
+  Stata's `test` and `lincom` do not read `e(rank)` (`tools/probe_a2b_singular_v.do`).
 - **Probed on StataMP 18 and 16.1, identical** (`tools/probe_d5_post.do`): the constrained post
   is accepted, the display shows `1 (constrained)`, `_b[]` reaches fixed and free rows, `test`
   and `lincom` work, and `test` on a fixed coefficient reports the constraint dropped; posting
@@ -3054,14 +3060,17 @@ history.
   `standardized` is accepted on the fit and on replay (`dwlsmv, standardized`). It **replaces**
   the coefficient table: $g(\hat\theta)$ in `e(b)`'s order and names, with delta-method SEs
   $\sqrt{\operatorname{diag}(J_g\,\texttt{e(V)}\,J_g^\top)}$ and the usual z, p and interval,
-  followed by one Θ row `/var(e.y)` per indicator. **Θ appears in the standardized table only**;
-  the default table is unchanged. A row whose standardized value is a constant (SE exactly 0:
-  an exogenous factor's `var()`, a covariance fixed at 0) shows as `(constrained)`, as fixed
-  rows do in the default table. Header and notes block are unchanged; one line above the table
-  says the table is standardized (`std.all`) and that `/var(e.y)` rows are the derived residual
-  variances. **Nothing is stored** (D8d unchanged): `dwlsmv_m11_std()` rebuilds the parameter
-  table from `e(b)`'s stripe (D6) and `e(indicators)`, so replay needs nothing more; the display
-  holds and restores the posted results. Verified against the D7 fixture on Case E's four fits
+  followed by one Θ row `/var(e.y)` per indicator, laid out as the compact table of D8e.
+  **Θ appears in the standardized table only**; the default table is unchanged. A row whose
+  standardized value is a constant (SE exactly 0) **is not shown** when it is an exogenous factor's
+  `var()` or, at $G>1$, a `scale()`, intercept or mean (decided 2026-11-18, owner, C2 (a); this
+  reverses Q-D, whose earlier rule was "(constrained)"). Any other constant row (a covariance fixed
+  by the user, say) shows as its value and `(constrained)`. Header and notes block are unchanged; one
+  line above the table says the table is standardized (`std.all`) and that `/var(e.y)` rows are the
+  derived residual variances, and a second says the constant rows are not shown. **Nothing is
+  stored** (D8d unchanged): `dwlsmv_m11_std()` rebuilds the parameter table from `e(b)`'s stripe
+  (D6) and `e(indicators)`, so replay needs nothing more; the display does not repost, hold or
+  restore `e()`. Verified against the D7 fixture on Case E's four fits
   (`tests/unit/test_standardized.do`). **Returned in `r()` (decided 2026-10-10, user, option (c), estout
   review; not built):** the standardized display returns `r(b_std)` (1 × k) and `r(V_std)`, named as
   the table rows (`e(b)`'s names plus the Θ rows `/var(e.y)`), still storing nothing in `e()`; a
@@ -3172,7 +3181,8 @@ the name to another program), a sub-option `stage1(keepbound)` (would set a patt
 - **Also posted** (recorded 2026-10-05 from the code; the help file documents them):
   `e(indicators)`, the indicators in D9's order; `e(cmdline)`; `e(version)`, the release
   (`0.2.0`), equal to `dwlsmv.ado`'s version line (added 2026-10-07, the user's; checked by
-  `test_dwlsmv_gaps.do` G14 and the release-staging script); `e(properties)` = `b V` and
+  `test_dwlsmv_gaps.do` G14 and the release-staging script); `e(properties)` = `b V` (an
+  `efa()` fit: `b V eigen`, or `b eigen` with no `e(V)`, with `e(Ev)`; Module 12 *Release A*, eigenvalues) and
   `e(sample)`, set by `ereturn post`. **`e(Cns)` is posted only when some parameter is fixed**
   (D5's rows exist only then); a model with no fixed parameter has no `e(Cns)`. sem's `e(chi2_ms)` and
   `e(df_ms)` are not used: they suggest an ML chi-square, and sem's post-estimation commands would
@@ -3196,6 +3206,47 @@ the name to another program), a sub-option `stage1(keepbound)` (would set a patt
 **D8e, display (decided 2026-10-04).** The header's metric line is D2's; the near-bound note's
 names are D8b's; the wording rule is Module 10's (fact first, a reading second, no advice as a
 diagnosis).
+- **Threshold rows (decided 2026-11-17, owner; Module 12 *Release A*, threshold rows).** The coefficient
+  table does not show the threshold rows by default; it shows them by default only when
+  `invariance()` constrains them across groups (`thresholds`, `metric`, `scalar`). Options
+  `thresholds` and `nothresholds` override either default, and a one-line note under the table says
+  when rows are hidden. Display only: `e(b)`, `e(V)` and the §4.2 order are unchanged. The fit block
+  and the notes block below are unchanged.
+- **The coefficient table's layout (decided 2026-11-18, owner: C1 (a), C2 (a) and M1–M13 of
+  E-110; built in `dwlsmv_m11_ctab.mata`).** One compact grouped
+  table for every fit but `efa()`, which keeps its own matrices.
+  - **Columns:** label, Estimate, Std. err., z, P>|z| and the Wald interval at `level()` (normal
+    theory, as `ereturn display`; dwlsmv posts no `e(df_r)`). 78 columns wide; the label column is the
+    longest label plus 2, at least 16 and at most `linesize` − 62, a longer label cut with `~`. A
+    `linesize` below 78 wraps the table; that is not an error.
+  - **Sections,** in this order, an empty one not printed: `Loadings on F` (one per factor),
+    `Structural` (`F2 <- F1`), `Covariates` (`F <- x`, `y4 <- x`), `Variances`, `Covariances`, at
+    $G>1$ `Intercepts`, `Scales` and `Factor means`, then one `Thresholds: y` block per item when
+    shown. A row is labelled by its `e(b)` name without the equation its heading states and without
+    the leading `/`; at $G>1$ a threshold reads `cut1 (Group 2)`. A row's numbers are those of its own
+    `e(b)` index and `e(V)` diagonal entry.
+  - **Shown:** every free parameter. The marker loading (named by `e(canon)`'s `metric marker F y`
+    line; without `e(canon)`, the first loading of each factor fixed at 1 under `e(metric)` marker)
+    shows as `1  (marker)`. Any other fixed parameter shows as its value and `(constrained)`, a fixed
+    0 included (never Stata's `(omitted)`).
+  - **Not shown:** the metric fixings the header's metric line states (under unit variance, the
+    variance fixed at 1 of each factor named by a `metric unitvariance F` line, `var(e.F)` for an
+    endogenous factor). At $G>1$ (C1 (a)), the level conventions: a factor variance fixed at 1, the
+    intercepts fixed at 0, the scales fixed at 1 and the means fixed at 0; one line under the table
+    says so. The threshold rows when hidden. In the standardized table, the constant rows of D7
+    (C2 (a)).
+  - **Groups** ($G>1$, C1 (a)): one sub-table per group, titled `Group 2 (g = 1)` (never the notes
+    block's form ending in a colon), tied parameters repeated in every group as `e(b)` holds them,
+    the thresholds after the groups as one table grouped by item.
+  - **A fit that did not converge** shows the same sections with an Estimate column only, under the
+    title "Last iterate, not a solution; no standard errors"; `(marker)` and `(constrained)` replace
+    the old Fixed column.
+  - **`r(table)`** (M7) is returned in Stata's layout for the full `e(b)` (every column, hidden and
+    omitted ones included; for the standardized display, the standardized rows): rows `b se z pvalue
+    ll ul df crit eform`, `df` missing, `crit` the normal quantile at `level()`, `eform` 0, and z, p
+    and the interval missing where the SE is 0.
+  - `e()` is never reposted, so `lincom`, `test` and `nlcom` are untouched. Tested by
+    `tests/unit/test_ctab.do`.
 - **After the coefficient table, one notes block,** in this order: the `keepbound` footnote, the
   near-bound note, the admissibility notes (Module 7), Module 10's diagnostic notes. Text that
   bears on whether to trust the fit sits in one place.
@@ -3222,8 +3273,10 @@ diagnosis).
   estimates are not shown; the help file says it, and the refusal of `standardized` (rc 198, D8a)
   points to the `nlcom` stopgap. **Superseded 2026-10-05** by D7 step (3): `standardized` shows
   the standardized table and Θ; the default output still carries no line about them.
-- **Replay (decided 2026-10-05).** `dwlsmv [, standardized level(#)]` with no model redisplays
-  the header and the coefficient table, standardized if asked, from `e()`. The notes block is
+- **Replay (decided 2026-10-05).** `dwlsmv [, standardized level(#) se ci thresholds nothresholds]` (the last four from release A, 2026-11-17) with no model redisplays
+  the header and the coefficient table (the compact table of D8e), standardized if asked, from
+  `e()`, and returns it in `r(table)`. The replay is the call whose `r()` is guaranteed, since an
+  estimation call's notes block runs after the table. The notes block is
   not redisplayed: its near-bound and diagnostic content comes from Stage 1 and Module 10
   results that `e()` does not carry (D8d). Tested by `test_dwlsmv_gaps.do` G7 and
   `test_dwlsmv.do` check 9.
@@ -3249,30 +3302,63 @@ canonical text: "Factor F has no fixed scale: fix one of its loadings at 1, e.g.
 (F -> y@1 ...), or specify metric(unitvariance)." Stage 1's and Module 3's texts are unchanged
 (D8a, D8f).
 
-**A Stage 2 fit that does not converge is posted (decided 2026-10-04), as sem does:** `e(b)`,
-`e(V)` and T3 at the last iterate (`dwls_inference()` does not check convergence, decided
-2026-09-24), `e(converged)` = 0, and "convergence not achieved" in the header. Refusing to post
-was rejected. `e(converged)` and `e(iterations)` join D8d's scalars. **Tested only by its header**
-(`test_dwlsmv_gaps.do` G10, `e(converged)` set by hand): a fit that actually fails to converge
-and is posted is not tested, and no iteration-limit option is added to force one (decided by
-the user 2026-10-05).
+**Non-convergence is an inference boundary (owner, 2026-11-18).** Inference is reported only for a
+converged solution. A Stage 2 fit that does not converge is still posted, for inspection (posting it
+was decided 2026-10-04; refusing to post stays rejected), but without inference, whatever the fit:
+CFA or `efa()`, one group or several, with or without a covariate. A fit whose final DWLS run did not
+converge (`e(converged)` = 0) posts:
+- `e(b)`, the last iterate (for `efa()`, its rotation), and `e(Cns_b)`, the fixed-parameter rows
+  (Stata reserves `e(Cns)` and refuses it without `e(V)`; probed 2026-11-14);
+- what identifies the model, the sample and the last iterate: `e(N)`, `e(rank)`, `e(df_T3)`,
+  `e(converged)`, `e(iterations)`, the stored ratios of Module 10, and every macro, matrix and
+  sample signature a converged fit of the same kind posts (`e(canon)`, `e(bound)`, `e(K)`, `e(Lambda)`,
+  `e(Phi)`, `e(Ev)`, the `e(rot_*)` scalars, `e(rot_nose)` = `unconverged`).
 
-**Exception, a model with a covariate (confirmed by the owner 2026-11-14; drafted from the owner's requirement of the
-same day).** A conditional fit (§4.8, conditional covariates) that does not converge is
-NOT posted as above. It posts `e(b)`, `e(Cns_b)` (the fixed-parameter rows; Stata reserves `e(Cns)` and refuses it without `e(V)`), `e(N)`, `e(rank)`, `e(df_T3)`, `e(converged)`,
-`e(iterations)` and the macros of an ordinary fit; it posts no `e(V)`, no `e(T3)` and no `e(p_T3)`. The
-header says first, in error colour, directly under the title line, that the optimizer did not converge, that
-the estimates are the last iterate and not a solution, and that no standard errors, T3 or p-value are
-reported; under `metric(marker)` it says to refit with `metric(unitvariance)`, and, when `e(recovery)` is
-`ineligible` or `failed`, that the recovery refit was not attempted (the model is not eligible) or was
-attempted and failed, as the notes say (2026-11-15). A conditional marker fit whose recovery succeeds has
-converged and is posted as a converged fit, so this exception applies to a fit that stayed nonconverged
-after D11, or under `metric(unitvariance)`. The table lists the last iterate without standard errors, and the
-replay shows the same. Reasons: `dwls_inference()` computes a sandwich and T3 at any point, but both are
-asymptotics about a solution, so at a non-solution they are not inference (Module 6, "An unconverged fit",
-leaves whether to show them to the caller); the ordinary-fit rule is unchanged. **Not established:** that the
-ordinary-fit rule has the same gap (flagged to the owner, not edited), and the sandwich's behaviour at a
-non-solution as a diagnostic. Tests: `test_condx_marker.do`.
+It posts no `e(V)`, `e(T3)`, `e(p_T3)`, `e(rmsea_s)`, `e(cfi_s)`, `e(tli_s)`, `e(T3_b)` or `e(df_T3_b)`.
+Then `lincom`, `test` and `nlcom` cannot produce apparently valid inference from a non-solution. The
+baseline's T3 and df are withheld with the indices they exist to form.
+
+Reason (the owner's, 2026-11-18, extending the conditional-fit rule of 2026-11-14 to every fit):
+`dwls_inference()` computes a sandwich and T3 at any point (it does not check convergence, decided
+2026-09-24), but both are asymptotics about a solution, and the last iterate is not necessarily one
+(Module 6, "An unconverged fit", leaves whether to show them to the caller). This supersedes the
+2026-10-04 rule, which posted `e(V)` and T3 at the last iterate as `sem` does, and it removes two
+inconsistencies: an ordinary fit that kept inference a conditional fit withholds, and an `efa()` fit
+whose rotated SEs were withheld (A3.4) while its T3 was printed.
+
+Display:
+- The header says first, in error colour, directly under the title line, that the optimizer did not
+  converge, that the estimates are the last iterate and not a solution, and that no standard errors,
+  T3 or p-value are reported. The T3 line reads "not reported (not a solution)" with its df, and no
+  fit index is printed.
+- Under `metric(marker)` it says to refit with `metric(unitvariance)`, and, when `e(recovery)` is
+  `ineligible` or `failed`, that the recovery refit was not attempted (the model is not eligible) or
+  was attempted and failed, as the notes say (a conditional fit since 2026-11-15, every fit since
+  2026-11-18). A marker fit whose recovery succeeds has converged and is posted as a converged fit.
+- Otherwise it says that dwlsmv has no option for other starting values; a conditional fit's line
+  also says no further remedy is built for a model with a covariate.
+- The table lists the last iterate without standard errors (`e(Cns_b)` marks the fixed parameters),
+  and the replay shows the same. An `efa()` fit shows its two matrices, as A3.4.
+- `standardized` is refused, rc 198, at estimation (the fit stays posted, as O17) and on replay:
+  the standardized solution is computed with its standard errors from `e(V)`.
+- `difftest` already refuses a non-converged fit (its check 7).
+
+Not in this rule: dwlsmv has no starting-values option (D10 refuses `sem`'s `from()`), so the posted
+last iterate cannot be passed back as starts, as Mplus allows. That would be a separate decision.
+
+**Not established:** the sandwich's behaviour at a non-solution as a diagnostic.
+
+**Tested by a real non-converged fit:**
+- a single-group ordinary marker fit ineligible for recovery, on the marker-trap fixture
+  (`test_unconv_post.do`, the model of `test_marker_recovery.do` check 6);
+- conditional fits (`test_condx_marker.do`).
+
+**Not exercised by a real fit** (no known input; no iteration-limit option is added to force one,
+decided by the user 2026-10-05):
+- G > 1;
+- `efa()` with an unconverged unrotated fit.
+
+Their display is checked with `e(converged)` set by hand (`test_dwlsmv_gaps.do` G10).
 
 **D9, indicator order and category recoding (decided 2026-10-04).**
 - **Order.** The indicators are sem's `e(oyvars)` (D1), which lists observed indicators in order
@@ -3667,7 +3753,8 @@ release (decided 2026-09-26):
   estimates only.** The unrotated fit is v1 unchanged (`test_efa_unrotated.do`); new are the
   rotation (derivation first: geomin criterion and gradient, oblique GPA, convergence, random
   starts), the rotated $\Lambda$ and $\Phi$, and Module 11 surface. **Rotated-loading SEs are not
-  in 0.3.0** and are suppressed, not shown unrotated. Derivation: `@sec-geomin`.
+  in 0.3.0** and are suppressed, not shown unrotated (release A adds them; see **Release A**
+  below). Derivation: `@sec-geomin`.
   **Settled conventions (user):**
   - *geomin ε (2026-10-29):* Mplus's rule (Browne 2001), $\varepsilon = 10^{-4}$ at $m=2$,
     $10^{-3}$ at $m=3$, $10^{-2}$ at $m\ge4$, overridable by the user. lavaan's default (0.001 for
@@ -3695,11 +3782,40 @@ release (decided 2026-09-26):
     specific evidence from Unit 4: on a fixture case, random starts (lavaan's, or a seeded
     random-start run of the same GPA) reach a criterion lower than the grid's best by more than
     the distinct-minima tolerance. The grid's unproven coverage alone is not a trigger.
-  - *Sign and column order (2026-10-29):* lavaan's rule. Reflect each column of Λ whose loading
-    sum is negative; then order columns ascending by the mean row index of the loadings with
-    $|\lambda|\ge0.8\max|\lambda|$ in that column (lavaan's `"index"`). Φ is reflected and
-    permuted with Λ. Replaces `dwlsmv_signcanon()`'s first-free-loading anchor for EFA. Mplus
-    documents no rule; on Case E it gave the same order and signs.
+  - *Sign and column order (2026-10-29; the order made complete 2026-11-18, A3.7 revisited).*
+    Reflect each column of Λ whose loading sum is negative; a sum of exactly 0 is not reflected.
+    Then put the columns in the order defined by these keys. Each key is compared exactly, in
+    double precision, and a later key is consulted only when every earlier one is equal.
+    1. **The index statistic, ascending:** the mean row index of the loadings with
+       $|\lambda|\ge0.8\max|\lambda|$ in that column (lavaan's `"index"`, its rule up to here).
+       It is a mean of integers, so it is rational and its ties are exact.
+    2. **The sum of squared loadings $\sum_i\lambda_{ij}^2$, descending.**
+    3. **The loading columns compared item by item, from item 1 to item p.** At the first item
+       where they differ, the column with the larger loading comes first.
+    4. **Identical loading columns.** Columns equal in key 3 are identical. Among the
+       arrangements of such columns, take the one whose Φ, read over its strict lower triangle
+       row-major, is lexicographically largest. Two arrangements that are still equal give
+       identical Λ and Φ, so the posted solution does not depend on which one is used.
+
+    Φ is reflected and permuted with Λ. Keys 1–4 make the posted (Λ, Φ) a function of the rotated
+    solution alone, never of which start reached it. In particular, keys 1–4 never leave a pair
+    to the starts' column order.
+
+    Keys 2–4 compare continuous values:
+    - The order is deterministic for a computed solution.
+    - It is reproduced on another machine whenever the deciding key's difference exceeds the
+      solution's own cross-machine variation. Rotated estimates move up to 2e-8 relative between
+      6 and 4 processors; see the development record.
+    - Ties on key 1 are exact, so they are always detected.
+
+    When key 1 ties, the output prints a note naming the two factors and the key that decided.
+    This is computed from `e(Lambda)` and `e(Phi)`; no stored result is added.
+
+    Mplus documents no rule, and lavaan keeps its pre-order on a key-1 tie. On Case E Mplus gave
+    the same order and signs. At the A4 near-tie fixture's exact tie, lavaan's order and dwlsmv's
+    agreed or not depending on processor count before this rule
+    (E-109, near-tie finding). Replaces `dwlsmv_signcanon()`'s
+    first-free-loading anchor for EFA.
   - *Surface (2026-10-29):* an EFA block in the existing path syntax, after Mplus's
     `F1-F2 BY y1-y6 (*1)`: `dwlsmv (F1 F2 -> y1-y6), efa(F1 F2) [epsilon(#) rstarts(#)]`.
     `efa(namelist)` marks the block's factors; Module 11 writes the echelon canonical form
@@ -3709,8 +3825,10 @@ release (decided 2026-09-26):
     every block factor loading on every block item. Refused at rc 198: other paths, a second or
     partial block, `group()`, `invariance()`, `partial()`, `ginvariant()`, `metric()`,
     `standardized` (the rotated Λ is already std.all), negative df; `difftest` refuses an EFA
-    result. df = 0 and $m=1$ are allowed. v3 ESEM lifts the one-block refusal without new syntax.
-  - *Posted results (2026-10-29, user):* `e(b)` holds the rotated loadings, the factor
+    result. df = 0 and $m=1$ are allowed. ESEM (release C) lifts the one-block refusal without
+    new syntax.
+  - *Posted results (2026-10-29, user; `e(V)` and SEs superseded from release A's build, see
+    **Release A** below):* `e(b)` holds the rotated loadings, the factor
     correlations (under sem's `/cov(F,G)` names) and the thresholds; **no `e(V)`**, so `test` and
     `lincom` cannot run on an arbitrary basis. `e(Lambda)` and `e(Phi)` as matrices; the eight
     `rot_*` scalars; `e(efa)`, `e(rotation)`. T3, df and the scaled fit indices are reported as
@@ -3719,10 +3837,175 @@ release (decided 2026-09-26):
   - *No converged rotation start (2026-10-29, user):* rc 3498, nothing posted, and the reason in
     the command's terms: whether the unrotated fit converged and is admissible, and that this
     usually means more factors than the data support (seen on Case E at $m=3$, where lavaan's own
-    fit is degenerate).
+    fit is degenerate). On this path only, and after the Module 11 cleanup, `dwlsmv` sets a Mata
+    external real scalar `dwlsmv_rotfail` (value 1) before exiting; every estimation call (not a
+    replay) drops it on entry. It is the documented signal `efacompare` reads to tell this rc 3498
+    from the other rc 3498 exits (Stage 1, rank, inference, internal), none of which sets it (owner
+    2026-11-18, option A). The rc and the "nothing posted" rule are unchanged.
 
   No `group()`/`invariance()`/`difftest` with EFA in 0.3.0.
-- **v3:** ESEM (rotated SEs, EFA blocks inside SEM, target rotation, multiple groups).
+- **Release A (2026-11-16 plan): rotated-EFA standard errors.** Conventions decided at unit A3
+  (owner, 2026-11-17, every item as recommended in E-109 (the decision package));
+  derivation `@sec-rot-se`; probes E-109 (probe finding). **Decided, not built**:
+  until release A's build (A4, A5) lands, 0.3.0's *Posted results* above hold as written. From
+  that build on, they supersede 0.3.0's "rotated SEs suppressed" and "no `e(V)`".
+  - *Scope of the claim (A3.1).* Rotated loadings and factor correlations carry SEs and `e(V)`.
+    The help, output and README state one caveat that covers all of them, not only loadings near
+    zero: the covariance is a local first-order approximation, its accuracy depends on a
+    loading's distance from zero relative to $\sqrt\varepsilon$ and on N, and the calibration of
+    its intervals is not established and is under test (unit A6). There is no per-loading flag,
+    indicator or cutoff. Thresholds and rotation-invariant quantities (T3, fit indices) are
+    exempt (RS5(a),(b)). Unit A6 is designed, under `docs/prereg-template.md` §3a, to test
+    RS6(iii)'s candidate indicators against coverage; any narrowing of the claim afterwards is
+    A6's gate.
+  - *Diagnostic (A3.2).* SEs are withheld only on the §4.8 rank cut ($\sigma_{\min}/\sigma_{\max}
+    < 10^{-8}$) applied to $W^{1/2}\Delta^*Z$ (RS6(i)). The bordered system's condition number
+    is stored as an `e()` scalar with no note and no cutoff: conditioning does not indicate
+    calibration.
+  - *Several minima (A3.3).* `e(V)` is posted. The existing distinct-minima note adds that the
+    SEs are conditional on the selected minimum and differ between minima. No refusal.
+  - *Bad unrotated fit or singular bread (A3.4).* The rotated `e(b)` is posted with no `e(V)`;
+    the header says, in error colour, that no SEs are reported and why. This follows the
+    2026-11-14 rule for a non-converged conditional fit, not the rc 3498 of *No converged
+    rotation start*, which is unchanged. When the unrotated fit did not converge, T3, p and the
+    fit indices are withheld too (Module 11, *Non-convergence is an inference boundary*,
+    2026-11-18).
+  - *What is posted (A3.5).* The full rotated covariance over every rotated `e(b)` column,
+    singular by construction (rank $n_u$ at order $n^* = n_u + m(m-1)$, RS2.1), not regularised.
+    The help states that tests and intervals for linear combinations in the orbit tangent
+    (RS2.1's range $G_T$, which mix loadings and the factor correlations) are not interpretable,
+    and that Stata's handling of them depends on the sign of a rounding residue, so differs by
+    machine (dropped on one, reported as decisive on another; A2b). Tests of `test` and
+    `lincom` on a rotated fit assert ordinary combinations only.
+  - *Output (A3.6, revised 2026-11-17 by the owner; the first version was SE, z, p and interval
+    columns for every rotated estimate).* By default an `efa()` fit prints the rotated loadings
+    and the factor correlations as matrices, with no standard errors, no intervals and no
+    threshold rows, and one line saying that `e(V)` is posted (so that `lincom` and `test` can
+    use it). Option `se` adds the standard-error matrices. Option `ci` prints a bracketed Wald
+    interval, $\hat\theta \pm z_{1-\alpha/2}\,\widehat{\mathrm{se}}$ at `level()`, beside each
+    loading and, in the strict lower triangle, each factor correlation, in one table when the $m$
+    columns fit the line and otherwise as a long table grouped by factor. The factor
+    correlation's Wald interval is printed as computed, not clipped to $[-1, 1]$, and a note says
+    so when one crosses $\pm1$; a transformed (Fisher $z$) interval is a later derivation item.
+    `se` and `ci` each print the A3.1 caveat and, when several minima were found, the
+    selected-minimum note. Both are refused (rc 198) on a fit without `efa()`, whose coefficient
+    table already carries standard errors and intervals. With no `e(V)` (A3.2, A3.4) they print
+    nothing extra and a line says why. Wording is drafted at A7 for the owner. The option names
+    were checked against `sem`'s display options (Stata 18, `sem_parse_display.ado`): no collision.
+  - *Ties in column order (A3.7, revisited 2026-11-18, owner).* N1 is replaced by the complete
+    order above (keys 1–4), with a tie note. The revisit was triggered by the A4 near-tie fixture.
+    At an exact key-1 tie, dwlsmv's order under N1 depended on the processor count. RS5(c): the
+    covariance permutes with the order, so the rule changes labels and order only.
+  - *Effort (A3.8).* The full §3a treatment for the numerical component (R, J, the delta-method
+    covariance and the bordered oracle); calibration is a separate layer (A6).
+  - *Tolerances (A3.9).* The §7.2 rows hold unchanged; §7.2 records the tier-3 extension.
+    §7.2.1 is not extended now (see its *Scope*).
+  - *Comparator (A3.10).* Every lavaan rotated-SE fixture sets `std_ov = FALSE`. This is a
+    comparator setting recorded in the generator, the MANIFEST and the development record, not a
+    dwlsmv convention.
+  - *Refusals (A3.11).* `standardized` (rc 198) and `difftest` (rc 3498) stay refused on an EFA
+    result.
+  - *Formula (A3.13).* Production computes $J\,\mathrm{ACOV}_u\,J^\top$ (RS7 route 3) from the
+    minimum snapshot of 2026-11-16, which therefore need not hold Γ or W. The bordered form
+    (route 1, `dwlsmv_delta_cols()` on fixed rows; no locked-boundary change, A2b) is the test
+    oracle, and R's oracle is the complex step (RS3(i)).
+  - *`e(rank)` (A3.14).* $n_u$: the free-parameter count of the fitted echelon model, which is
+    also the rank of the posted `e(V)`. The D5 contract below holds with "free parameters" read
+    as those of the fitted model.
+  - *Evaluation point (A3.15).* The selected GPA stall point, with no Newton polish (SEs differ
+    from polished ones by at most $1.1\times10^{-7}$ relative on Cases E, F, G).
+  - *Threshold rows (owner 2026-11-17).* The threshold rows of `e(b)` are hidden in
+    `dwlsmv`'s coefficient table by default and shown by default only when `invariance()` constrains
+    them across groups (`thresholds`, `metric`, `scalar`; not `configural`). Option `thresholds`
+    shows them and `nothresholds` hides them, each overriding either default; both together are
+    refused (rc 198). This applies to every coefficient table the command prints: the ordinary
+    table, the standardized table, the last-iterate table of a fit that did not converge, and
+    the `efa()` fit (where `thresholds` adds a threshold table after the matrices; an `efa()`
+    fit never has `invariance()`). A one-line note says when rows are hidden, except on `efa()`
+    output, which prints no such note (owner veto, 2026-11-18). In the compact table of D8e the
+    thresholds are the last section, one block per item. The
+    change is display only: `e(b)`, `e(V)`, `e(Cns)` and the order of §4.2 (thresholds first) are
+    unchanged, and the replay `dwlsmv [, ...]` takes the same options. A threshold row is one whose
+    `e(b)` equation starts with `/` and is not `/` alone (`/y1:cut1`; at $G>1$
+    `/y1:1bn.g#c.cut1`). This is a small change to D8e's table, agreed with the option design.
+  - *Eigenvalues of the sample correlation matrix (owner 2026-11-17).* An `efa()` fit posts
+    `e(Ev)`, a $1\times p$ row vector (columns `Ev1`..`Evp`) of the eigenvalues, descending, of the
+    sample polychoric/tetrachoric correlation matrix $\hat R$ that Stage 1 estimated (unit
+    diagonal; entries from $\hat s$; the one-empty-cell repair and `keepbound` pairs as Stage 1 has
+    them). They sum to $p$ and are not clipped: $\hat R$ is pairwise and can be indefinite.
+    `e(properties)` is `b V eigen` (`b eigen` with no `e(V)`), which is what Stata's `screeplot`
+    checks (`has_eprop(eigen)`) before reading `e(Ev)`. Not printed. It is posted for `efa()` fits
+    only: the number of factors is the question an exploratory fit leaves open; at $G>1$ there is
+    no single matrix, and with a covariate the correlations are conditional, so neither has an
+    unconditional $\hat R$ in the sense the screeplot uses. It is a descriptive input to a
+    judgment, not a test; parallel analysis is held. Fit by $m$ is `efacompare` (next bullet).
+- **`efacompare`: the fit and over-extraction diagnostics by number of factors (owner 2026-11-17 and
+  2026-11-18; ships in 0.5.0 in its own change after the rotated-SE release; built as `dwlsmv_nf`
+  and renamed before publication, owner 2026-11-18).** A separate command,
+  `efacompare varlist [if] [in] [, maxfactors(#) epsilon(#) rstarts(#) keepbound]`. It fits the
+  one-block `efa()` model of this module with $m=1,2,\dots$ factors, one `dwlsmv` call per $m$, and
+  shows one row per $m$. It gives no verdict, no cutoff, no marked row and no difference test between
+  $m$; parallel analysis is not provided. Choosing the number of factors stays with the user.
+  - *One way to fit.* Each row is the result of the standalone call
+    `dwlsmv (F1..Fm -> varlist) if touse, efa(F1..Fm) [epsilon() rstarts() keepbound]`, with the
+    factors named `F1`..`Fm`, so a row equals the standalone fit on the same sample. Stage 1 is
+    recomputed at every $m$ (no reuse; owner call 1). The sample is marked once over the items, `if`
+    and `in`; an empty sample is rc 2000. The caller's `e()` is held and restored on every exit, and
+    nothing is left in `e()`. `dwlsmv` never clears `e()` on entry, so `efacompare` runs `ereturn clear`
+    before each call and decides a row from the return code, never from `e()` alone.
+  - *Syntax and refusals (rc 198, before anything is fitted).* At least 4 items, because
+    $\mathrm{df}(p,1)\ge1$ needs $p\ge4$; an item named `F` followed by digits; a duplicated or
+    non-numeric item; `maxfactors()` below 1 or above the range's cap; a malformed `epsilon()` or
+    `rstarts()`. `group()`, `invariance()`, `metric()`, `standardized`, covariates and the display
+    options of one fit are not in the syntax (Stata's rc 198). `epsilon()` and `rstarts()` pass
+    through to every fit, empty by default, so each row has what the standalone default would use,
+    including the $m$-dependent default $\varepsilon$ of this module (1e-4 at $m=2$, 1e-3 at $m=3$,
+    1e-2 at $m\ge4$); the table says so when it applies.
+  - *Degrees of freedom and the range.* With thresholds saturated,
+    $\mathrm{df}(p,m)=p(p-1)/2-\bigl(pm-m(m-1)/2\bigr)$: the polychoric correlations less the free
+    loadings, $pm$ less the $m(m-1)/2$ fixed at 0 by the echelon form. This is the quantity
+    `dwlsmv_m11_efa_canon` refuses when negative, and it equals the posted `e(df_T3)`. By default the
+    rows are $m=1,\dots,m^*$, where $m^*$ is the largest $m$ with $\mathrm{df}\ge1$, found by
+    stepping $m$ up (no closed-form root). `maxfactors(#)` may reach the one $m$ with $\mathrm{df}=0$
+    (shown with a note) and is refused above the largest $m$ with $\mathrm{df}\ge0$, naming it.
+    For $p=9$ the default ends at $m=5$ ($\mathrm{df}=1$) and there is no $\mathrm{df}=0$ row.
+  - *Columns, and where each comes from.* `m`; `df`: `e(df_T3)`; `status`: below; `conv`:
+    `e(converged)`; `T3`, `p`: `e(T3)`, `e(p_T3)`; `RMSEA`, `CFI`, `TLI`: `e(rmsea_s)`, `e(cfi_s)`,
+    `e(tli_s)`; `minima`, `gap`: `e(rot_minima)`, `e(rot_gap)`; `lam3`: for each factor the
+    third-largest absolute loading in `e(Lambda)`, the minimum over the factors; `phimax`: the largest
+    absolute off-diagonal of `e(Phi)` (missing at $m=1$); `comm1`: 1 if `e(rot_nose)` is
+    `inadmissible` (an indicator's communality exceeds 1 at the unrotated fit), else 0; `ev_m`: the
+    $m$-th element of `e(Ev)`. A quantity that does not exist is missing.
+  - *Row statuses and the return-code mapping.* Decided from the return code `rc` of the `dwlsmv`
+    call, in this order. (1) `rc` 0 and `e(converged)` 1: status 1, the full row. (2) `rc` 0 and
+    `e(converged)` 0: status 2, `conv` 0, and every fit and rotated column missing (Module 11,
+    *Non-convergence is an inference boundary*: the rotated quantities are posted at the last iterate
+    but are diagnostics of a non-solution; owner call 3). (3) `rc` 3498, $m\ge2$ and the rotation-
+    failure mark set: status 3, only `m` and `df` set, `conv` missing; the command continues (owner
+    call 4). (4) any other `rc`, and any `rc` at $m=1$ (where geomin returns at once and cannot fail
+    to rotate): the command stops with that `rc`, after one line naming $m$ and the standalone command
+    that shows `dwlsmv`'s own message. A Stage 1 refusal, a $\Delta$ rank or ACOV refusal, and an
+    internal error all exit 3498 and are therefore stopped, never shown as a blank row (owner
+    2026-11-18, option A over B and C). A status 2 or 3 row is a boundary of inference, not an error;
+    it is footnoted.
+  - *Stored results.* `r(table)` (rows `m1`, `m2`, ..., columns as above plus `status`, in the order
+    `m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m`), `r(Ev)` (1 x $p$, from
+    the first fit that returned rc 0; it depends on Stage 1 only, so it is the same at every $m$),
+    `r(N)`, `r(p)`, `r(maxfactors)` (the largest $m$ shown). Nothing in `e()` but the caller's.
+  - *Display.* Two blocks within 80 columns (fit; rotated diagnostics with `ev_m`), a header with $N$,
+    $p$ and the items, and footnotes only when they apply: rows not converged, rows whose rotation
+    failed, $\mathrm{df}=0$ rows, the $m$-dependent default $\varepsilon$ (unless `epsilon()` is
+    given), and that rotated quantities are conditional on the selected minimum. No stars, no best-$m$
+    mark.
+  - *Validation and what is not certified.* The deciding check is equality with the standalone fit
+    for each case and $m$, exact (`tests/unit/test_efacompare.do`). It includes the real non-converged
+    fit of Case F at $N=5000$, $m=4$, the rotation failure of Case E at $m=3$, and the sequence
+    success, non-converged, rotation failure, success. Case F at $m=5$ is not used as a fixed
+    status, because it is a rotation failure at 6 processors and a non-converged fit at 4. Not certified: that any column identifies the number of
+    factors; that the usual RMSEA and CFI cutoffs mean anything for WLSMV EFA; the multiple-group
+    non-convergence path (G > 1 is not supported).
+- **Later:** EFA blocks inside SEM (release C), then target rotation and multiple groups
+  (formerly grouped as "v3").
 
   **Architecture principles for the full multiple-group module (direction only; recorded
   2026-10-10, user).** These set direction. They reopen nothing decided for 0.3.0: O2, O3 and O4
@@ -3816,7 +4099,8 @@ release (decided 2026-09-26):
 
 The order follows feasibility, not preference: ESEM is the more wanted of the two, but it needs a
 rotation module and an SE layer through the rotation, while multiple groups reuse Stage 1
-unchanged.
+unchanged. (The order of the ESEM work itself is now releases A, B, C of the owner's plan of
+2026-11-16; see Section 3 and the ESEM entry below.)
 - **Continuous/mixed indicators (v2):** extend Section 4.2's index map with variance/covariance
   `stat_type` entries for continuous variables, extend Module 2 to polyserial/Pearson estimation,
   extend Module 4's sub-phase 4c (mixed continuous/ordinal), and give Section 4.3's scale
@@ -4282,7 +4566,7 @@ $$M_1 = \big(P_1 - P_1 H (H'P_1H)^{-1} H' P_1\big)\, V_1$$
   measurement invariance, must be derived and checked against the literature and against lavaan's
   `group.equal` behaviour before any code. This extension and DIFFTEST are what make invariance
   testing usable, so they should ship together.
-- **ESEM (v3):** an unrotated starting-value CFA (all indicators loading on all factors, reusing
+- **ESEM (release C of the 2026-11-16 plan, formerly "v3"):** an unrotated starting-value CFA (all indicators loading on all factors, reusing
   Module 3's free/fixed table with cross-loadings freed), a rotation module (geomin default,
   target rotation per Asparouhov & Muthén 2009), and a delta-method SE propagation layer (Jennrich's
   approach) reusing the same Δ/Γ machinery from Modules 4 and 8.
@@ -4771,6 +5055,17 @@ construction.
   handles that.
 - **Mplus keeps the old row.** Its θ̂ differs from lavaan's by about $10^{-5}$, a cross-tool
   difference that is not ours to close.
+- **Rotated EFA (release A; owner, 2026-11-17, A3.9).** Rotated SEs against lavaan use the SE row
+  unchanged ($10^{-8}$, $10^{-5}$), with lavaan's rotation and Jacobian settings fixed tight in
+  the fixtures (set and recorded at unit A4). Covariance elements of the rotated `e(V)` use
+  §7.2.1's element form $10^{-8} + 10^{-5}\sqrt{V_{ii}V_{jj}}$ as a tolerance in its own right,
+  not as an attribution. Tier 3 (Mplus) applies the existing tier-3 row ($\approx10^{-4}$,
+  $10^{-3}$) to rotated estimates, SEs and covariances. **Chosen after measuring:** the
+  exploratory Mplus probe had already measured rotated estimates 2.0e-4 from lavaan's on Case E
+  (E-109, Mplus probe), so for rotated estimates the row is adopted
+  after that figure, and a result outside it is reported as a miss, not absorbed. A miss
+  against lavaan is reported as a miss; an extension of §7.2.1 to a rotation's stopping point is
+  then written, with its element-by-element prediction, before it is used.
 
 Loosen a given tier only when the competing implementations are known to use genuinely different
 numerical approximations at that step, documented explicitly rather than loosened silently to make
@@ -4807,6 +5102,9 @@ our better minimum.
   statistics (their own Newton-step rule); $T_{\text{raw}}$ (its propagated bound); tier-3 (Mplus)
   comparisons; population, Monte Carlo or sampling comparisons; anything compared at matched inputs,
   where agreement is expected to machine precision.
+- *Not extended to rotation (owner, 2026-11-17, A3.9).* Rotated SEs reach `e(V)` through RS7's
+  routes, not `dwls_inference()`, so this rule does not cover a rotation's stopping point. It is
+  extended only if a release A comparison misses, and then with its prediction written first.
 - *Existing instances stand as written.* `test_fit_groups_beta.do` check 4 (for $a$, $b$) keeps its
   own constants, which are at least as strict as the general ones below.
 

@@ -1,0 +1,132 @@
+A2BVENV stata_version 16.1 processors 4
+A2BV build n 25 seeded 20261117; every row of V nonzero (min row abs sum  2.88e-02)
+A2BV build eig min -1.74883e-18 max  3.28930e-02; rank() 23; singular values above 1e-8 relative 23 (expect 23)
+A2BV build smallest 4 singular values  1.32010e-19  1.03797e-18  8.50305e-06  2.76971e-05
+A2BV build max|K'V|  2.16e-17 (null basis K, 25 x 2); max|V-V'| 0
+A2BVNAMES 25 coefficients:  y1:F1 y2:F1 y3:F1 y4:F1 y5:F1 y6:F1 y1:F2 y2:F2 y3:F2 y4:F2 y5:F2 y6:F2 /:cov(F1,F2) /y1:cut1 /y1:cut2 /y2:cut1 /y2:cut2 /y3:cut1 /y3:cut2 /y4:cut1 /y4:cut2 /y5:cut1 /y5:cu
+==== variant a
+A2BV a post rc 0
+A2BV a e_rank . e_N 100 e_df_r .
+A2BV a ereturn_display rc 0
+A2BV a table cols 25 missing_se 0 missing_z 0 missing_p 0 missing_ll 0 missing_ul 0
+A2BV a table se_first3 .09636015 .09830876 .08391247 se_cov .0922757 se_cut1 .09402047
+A2BV a _b[y1:F1] .21687229 _se[y1:F1] .09636015
+A2BV a _b[y4:F2] .74457586 _se[y4:F2] .07568939
+A2BV a _b[/cov(F1,F2)] .3 _se[/cov(F1,F2)] .0922757
+A2BV a _b[/y1:cut1] -.45 _se[/y1:cut1] .09402047
+A2BV a test_single rc 0 chi2 5.0653935 df 1 p .02440816 drop 0 F . est . se . z .
+A2BV a test_F1_loadings rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 0 F . est . se . z .
+       Constraint 1 dropped
+A2BV a test_null1_exact rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV a test_null1_shift rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV a test_null1_null2 rc 0 chi2 5.057e-13 df 1 p .99999943 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV a test_ord_plus_null1 rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV a test_ord_plus_null1_shift rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV a test_ord_plus_both rc 0 chi2 5.0653935 df 2 p .07944449 drop 1 F . est . se . z .
+       Constraint 7 dropped
+A2BV a test_F1_plus_null1 rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 1 F . est . se . z .
+A2BV a lincom_ord rc 0 chi2 . df . p .00040977 drop . F . est -.46792587 se .13241767 z -3.5337116
+A2BV a lincom_null1 rc 0 chi2 . df . p . drop . F . est -2.220e-15 se . z .
+A2BV a lincom_null1_shift rc 0 chi2 . df . p . drop . F . est .1 se . z .
+A2BV a lincom_null1_alone rc 0 chi2 . df . p . drop . F . est 2.3025392 se . z .
+A2BV a estimates_store rc 0
+A2BV a estimates_restore rc 0 e_rank . e_cmd a2bvprobe
+A2BV a ereturn_display_after_restore rc 0
+==== variant b
+A2BV b post rc 0
+A2BV b e_rank 23 e_N 100 e_df_r .
+A2BV b ereturn_display rc 0
+A2BV b table cols 25 missing_se 0 missing_z 0 missing_p 0 missing_ll 0 missing_ul 0
+A2BV b table se_first3 .09636015 .09830876 .08391247 se_cov .0922757 se_cut1 .09402047
+A2BV b _b[y1:F1] .21687229 _se[y1:F1] .09636015
+A2BV b _b[y4:F2] .74457586 _se[y4:F2] .07568939
+A2BV b _b[/cov(F1,F2)] .3 _se[/cov(F1,F2)] .0922757
+A2BV b _b[/y1:cut1] -.45 _se[/y1:cut1] .09402047
+A2BV b test_single rc 0 chi2 5.0653935 df 1 p .02440816 drop 0 F . est . se . z .
+A2BV b test_F1_loadings rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 0 F . est . se . z .
+       Constraint 1 dropped
+A2BV b test_null1_exact rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV b test_null1_shift rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV b test_null1_null2 rc 0 chi2 5.057e-13 df 1 p .99999943 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV b test_ord_plus_null1 rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV b test_ord_plus_null1_shift rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV b test_ord_plus_both rc 0 chi2 5.0653935 df 2 p .07944449 drop 1 F . est . se . z .
+       Constraint 7 dropped
+A2BV b test_F1_plus_null1 rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 1 F . est . se . z .
+A2BV b lincom_ord rc 0 chi2 . df . p .00040977 drop . F . est -.46792587 se .13241767 z -3.5337116
+A2BV b lincom_null1 rc 0 chi2 . df . p . drop . F . est -2.220e-15 se . z .
+A2BV b lincom_null1_shift rc 0 chi2 . df . p . drop . F . est .1 se . z .
+A2BV b lincom_null1_alone rc 0 chi2 . df . p . drop . F . est 2.3025392 se . z .
+A2BV b estimates_store rc 0
+A2BV b estimates_restore rc 0 e_rank 23 e_cmd a2bvprobe
+A2BV b ereturn_display_after_restore rc 0
+==== variant c
+A2BV c post rc 0
+A2BV c e_rank 25 e_N 100 e_df_r .
+A2BV c ereturn_display rc 0
+A2BV c table cols 25 missing_se 0 missing_z 0 missing_p 0 missing_ll 0 missing_ul 0
+A2BV c table se_first3 .09636015 .09830876 .08391247 se_cov .0922757 se_cut1 .09402047
+A2BV c _b[y1:F1] .21687229 _se[y1:F1] .09636015
+A2BV c _b[y4:F2] .74457586 _se[y4:F2] .07568939
+A2BV c _b[/cov(F1,F2)] .3 _se[/cov(F1,F2)] .0922757
+A2BV c _b[/y1:cut1] -.45 _se[/y1:cut1] .09402047
+A2BV c test_single rc 0 chi2 5.0653935 df 1 p .02440816 drop 0 F . est . se . z .
+A2BV c test_F1_loadings rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 0 F . est . se . z .
+       Constraint 1 dropped
+A2BV c test_null1_exact rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV c test_null1_shift rc 0 chi2 . df 0 p . drop 1 F . est . se . z .
+       Constraint 1 dropped
+A2BV c test_null1_null2 rc 0 chi2 5.057e-13 df 1 p .99999943 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV c test_ord_plus_null1 rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV c test_ord_plus_null1_shift rc 0 chi2 5.0653935 df 1 p .02440816 drop 1 F . est . se . z .
+       Constraint 2 dropped
+A2BV c test_ord_plus_both rc 0 chi2 5.0653935 df 2 p .07944449 drop 1 F . est . se . z .
+       Constraint 7 dropped
+A2BV c test_F1_plus_null1 rc 0 chi2 260.77421 df 6 p 2.040e-53 drop 1 F . est . se . z .
+A2BV c lincom_ord rc 0 chi2 . df . p .00040977 drop . F . est -.46792587 se .13241767 z -3.5337116
+A2BV c lincom_null1 rc 0 chi2 . df . p . drop . F . est -2.220e-15 se . z .
+A2BV c lincom_null1_shift rc 0 chi2 . df . p . drop . F . est .1 se . z .
+A2BV c lincom_null1_alone rc 0 chi2 . df . p . drop . F . est 2.3025392 se . z .
+A2BV c estimates_store rc 0
+A2BV c estimates_restore rc 0 e_rank 25 e_cmd a2bvprobe
+A2BV c ereturn_display_after_restore rc 0
+==== variant d
+A2BV d post rc 0
+A2BV d e_rank . e_N 100 e_df_r .
+A2BV d ereturn_display rc 0
+A2BV d table cols 25 missing_se 0 missing_z 0 missing_p 0 missing_ll 0 missing_ul 0
+A2BV d table se_first3 .10141636 .10326961 .08967331 se_cov .09754386 se_cut1 .09919601
+A2BV d _b[y1:F1] .21687229 _se[y1:F1] .10141636
+A2BV d _b[y4:F2] .74457586 _se[y4:F2] .08202978
+A2BV d _b[/cov(F1,F2)] .3 _se[/cov(F1,F2)] .09754386
+A2BV d _b[/y1:cut1] -.45 _se[/y1:cut1] .09919601
+A2BV d test_single rc 0 chi2 4.5729038 df 1 p .03248146 drop 0 F . est . se . z .
+A2BV d test_F1_loadings rc 0 chi2 210.69728 df 6 p 1.000e-42 drop 0 F . est . se . z .
+A2BV d test_null1_exact rc 0 chi2 1.821e-28 df 1 p 1 drop 0 F . est . se . z .
+A2BV d test_null1_shift rc 0 chi2 .36930992 df 1 p .54338066 drop 0 F . est . se . z .
+A2BV d test_null1_null2 rc 0 chi2 4.424e-28 df 2 p 1 drop 0 F . est . se . z .
+A2BV d test_ord_plus_null1 rc 0 chi2 4.5908548 df 2 p .10071834 drop 0 F . est . se . z .
+A2BV d test_ord_plus_null1_shift rc 0 chi2 4.7984519 df 2 p .0907882 drop 0 F . est . se . z .
+A2BV d test_ord_plus_both rc 0 chi2 4.614531 df 3 p .20229908 drop 0 F . est . se . z .
+A2BV d test_F1_plus_null1 rc 0 chi2 210.82575 df 7 p 5.831e-42 drop 0 F . est . se . z .
+A2BV d lincom_ord rc 0 chi2 . df . p .00081417 drop . F . est -.46792587 se .13976566 z -3.3479316
+A2BV d lincom_null1 rc 0 chi2 . df . p 1 drop . F . est -2.220e-15 se .16455251 z -1.349e-14
+A2BV d lincom_null1_shift rc 0 chi2 . df . p .54338066 drop . F . est .1 se .16455251 z .60770875
+A2BV d lincom_null1_alone rc 0 chi2 . df . p 1.726e-44 drop . F . est 2.3025392 se .16455251 z 13.992732
+A2BV d estimates_store rc 0
+A2BV d estimates_restore rc 0 e_rank . e_cmd a2bvprobe
+A2BV d ereturn_display_after_restore rc 0
+A2BV done
