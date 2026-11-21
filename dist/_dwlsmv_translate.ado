@@ -1,4 +1,4 @@
-*! version 0.5.0  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
+*! version 0.6.0  dwlsmv -- Module 11: sem's reading of the model, as the canonical form
 *!
 *! Internal; called by dwlsmv.ado. Spec Module 11 D1, D2, D9.
 *!
@@ -14,7 +14,11 @@
 *! variables (N = 200, one factor, asserted benign), so the canonical form
 *! cannot depend on the user's data. Under metric(unitvariance) a forcenoanchor
 *! pass first finds the factors the user did not normalise, and the model is
-*! run again with var(F@1) / var(e.F@1) injected for them (D2). The user's
+*! run again with var(F@1) / var(e.F@1) injected for them (D2). Under
+*! metric(marker) the ordinary pass is read first, and only a factor with no
+*! observed indicator and a path out of it (a second-order factor) that the user
+*! did not normalise gets var(G@1) injected (release B, B3.2); sem then runs
+*! again and one Note line says so. The user's
 *! data, sort order, RNG state and estimation results are restored on every
 *! exit, error or not. sem's refusals reach the user as sem's message and rc.
 *!
@@ -23,6 +27,8 @@
 *!   r(ind)       the indicators in e(oyvars) order (D9)
 *!   r(semnames)  sem's structural stripe, eq:name, for D6's check
 *!   r(injected)  what D2 injected, if anything
+*!   r(sofac)     the factors with no observed indicator and a path out of them
+*!                (second-order factors, release B), or empty
 *!   r(cov)       the observed exogenous variable (the binary covariate of a conditional
 *!                fit), or empty; the canonical text then carries a covariate line
 *!
@@ -89,6 +95,8 @@ program _dwlsmv_translate, rclass
         drop `f'
         mata: dwlsmv_benign(tokens(st_local("obs")))
         local inj
+        local soinj
+        local sofac
         if `G' {
             * multiple groups, invariance() only (decided 2026-10-12): sem's
             * group grammar with ginvariant(none) (spec principle 4); every
@@ -109,8 +117,19 @@ program _dwlsmv_translate, rclass
                 quietly sem `paths', `semopts' forcenoanchor noestimate
                 mata: st_local("inj", dwlsmv_inject(dwlsmv_translate(0)))
             }
-            quietly sem `paths', `semopts' `inj' noestimate
+            else {
+                * release B (B3.2): a factor with no observed indicator is scaled
+                * by its variance. The ordinary pass is read first; sem runs again
+                * only when something is injected
+                quietly sem `paths', `semopts' noestimate
+                mata: st_local("inj", dwlsmv_inject_so(dwlsmv_translate(0)))
+                local soinj `inj'
+            }
+            if "`metric'" == "unitvariance" | `"`inj'"' != "" {
+                quietly sem `paths', `semopts' `inj' noestimate
+            }
             mata: st_local("canon", invtokens(dwlsmv_translate(1)', ";"))
+            mata: st_local("sofac", invtokens(dwlsmv_tr_sofac_t(st_local("canon"))))
             local cov `e(oxvars)'
             mata: st_local("semnames", invtokens(dwlsmv_semnames()'))
             local ind `e(oyvars)'
@@ -120,10 +139,27 @@ program _dwlsmv_translate, rclass
     restore
     set rngstate `rng'
     if `rc' exit `rc'
+    * B3.2's line, only after a successful translation that injected var(G@1)
+    if `"`soinj'"' != "" {
+        local sonames
+        foreach t of local soinj {
+            local t : subinstr local t "var(e." "", all
+            local t : subinstr local t "var(" "", all
+            local t : subinstr local t "@1)" "", all
+            local sonames `sonames' `t'
+        }
+        if `: word count `sonames'' == 1 {
+            display as text `"Note: `sonames' has no observed indicator and is scaled by its variance, `soinj'; sem's default fixes the path to its first child at 1 instead. Standardized estimates are the same."'
+        }
+        else {
+            display as text `"Note: `sonames' have no observed indicator and are scaled by their variances, `soinj'; sem's default fixes each factor's path to its first child at 1 instead. Standardized estimates are the same."'
+        }
+    }
 
     return local canon    `"`canon'"'
     return local ind      `"`ind'"'
     return local semnames `"`semnames'"'
     return local injected `"`inj'"'
     return local cov      `"`cov'"'
+    return local sofac    `"`sofac'"'
 end

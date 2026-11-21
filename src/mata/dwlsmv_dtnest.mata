@@ -37,6 +37,12 @@
 *! deferred gate. Executed 2026-10-12: tests/unit/test_dtnest_groups.do green;
 *! mutants listed in its header.
 *!
+*! B3.9 (release B, unit B5): after the beta guard, a pair in which exactly one
+*! table has a second-order factor (a beta row out of a factor with no lambda
+*! row, each free or fixed nonzero; dwlsmv_dtn_so) is refused, rc 3498, with
+*! its own message. Before, rule 0 refused the correlated-factor parent by
+*! accident ("differ by name"). tests/unit/test_dtnest_so.do.
+*!
 *! THE RULE. Rows are identified by (ptype, grp, row, col) (spec 4.8 G6; an
 *! empty or missing grp reads 1). A row ABSENT from a table counts as fixed at
 *! its type's absent-row default (spec 4.8 G4: omega 1, every other type 0).
@@ -151,6 +157,39 @@ real scalar dwlsmv_dtn_mgbeta(struct dwlsmv_parmap scalar par)
     return(mg & hasb)
 }
 
+// 1 if the table has a second-order factor (release B): a factor with a beta row
+// out of it (col = from) that is free or fixed nonzero, and no lambda row on it
+// (col = factor) that is free or fixed nonzero, in the same group.
+real scalar dwlsmv_dtn_so(struct dwlsmv_parmap scalar par)
+{
+    real scalar i, j, f, g, hasl
+
+    for (i = 1; i <= par.nall; i++) {
+        if (par.ptype[i] == 3) {
+            if (par.free[i] | par.value[i] != 0) {
+                f = par.col[i]
+                g = dwlsmv_dtn_grp(par, i)
+                hasl = 0
+                for (j = 1; j <= par.nall; j++) {
+                    if (par.ptype[j] == 1) {
+                        if (par.col[j] == f) {
+                            if (dwlsmv_dtn_grp(par, j) == g) {
+                                if (par.free[j] | par.value[j] != 0) {
+                                    hasl = 1
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!hasl) {
+                    return(1)
+                }
+            }
+        }
+    }
+    return(0)
+}
+
 real scalar dwlsmv_dtnest(struct dwlsmv_parmap scalar par0,
                           struct dwlsmv_parmap scalar par1,
                           real scalar df0, real scalar df1,
@@ -193,6 +232,21 @@ real scalar dwlsmv_dtnest(struct dwlsmv_parmap scalar par0,
                   name0, name1)
         errprintf("not available in this version: its validation was not met (spec 4.8 O2). Compare\n")
         errprintf("untied slopes with a Wald test on e(b) and e(V) instead.\n")
+        exit(3498)
+    }
+
+    // B3.9 (owner, release B): DIFFTEST between a model with a second-order factor
+    // and one without (its correlated-factor parent, or any other structure) is
+    // refused until that comparison's nesting, identification and reference
+    // distribution are established. A pair of second-order models goes on to the
+    // rules below, as any pair.
+    if (dwlsmv_dtn_so(par0) != dwlsmv_dtn_so(par1)) {
+        errprintf("dwlsmv check 8 (%s in %s): one model has a second-order factor\n",
+                  name0, name1)
+        errprintf("and the other does not. DIFFTEST across these structures (for example\n")
+        errprintf("a second-order model against its correlated-factor parent) is not\n")
+        errprintf("available in this version; it is planned once its reference\n")
+        errprintf("distribution is established (spec Module 12, B3.9).\n")
         exit(3498)
     }
 

@@ -964,7 +964,15 @@ with $\psi_{21}$ free lose two at $\psi_{21} = 0$ whatever the loadings. The rul
   deterministic (no random-number state); the scale and sequence were chosen without measuring.
   Perturbing loadings alone does not suffice (the two-by-two model stays deficient by two).
 - Abort only if $\theta^{(2)}$ is also deficient, with the same criterion, and report the null
-  directions from $\theta^{(0)}$, which name the offending parameters cleanly. A model that passes
+  directions from $\theta^{(2)}$ (owner, 2026-11-20, B3.13; until then $\theta^{(0)}$'s), labelled
+  a numerical diagnostic at that point: they show which free parameters trade off there and do
+  not prove the model unidentified, which needs a rank argument holding at every point. The
+  deficiency's persistence at $\theta^{(2)}$ is likewise reported as evidence, not proof.
+  $\theta^{(0)}$'s directions mislead when $B = 0$ adds deficiencies of its own (G over two,
+  `@sec-second-order` correction 6); the cost is that a direction at $\theta^{(2)}$ can be a
+  rotated form (ψ₁₂ freed with β names loadings too there), which the ψ/β line says. The
+  message is written for an applied reader (owner, 2026-11-20): plain language first, with
+  rank(Δ) at both points and the singular values on one closing "Technical detail" line. A model that passes
   only at $\theta^{(2)}$ gets no note: that describes the check, not the model.
 - **When $\theta^{(2)}$ is what passes, it becomes the optimizer's start** (`dwls_identify()` writes
   it into `par.value` for the free rows; no API or struct change). At $\theta^{(0)}$ the matrix
@@ -2588,6 +2596,20 @@ calls `dwlsmv_fit_from()` directly for its final fit, from transformed starts wi
 thresholds at s_τ (decided 2026-10-07, the user's; D11 Procedure step 4). `dwls_fit()`'s
 signature and behaviour are unchanged.
 
+**Start of an item-anchored higher-order factor (owner, 2026-11-20, option A-R).** Take a factor
+that, within a group, has a free ψ diagonal, exactly one λ row and two or more free outgoing β
+rows. Its outgoing β start at 0.7 in the optimizer's start, not at Module 3's 0. The start is
+built from `par.value` in `dwlsmv_fit_uls()` (helper `dwlsmv_hof_start()`), so it reaches ULS and
+the retry's second start and is the same for `dwlsmv_fit_noretry()`. Module 3's defaults and the
+Δ rank check are unchanged, as are `par.value` and every other start. Reason: such a factor has a
+ridge at infinity (b → 0, |ψ| → ∞ with bψ fixed) along which F stays bounded, and β = 0 points
+along it (@sec-so-hof, Result SO7). B1's MD model fitted from the old start needed 286 of ULS's 300
+iterations in Module 11's order, and failed in another (E-114). Evidence
+for this rule is SO7 and the start tests only; it is independent of the disturbance-variance band
+(gate B3b). Not covered: SO7.3(b) shows that the same ridge exists for ψ ≥ 0 when the factor's
+variance is fixed and its one item's loading is free. Every measured fit of that form converged,
+and extending the rule to it is not decided.
+
 Before accepting a fitted $\hat\theta$, run an **admissibility check**: no negative residual
 variances, implied covariance matrices positive definite, factor correlations within $[-1, 1]$,
 $(I - B)$ nonsingular, thresholds still ordered; under multiple groups (0.3.0, §4.8 O12) also
@@ -2921,7 +2943,10 @@ arrow direction), and a model ports exactly as sem reads it.
   Extending the canonical form to non-unit scale fixes (spec and Module 3 in one commit) is
   possible later work, not v1a. Rescaling in Module 11 is rejected: it would change what is
   estimated.
-- **A factor with no observed indicator is rejected by Module 11:** second-order factors are
+- **A factor with no observed indicator was rejected by Module 11** (superseded by Module 12
+  *Release B*, decided 2026-11-19, Module 11's part built 2026-11-20: a factor with no observed
+  indicator and a path out of it is a second-order factor and is translated; one with no path
+  is still refused, rc 198). The paragraph records the v1 reasoning: second-order factors were
   outside v1. Under sem's default the higher-order factor is anchored on a latent child
   (`beta F1 G fixed 1`) and has no `metric` line; with `var(G@1)` Module 3 aborts with "a factor
   has no indicators". Supporting them is a scope extension, not a normalisation, and a separate
@@ -4570,6 +4595,167 @@ $$M_1 = \big(P_1 - P_1 H (H'P_1H)^{-1} H' P_1\big)\, V_1$$
   Module 3's free/fixed table with cross-loadings freed), a rotation module (geomin default,
   target rotation per Asparouhov & Muthén 2009), and a delta-method SE propagation layer (Jennrich's
   approach) reusing the same Δ/Γ machinery from Modules 4 and 8.
+- **Release B (2026-11-16 plan): second-order factors.** Conventions decided at unit B3 (owner,
+  2026-11-19: every item as recommended in E-114 (the decision package) except
+  B3.9, which the owner revised); derivation `@sec-second-order`; probes
+  E-114 (the probe finding). **Decided, being built (B5)**: Module 3's part of
+  B3.1 is built (2026-11-20, `tests/unit/test_identify_second_order.do`); Module 11's part of
+  B3.1, B3.2 and B3.5 and the B3.9 refusal are built (2026-11-20,
+  `tests/unit/test_translate_second_order.do`, `tests/unit/test_dtnest_so.do`; "Module 11 as
+  built" below). Metric names are the derivation's (M, V, U, W).
+  - *Scale of a second-order factor (B3.1).* A factor with no observed indicator is scaled by its
+    variance, ψ_GG = 1: metric V under `metric(marker)` (first-order factors by item markers),
+    metric U under `metric(unitvariance)`. M and W are not offered. A fixed nonzero `beta` out of a
+    factor with no observed indicator is refused by Module 11 at rc 198, with a message naming
+    `var(G@1)`; this also closes D2's silent extra restriction on a user-written latent marker.
+    §4.8's metric contract is unchanged: V is already `metric marker F_k y` beside
+    `metric unitvariance G`. Module 3 lifts only its "a factor has no indicators" abort, for a
+    factor with an outgoing `beta` row and a `metric unitvariance` line. An outgoing row is free
+    or fixed at a nonzero value: a fixed zero is no path, as in §4.8's cycle check. A later
+    group's factor carries no `metric` line, so the abort stands for it (consistent with B3.5).
+    Identification is left to the Δ rank check. A curve-of-factors model
+    (fixed nonzero paths out of a factor) reopens this; the refusal can be lifted then.
+  - *Default spelling (B3.2).* Under `metric(marker)`, Module 11 injects `var(G@1)` for each factor
+    with no observed indicator before the `sem` call (D2's mechanism, extended to this case) and
+    prints one line: G is scaled by its variance; `sem`'s default fixes the path to the first child
+    at 1 instead; standardized estimates are the same. A user-written `var(G@1)` gives the same
+    text and no line.
+  - *Recovery (B3.3).* D11 eligibility extends to a factor scaled by `metric unitvariance` with no
+    λ rows, with c_G = 1 in D11's transform (U→V, `@sec-second-order` SO4.1). The trigger is
+    unchanged. When the unit-variance fit cannot reach a first fit with ψ̂_k < 0 (SO4.4), the
+    failure note says that the unit-variance route cannot represent a negative disturbance
+    variance and that the converged first fit is reported. *As built (2026-11-20):* such a factor
+    (no λ row, one ψ_ff fixed at exactly 1) is exempt from E1 and E2 and has c_G = 1; ψ_ff fixed at
+    another value, or free, on a factor with no λ row is its own ineligibility reason. On a failed
+    recovery of a second-order model whose converged first fit has a free diagonal ψ classed
+    negative by the disturbance-variance check (below its band, B3b), the note is the owner's
+    wording, naming the reason: "The marker-metric fit produced an invalid solution: F1 has a
+    negative disturbance variance. A restart from the unit-variance solution, transformed to the
+    marker metric, was attempted but failed. The first fit is retained. Its negative disturbance
+    variance cannot be represented by the unit-variance parameterization, although the first fit
+    itself converged." It then names the step that failed (D11, Failure). "variance" replaces
+    "disturbance variance" for a factor with no β or γ row into it; several are listed. Other D11
+    notes are unchanged.
+  - *Scope (B3.4).* In: one G over three or more first-order factors; two correlated G's; a
+    first-order factor outside the hierarchy that covaries with G or is regressed on G; a
+    first-order factor with two items; an item loading on G (as in 0.5.0: G is item-anchored, as
+    is any factor with an item). Refused by the existing Δ rank check (no new Module 11 rule): G
+    over two with no constraint; two uncorrelated G's; a first-order factor with one item. Out
+    and unreachable: G over two with an added constraint (a fixed path is refused above, and an
+    equality cannot be expressed); a covariance with first-order disturbances (`sem` rc 498).
+  - *Refusals (B3.5).* `group()`, `efa()` and a covariate are refused with a second-order factor
+    at rc 198.
+  - *Module 11 as built (2026-11-20).* Placements and wording filled in as mechanical (E-116):
+    - A second-order factor is one with no λ row and no `metric marker` row, and a `beta` row out
+      of it that is free or fixed nonzero (`dwlsmv_tr_sofac`). `sem` leaves a path fixed at 0
+      out of `e(b)`, so `(G -> F1@0)` is no path; G with no other path is refused ("no observed
+      indicator and no path to another factor").
+    - Under `metric(marker)` the ordinary `sem` pass is read first; `var(G@1)` (`var(e.G@1)` for
+      an endogenous G) is injected only for a second-order factor the user did not normalise, and
+      `sem` runs again only then. A first-order model costs no extra `sem` call. Under
+      `metric(unitvariance)` D2's forcenoanchor pass already gives G its `var(G@1)`.
+    - The line (B3.2), printed only after a successful translation: "Note: G has no observed
+      indicator and is scaled by its variance, var(G@1); sem's default fixes the path to its first
+      child at 1 instead. Standardized estimates are the same." Several such factors share one
+      line in the plural. A refusal prints no line.
+    - Refusals: a nonzero fixed path out of G names `var(G@1)` (under either metric, with or
+      without a user `var(G@1)`); the covariate in `dwlsmv_tr_core`'s final pass; `group()` in
+      `dwlsmv_translate_g` after each group's translation; `efa()` in `dwlsmv.ado` right after the
+      translation (`r(sofac)`), before the EFA block is built.
+    - `dwlsmv_m11_unanchored`'s remedy names `var(F@1)` for a factor with no λ line. None is
+      expected there, since every second-order factor reaches Module 3 with a metric line or is refused.
+  - *Disturbance-variance check (B3.6; the check itself decided 2026-11-16).* It covers every free
+    diagonal ψ in every model, second-order or not; a fixed ψ is not checked. A ψ̂ inside the
+    numerical band is reported as zero within numerical error (standardized loading 1), not as
+    inadmissible; below the band it is negative. It does not feed D11's trigger. It is a separate
+    routine below the locked boundary (B3.11): `dwlsmv_admissible()`'s 6 × 4 return is unchanged,
+    and its lines print inside the admissibility note. The existing rows are unchanged. Wording
+    as in the package, shown again at B5.
+  - *The band (B3.7).* Settled at a short gate B3b inside B5, after Module 3 accepts these models
+    and before the check is written, from a measurement on fitted second-order models. The
+    candidate is SO6.5(1)'s per-fit bound; no tolerance is invented. **Settled at gate B3b (owner,
+    2026-11-20; E-114, the gate package, option (2)).**
+    - **The band.** For a free diagonal ψ with θ entry k, the band is β_k = 2√([H⁻¹]_kk · gH⁻¹gᵀ),
+      evaluated at θ̂, with g = −2ΔᵀWr and H = 2ΔᵀWΔ (Gauss-Newton). Pooled g and H are used under
+      groups and in conditional mode.
+    - **The factor 2 was chosen after measuring** (E-114, the B5 psi measurement, StataMP 18, six fits
+      on Cases E, H, I and J at six processors and at one). It covers what the first-order bound
+      omits there: the difference-quotient term (≤ 0.41), Gauss-Newton against the exact H
+      (≤ 0.05) and the processor-count spread (≤ 1.0), each as a multiple of the bound. It also
+      matches the bound between two stopping points.
+    - **Classification.** |ψ̂| ≤ β_k is "zero within numerical error", whichever its sign;
+      ψ̂ < −β_k is negative.
+    - **Edge cases.**
+      - A singular H gives no band; the line then states the sign only and says the band could not
+        be computed.
+      - A tied ψ is one θ entry, so it has one band.
+      - A fit that did not converge gets no line.
+      - **A residual that is exactly zero** (owner, 2026-11-20: documented, not floored). Then g = 0
+        and the band is 0, so ψ̂ is classed by its sign alone: −1e-17 is "negative" and +1e-17 has
+        no line. This needs s reproduced by the model to the last bit, which happens with constructed
+        data, not sampled data. Measured on H4's known-truth design (s = σ(θ*) exactly): the band was
+        1.6e-16 at six processors and exactly 0 at four.
+    - **Independence.** The band's evidence is that measurement only. It is independent of the
+      start rule for an item-anchored higher-order factor (Module 7, 2026-11-20). Neither decision
+      is evidence for the other.
+    - **The check as built (B5, 2026-11-20; `src/mata/dwlsmv_psi_check.mata`).**
+      - It reads the fit's own Δ at θ̂ and stacks s and W as the fit does, so it adds no Δ
+        evaluation.
+      - Its lines go inside the admissibility note, before the note's closing paragraph. With no
+        note:
+        - a negative line brings the note's header and closing paragraph;
+        - a zero-only line gets the header "Disturbance variances:".
+      - Under several groups the band is the pooled objective's, so the lines print once, under
+        "All groups:", after the per-group notes.
+      - The wording is B3.6's. The standardized-loading clause is printed only where one path
+        defines it: one group, exactly one structural parent (a `beta` row, no covariate), and both
+        factors' variances in Φ positive. Otherwise the line stops after the classification, since
+        B3.6 shows no wording for those cases. An exogenous factor's line says "variance", not
+        "disturbance variance". The loading is printed with its sign (G's sign is set by B3.10, below).
+      - `dwlsmv_admissible()`'s rows, e() and D11 are unchanged.
+  - *Notes (B3.8).* An improper fit of G over exactly three factors adds that the model has the
+    correlated-factor model's fit, so a negative disturbance variance means those correlations
+    have no proper second-order representation (SO2.3). Non-convergence under
+    `metric(unitvariance)` with a second-order factor adds that unit variance cannot represent a
+    negative disturbance variance and `metric(marker)` can (SO3.3). *As built (2026-11-20,
+    `dwlsmv_psi_check.mata`, `dwlsmv_m11_fit.mata`):* the first note follows the ψ lines, inside
+    the admissibility note and before its closing paragraph, once per G that has no λ row, exactly
+    three free outgoing β (distinct parameters), and no other row but ψ_GG, when the check puts a
+    child's free diagonal ψ in class 2 (negative; class 3, band not computed, does not count). The
+    second follows the admissibility block of a fit with `e(converged)` ≠ 1 under
+    `metric(unitvariance)` whose table has a factor with no λ row and a free outgoing β. Both are
+    worded for an applied reader, wrapped at 76 columns and indented two:
+    "G has exactly three first-order factors (F1, F2, F3), so this model fits exactly as well as
+    one in which those three factors are simply correlated. The negative disturbance variance
+    means their correlations cannot be represented by a proper second-order factor." and "This
+    model has a second-order factor. With metric(unitvariance) its first-order factors cannot
+    have a negative disturbance variance; with metric(marker) they can, so a fit that needs one
+    may converge there."
+  - *`difftest` across structures (B3.9, revised by the owner).* Release B keeps refusing
+    `difftest` between a second-order model and its correlated-factor parent. Cross-structure
+    comparison is a **planned capability, not a permanent restriction**. Each comparison stays
+    refused until its nesting, identification conditions and reference distribution are
+    established individually. The correlated-factor versus second-order comparison and the
+    multifactor versus random-intercept comparison come first (E-108, item
+    B3.9). The existing statistic is not promised for every such comparison: a null that puts a
+    variance on its boundary with parameters unidentified under it may not have the ordinary
+    reference distribution. `difftest` between two second-order models is left to check 8, as for
+    any pair. *As built (2026-11-20):* check 8 refuses, after the groups-and-beta guard and with
+    its own message (rc 3498), any pair in which exactly one table has a second-order factor (a
+    β row out of a factor with no λ row, each free or fixed nonzero; `dwlsmv_dtn_so`). Before,
+    rule 0 refused the correlated-factor parent by accident ("differ by name").
+  - *Sign (B3.10).* After the first-order factors are anchored, G is reflected if Σ_k b*_k < 0
+    over its factor children (standardized paths); a tie at exactly 0 leaves it as fitted. Each G
+    separately. G with an item keeps the existing rule. *As built (2026-11-20,
+    `dwlsmv_signcanon.mata` pass 2):* a G is a reflectable factor with no free loading and at least
+    one free outgoing β; b*_k = b_k √(Φ_GG/Φ_kk) with Φ from the table at θ̂, b_k taken after the
+    children's own reflections. A child with Φ_kk not > 0 contributes nothing, and a G with
+    Φ_GG not > 0 is left as fitted. A G whose child is itself a G waits for that child. One group
+    only (B3.5 refuses `group()` with such a factor).
+  - *Equalities (B3.12).* Raw second-order path equalities are not offered (not expressible;
+    metric-dependent, SO3.5). *Rank message (B3.13).* When θ⁽⁰⁾ and θ⁽²⁾ both fail, the printed
+    null directions are θ⁽²⁾'s, labelled a diagnostic and not a proof of nonidentification
+    (owner, 2026-11-20; §4.8 *A second point before aborting*). Built 2026-11-20.
 
 ### 5.1 API shape — **locked (Gate 6)**
 

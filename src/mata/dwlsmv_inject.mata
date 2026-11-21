@@ -15,7 +15,20 @@ mata:
 // var(F@1), or var(e.F@1) when it has a beta line (endogenous).
 string scalar dwlsmv_inject(string colvector P)
 {
-    string rowvector fac, endo, t
+    return(dwlsmv_inject_sel(P, 0))
+}
+
+// release B (B3.2), metric(marker): the same, restricted to the factors with no
+// observed indicator and a path out of them (dwlsmv_tr_sofac) that the user did
+// not normalise, read from the ordinary (anchored) pass
+string scalar dwlsmv_inject_so(string colvector P)
+{
+    return(dwlsmv_inject_sel(P, 1))
+}
+
+string scalar dwlsmv_inject_sel(string colvector P, real scalar so)
+{
+    string rowvector fac, endo, t, sofac
     string scalar inj
     real scalar i, k, norm
 
@@ -31,7 +44,16 @@ string scalar dwlsmv_inject(string colvector P)
     // still treats the factor as endogenous and refuses var(F@1) on it
     endo = endo, tokens(st_global("e(lyvars)"))
     inj = ""
+    sofac = J(1, 0, "")
+    if (so) {
+        sofac = dwlsmv_tr_sofac(P)
+    }
     for (k = 1; k <= cols(fac); k++) {
+        if (so) {
+            if (!anyof(sofac, fac[k])) {
+                continue
+            }
+        }
         norm = 0
         for (i = 3; i <= rows(P); i++) {
             // nested, not &: Mata's & does not short-circuit, and a metric

@@ -45,7 +45,8 @@
 *!       says clustering and weights are planned for version 2; nolog passes.
 *!   G12 level() on the fit, on replay and with standardized; e(b) unchanged.
 *!   G13 build/dwlsmv_example.dta (tools/build_example.do) gives exactly the
-*!       fit on fixtures/data/case_E.csv.
+*!       fit on fixtures/data/case_E.csv. G13b: build/dwlsmv_example_so.dta
+*!       is the data of fixtures/data/case_H.csv, value for value (0.6.0).
 *!   G11-G13 added 2026-10-05 (decided by the user).
 *!   G14 e(version) equals the version on src/ado/dwlsmv.ado's first line, and
 *!       replay leaves it. Added 2026-10-07 (decided by the user).
@@ -401,6 +402,24 @@ local n13 = e(N)
 restore
 display as text " G13. example data: e(N) `n13', mreldif(e(b), fixture fit) `d13'"
 if `d13' != 0 | `n13' != 5000 {
+    local ++nfail
+}
+* G13b (0.6.0, owner 2026-11-21): the second-order example dataset is case_H.csv's
+* data unchanged, value for value in file order (build_example.do ran above)
+tempname h13
+preserve
+import delimited using "fixtures/data/case_H.csv", ///
+    clear varnames(1) delimiters(",") stringcols(_all)
+quietly destring y*, replace
+mkmat y1-y13, matrix(`h13')
+quietly use "build/dwlsmv_example_so.dta", clear
+mkmat y1-y13, matrix(H13so)
+local d13b = mreldif(H13so, `h13')
+local n13b = _N
+matrix drop H13so
+restore
+display as text " G13b. second-order example data: N `n13b', mreldif against case_H.csv `d13b'"
+if `d13b' != 0 | `n13b' != 1000 {
     local ++nfail
 }
 

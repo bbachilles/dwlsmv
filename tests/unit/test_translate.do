@@ -20,7 +20,8 @@
 *!   3  the D3 random-intercept case translates and leaves F1 with no metric
 *!      line (Module 3's rc 3498 reports it, not Module 11).
 *!   4  Module 11's refusals exit rc 198 (D8a): a non-unit loading and a
-*!      non-unit variance as scale (D3), a second-order factor (D3), a
+*!      non-unit variance as scale (D3), a factor with no indicator and no
+*!      path (B3.1; a second-order factor translates, test_translate_second_order.do), a
 *!      residual covariance among indicators, a constraint tying two
 *!      loadings, a fixed indicator residual variance, more than one observed
 *!      exogenous variable (one binary covariate translates, test_translate_cx.do),
@@ -153,7 +154,7 @@ local r1 `"(F1 -> y1 y2@.5 y3) (F2 -> y4 y5 y6)"'
 local o1 ""
 local r2 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6)"'
 local o2 "var(F1@2)"
-local r3 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (G -> F1 F2)"'
+local r3 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (G -> F1@0)"'
 local o3 ""
 local r4 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6)"'
 local o4 "cov(e.y1*e.y2)"
@@ -167,7 +168,7 @@ local r8 `"(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (y6 <- y1)"'
 local o8 ""
 local w1 "non-unit loading as scale (D3)"
 local w2 "non-unit variance as scale (D3)"
-local w3 "second-order factor (D3)"
+local w3 "a factor with no indicator and no path (B3.1)"
 local w4 "residual covariance among indicators (v1b)"
 local w5 "a constraint tying two loadings"
 local w6 "a fixed indicator residual variance"

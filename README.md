@@ -8,19 +8,19 @@ polychoric correlations, with robust standard errors and the mean- and variance-
 scaled-and-shifted (T3) test statistic, the approach known as WLSMV. Stata's `sem` and `gsem` do
 not offer this estimator.
 
-Current version: **0.5.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
+Current version: **0.6.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
 other platforms have not been checked.
 
 ## Install
 
 ```stata
-net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.5.0/dist/") replace
+net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.0/dist/") replace
 ```
 
 To get the example datasets, change to the folder where you want them and run:
 
 ```stata
-net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.5.0/dist/")
+net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.0/dist/")
 ```
 
 Then see `help dwlsmv`, `help difftest` and `help efacompare`.
@@ -97,6 +97,8 @@ dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)
 - **CFA and SEM with latent variables:** factors measured by ordinal or binary indicators, with
   regressions and covariances among the factors. Factors are scaled by a marker indicator or by unit
   variance.
+- **Second-order factors:** a factor measured by other factors, scaled by its variance, with a check
+  of the first-order factors' disturbance variances. Single-group models only.
 - **Fit statistics:** T3 with its degrees of freedom and p-value, plus scaled RMSEA, CFI and TLI.
 - **Standardized solutions:** delta-method standard errors, and residual variances for the
   indicators.
@@ -125,7 +127,9 @@ dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)
 - Observed predictors other than one binary covariate (a continuous covariate, or several), and a
   covariate together with `group()`. With a covariate: `standardized`, `difftest`, `efa()`,
   `keepbound`, and CFI, TLI and RMSEA.
-- Covariances among indicator residuals, and second-order factors.
+- Covariances among indicator residuals.
+- Second-order factors together with `group()`, `efa()` or a covariate, and `difftest` between a
+  second-order model and its correlated-factor parent. Both are refused with a message.
 - Sampling weights, clustering, or full-information handling of missing data. Estimation uses
   listwise deletion.
 - Partial invariance, or `invariance(scalar)` when any factor has only binary indicators.

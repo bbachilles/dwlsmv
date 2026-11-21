@@ -1,6 +1,7 @@
 *! dwlsmv -- Module 11: D11's marker-metric recovery (dwlsmv_m11_recover)
 *!
 *! Executed under StataMP 18 on 2026-10-07: tests/unit/test_marker_recovery.do.
+*! B3.3 change executed under StataMP 18 on 2026-11-20: tests/unit/test_recovery_so.do (all checks pass; mutants in its header).
 *!
 *!     string scalar dwlsmv_m11_recover(string scalar canon,
 *!                                      struct dwlsmv_parmap scalar par,
@@ -23,6 +24,16 @@
 *! reports its first fit unchanged (D11, Failure). note is the notes-block
 *! text, "" on "none"; char(10)-terminated lines otherwise.
 *!
+*! A SECOND-ORDER MODEL (release B, B3.3). A factor scaled by its variance (marker[f] == 0 after an eligible
+*! return) takes c_f = 1 in the transform. On a "failed" return, when such a factor exists, the first fit
+*! converged, and the disturbance-variance check (dwlsmv_psi_check(), classes 2 and 3) finds a negative free
+*! diagonal psi, the note is replaced by the owner's wording (2026-11-20): it names each negative variance,
+*! says the restart failed and the first fit is retained, that the unit-variance parameterization cannot
+*! represent it (SO4.4) although the first fit converged, and names the step that failed. Wrapped at 78
+*! columns by dwlsmv_m11_recwrap(). The check is recomputed here from fit, with the same
+*! band and classes as dwlsmv_psi_note()'s lines, so the signature is unchanged. "disturbance variance" when
+*! the negative psi is an endogenous factor's (a beta or gamma row into it), "variance" when exogenous.
+*!
 *! THE ABORT BOUNDARY. The recovery fits run as _stata("mata:
 *! dwlsmv_m11_recrun()", 1): an _error() inside returns its rc here and the
 *! command continues with the first fit (decided by the user 2026-10-07).
@@ -42,6 +53,84 @@ version 16
 
 mata:
 
+// 0: no free diagonal psi of fit is classed negative (class 2 or 3 of dwlsmv_psi_check()); 1: one is, and it
+// is exogenous (a variance); 2: one is an endogenous factor's (a disturbance variance). Not a raw sign test:
+// a psi inside its band (class 1) is zero within numerical error and does not count.
+// Optional outputs (owner's wording, 2026-11-20: name the reason): given fac, the factor names in
+// declaration order, what = one clause per negative psi joined by "; " ("F1 has a negative disturbance
+// variance"), and n = how many.
+real scalar dwlsmv_m11_recnegpsi(struct dwlsmv_fit scalar fit, | string colvector fac,
+                                 string scalar what, real scalar n)
+{
+    struct dwlsmv_stage1 vector sv
+    real colvector band
+    real matrix C
+    real scalar r, i, k, kind, endo
+
+    sv   = fit.stage1
+    band = dwlsmv_psi_band(fit.theta, fit.par, sv, fit.Delta)
+    C    = dwlsmv_psi_check(fit.theta, fit.par, band)
+    kind = 0
+    what = ""
+    n    = 0
+    for (r = 1; r <= rows(C); r++) {
+        if (C[r, 4] == 2 | C[r, 4] == 3) {
+            k = C[r, 1]
+            for (i = 1; i <= fit.par.nall; i++) {
+                if (fit.par.ptype[i] == 2 & fit.par.row[i] == fit.par.col[i] & fit.par.free[i]) {
+                    if (fit.par.fidx[i] == k) {
+                        endo = any(((fit.par.ptype :== 3) :| (fit.par.ptype :== 8)) :& (fit.par.row :== fit.par.row[i]))
+                        if (endo) {
+                            kind = 2
+                        }
+                        else {
+                            kind = max((kind, 1))
+                        }
+                        n = n + 1
+                        if (args() >= 2) {
+                            if (what != "") {
+                                what = what + "; "
+                            }
+                            what = what + fac[fit.par.row[i]] + " has a negative " +
+                                   (endo ? "disturbance variance" : "variance")
+                        }
+                        break
+                    }
+                }
+            }
+        }
+    }
+    return(kind)
+}
+
+// Word-wrap s at width w (no word is split); each line ends in char(10).
+string scalar dwlsmv_m11_recwrap(string scalar s, real scalar w)
+{
+    string rowvector t
+    string scalar out, line
+    real scalar j
+
+    t    = tokens(s)
+    out  = ""
+    line = ""
+    for (j = 1; j <= cols(t); j++) {
+        if (line == "") {
+            line = t[j]
+        }
+        else if (strlen(line) + 1 + strlen(t[j]) <= w) {
+            line = line + " " + t[j]
+        }
+        else {
+            out  = out + line + char(10)
+            line = t[j]
+        }
+    }
+    if (line != "") {
+        out = out + line + char(10)
+    }
+    return(out)
+}
+
 string scalar dwlsmv_m11_recover(string scalar canon,
                                  struct dwlsmv_parmap scalar par,
                                  struct dwlsmv_fit    scalar fit,
@@ -54,7 +143,8 @@ string scalar dwlsmv_m11_recover(string scalar canon,
     real colvector marker
     string colvector reasons, fac
     string scalar trig, nl, head, status, why, stage
-    real scalar rc, i
+    real scalar rc, i, negpsi, nneg
+    string scalar what, para, noun
 
     nl   = char(10)
     note = ""
@@ -142,6 +232,36 @@ string scalar dwlsmv_m11_recover(string scalar canon,
            "a restart from the unit-variance solution, transformed to the marker" + nl +
            "metric, was attempted. Recovery attempt failed; first fit retained:" + nl +
            "    " + why + "." + nl
+    // B3.3: a second-order model (some marker[f] == 0), a converged first fit, a negative free diagonal psi.
+    // The three tests are nested: Mata's & does not short-circuit and the check needs a converged fit.
+    // The note is then the owner's wording (2026-11-20), naming the reason, in place of the generic one;
+    // the step that stopped is still named (spec D11, Failure).
+    negpsi = 0
+    nneg   = 0
+    what   = ""
+    if (any(marker :== 0)) {
+        if (fit.converged == 1) {
+            negpsi = dwlsmv_m11_recnegpsi(fit, fac, what, nneg)
+        }
+    }
+    if (negpsi > 0) {
+        para = "The marker-metric fit produced an invalid solution: " + what + "."
+        if (strpos(trig, "could not determine") > 0) {
+            para = para + " It also could not determine all parameters reliably."
+        }
+        if (nneg == 1) {
+            noun = "Its negative " + (negpsi == 2 ? "disturbance variance" : "variance")
+        }
+        else {
+            noun = "Its negative variances"
+        }
+        para = para + " A restart from the unit-variance solution, transformed to the marker" +
+               " metric, was attempted but failed. The first fit is retained. " + noun +
+               " cannot be represented by the unit-variance parameterization, although the" +
+               " first fit itself converged."
+        note = dwlsmv_m11_recwrap(para, 78) +
+               dwlsmv_m11_recwrap("The step that failed: " + why + ".", 78)
+    }
     rmexternal("dwlsmv_m11_rec")
     return("failed")
 }

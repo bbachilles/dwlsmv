@@ -1,4 +1,4 @@
-*! version 0.5.0  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
+*! version 0.6.0  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
 *!
 *!   efacompare varlist [if] [in] [, maxfactors(#) epsilon(#) rstarts(#) keepbound]
 *!

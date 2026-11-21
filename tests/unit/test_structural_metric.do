@@ -121,6 +121,7 @@ foreach f in tests/dwlsmv_assert.mata               ///
              src/mata/dwlsmv_minimize.mata          ///
              src/mata/dwlsmv_signcanon.mata         ///
              src/mata/dwls_fit.mata                 ///
+             src/mata/dwlsmv_hof_start.mata         ///
              src/mata/dwlsmv_asym.mata              ///
              src/mata/dwlsmv_acov.mata              ///
              src/mata/dwlsmv_traces.mata            ///

@@ -1,9 +1,10 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-18 on the 0.5.0 release tree (814ba9c plus the version bump, first R e313374): every example run,}{...}
-{* including esttab, the two covariate examples, the difftest and dwlsmv_nf help examples. At the re-cut R (dwlsmv_nf renamed efacompare)}{...}
-{* dwlsmv changed only in comments and help links, so its examples were not re-run; the efacompare examples were,}{...}
-{* the random-intercept abort at rc 3498 as documented, every fit posting e(version) 0.5.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
-{* *! version 0.5.0  18nov2026}{...}
+{* Executed under StataMP 18 on 2026-11-21 on the 0.6.0 release tree (cdaaa78 plus this help text): every example in this file and in}{...}
+{* difftest.sthlp and efacompare.sthlp run on the source build, net get excepted, including esttab, the two covariate examples and the}{...}
+{* second-order example on dwlsmv_example_so.dta (its Note printed, the fit proper); the random-intercept abort at rc 3498 as documented,}{...}
+{* every other command rc 0, every fit posting e(version) 0.6.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* The notes quoted under "Second-order factors" are copied from the source strings; the examples do not print all of them.}{...}
+{* *! version 0.6.0  21nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
 {vieweralsosee "[SEM] gsem" "help gsem"}{...}
@@ -14,6 +15,7 @@
 {viewerjumpto "Options" "dwlsmv##options"}{...}
 {viewerjumpto "What sem reads and what dwlsmv refuses" "dwlsmv##refusals"}{...}
 {viewerjumpto "The metric" "dwlsmv##metric"}{...}
+{viewerjumpto "Second-order factors" "dwlsmv##secondorder"}{...}
 {viewerjumpto "Categories and indicator order" "dwlsmv##categories"}{...}
 {viewerjumpto "Measurement invariance across groups" "dwlsmv##invariance"}{...}
 {viewerjumpto "Output" "dwlsmv##output"}{...}
@@ -40,6 +42,11 @@
 {p 4 4 2}
 {it:paths} are {helpb sem} path specifications, for example
 {cmd:(F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (F2 <- F1)}.
+
+{p 4 4 2}
+A factor may also be measured only by other factors, a {it:second-order factor},
+as in {cmd:(G -> F1 F2 F3)} with each {cmd:F} measured by indicators; see
+{help dwlsmv##secondorder:Second-order factors}.
 
 {p 4 4 2}
 One observed variable may appear as a {it:covariate}: a binary variable coded 0 and 1, written as a
@@ -297,8 +304,10 @@ the covariate in the syntax) or fixed at a value other than 0;{p_end}
 {p2col:o}more than one observed exogenous variable, a covariate together with
 {opt group()}, and a covariate that is not numeric, not coded 0 and 1 in the
 estimation sample, or constant;{p_end}
-{p2col:o}a factor with no observed indicator (second-order factors are not
-supported);{p_end}
+{p2col:o}a factor with no observed indicator and no path to another factor;
+a path out of such a factor fixed at a nonzero value (a second-order factor is
+scaled by its variance, {cmd:var(G@1)}); and a second-order factor together
+with {opt group()}, {opt efa()} or a covariate;{p_end}
 {p2col:o}a factor scaled by a loading or variance fixed at a value other than 1
 (for example {cmd:y2@.5} or {cmd:var(F@2)}): a factor's scale is set by a
 loading fixed at 1 or a variance fixed at 1;{p_end}
@@ -375,6 +384,11 @@ not how a fitted solution is displayed, and an endogenous factor's loadings
 still change on standardization.
 
 {p 4 4 2}
+A factor with no observed indicator (a second-order factor) is scaled by its
+variance under either metric; see
+{help dwlsmv##secondorder:Second-order factors}.
+
+{p 4 4 2}
 The header states the metric: "marker (first-listed indicator)" or "factor
 variances fixed at 1 (for a factor predicted by other factors, its residual
 variance)".
@@ -436,6 +450,147 @@ reported fit. There is no option to turn recovery off.
 When recovery is {cmd:ineligible} or {cmd:failed}, refit with
 {cmd:metric(unitvariance)}, or reverse-code the negatively loading items, or
 choose as marker an indicator that loads positively (list it first).
+
+
+{marker secondorder}{...}
+{title:Second-order factors}
+
+{p 4 4 2}
+{bf:What one is.} A factor with no observed indicator and a path to other
+factors is a second-order factor: {cmd:(G -> F1 F2 F3)}, where each {cmd:F} is
+measured by indicators, as in {cmd:(F1 -> y1 y2 y3)}. Write it as any {cmd:sem}
+path. Second-order factors are available for a single group only.
+
+{p 4 4 2}
+{bf:Scale.} A second-order factor is scaled by its variance, not by a
+loading. Under {cmd:metric(marker)}, the first-order factors are scaled by their
+marker indicators as usual, and {cmd:dwlsmv} adds {cmd:var(G@1)} for each
+second-order factor you did not normalise ({cmd:var(e.G@1)} if {cmd:G} is itself
+predicted by another factor), has {cmd:sem} read the model again, and prints one line:
+
+{p 8 8 2}
+{cmd:Note: G has no observed indicator and is scaled by its variance, var(G@1); sem's default fixes the path to its first child at 1 instead. Standardized estimates are the same.}
+
+{p 4 4 2}
+With several such factors the line names them together, in the plural. If you
+write {cmd:var(G@1)} yourself, the model is the same and there is no line.
+{cmd:sem}'s default, the path to the first child fixed at 1, is not used. Under
+{cmd:metric(unitvariance)} the factor's variance is fixed at 1 as for any factor
+you did not normalise, and there is no such line. A path out of {cmd:G} fixed at a nonzero
+value is refused (below), because it would be a second scale for {cmd:G}.
+
+{p 4 4 2}
+{bf:What is accepted.} {cmd:G} over three or more first-order factors; two
+correlated second-order factors; a first-order factor outside the hierarchy,
+which may covary with {cmd:G} or be regressed on it; a first-order factor with
+two indicators; and an indicator that also loads on {cmd:G}, as in 0.5.0 (a
+factor with an indicator is scaled as any such factor is, by its marker or
+under {cmd:metric(unitvariance)}).
+
+{p 4 4 2}
+{bf:What is refused, with rc 198.} A second-order factor together with
+{opt group()}, {opt efa()} or a covariate; a path out of a factor with no
+indicator fixed at a nonzero value, for example {cmd:(G -> F1@1 F2 F3)}, with a message that names {cmd:var(G@1)};
+and a factor with no indicator and no path to another factor. The same message
+for a nonzero fixed path is given under both metrics, and whether or not you
+wrote {cmd:var(G@1)}.
+
+{p 4 4 2}
+{bf:What is refused as not identified.} The model-identification check refuses
+some models that {cmd:dwlsmv} otherwise accepts: {cmd:G} over exactly two
+first-order factors with no further constraint, a first-order factor with a
+single indicator, and two uncorrelated second-order factors. The refusal exits
+with rc 3498; it says that the model appears not to be identified, how many free
+parameters it has and how many the data seem to determine, and lists the
+parameters that seem to trade off against one another. These directions are a diagnostic
+at trial values, not a proof that the model is unidentified.
+
+{p 4 4 2}
+{bf:G over exactly three.} Such a model fits exactly as well as the model in
+which the three first-order factors are simply correlated, since three
+correlations are carried by three paths. When the fit is improper, that is,
+some disturbance variance of a first-order factor is negative, {cmd:dwlsmv}
+adds this to the admissibility note, after the lines about the variances:
+
+{p 8 8 2}
+{cmd:G has exactly three first-order factors (F1, F2, F3), so this model fits exactly as well as one in which those three factors are simply
+correlated. The negative disturbance variance means their correlations cannot be represented by a proper second-order factor.}
+
+{p 4 4 2}
+Under {cmd:metric(unitvariance)}, a fit with a second-order factor that does not
+converge is followed by this note:
+
+{p 8 8 2}
+{cmd:This model has a second-order factor. With metric(unitvariance) its first-order factors cannot have a negative disturbance variance; with
+metric(marker) they can, so a fit that needs one may converge there.}
+
+{p 4 4 2}
+{bf:The disturbance-variance check.} For every free diagonal element of Psi, in
+every model and not only second-order ones, {cmd:dwlsmv} classifies the
+estimate against a numerical band computed at the solution: a value within the
+band, of either sign, is reported as zero within numerical error and is not
+called inadmissible; below the band it is reported as negative. A fixed variance and a fit that did not
+converge are not checked. The lines are printed inside the admissibility note.
+Where the standardized loading is defined by a single path (one group, one
+structural parent of the factor), the line gives it:
+
+{p 8 8 2}
+{cmd:F1: disturbance variance -0.3200 is negative; its standardized loading on G is 1.2600, above 1.}{break}
+{cmd:F1: disturbance variance is zero within numerical error; its standardized loading on G is 1.}
+
+{p 4 4 2}
+An exogenous factor's line says "variance", not "disturbance variance". If the band cannot be computed (a
+singular information matrix), the line gives the sign only and says so. With no other
+admissibility finding, a negative line brings the note's own header, and a line that is only
+zero within numerical error gets the header {cmd:Disturbance variances:}. The check does not trigger
+{help dwlsmv##recovery:recovery}.
+
+{p 4 4 2}
+{bf:Sign.} After the first-order factors are oriented, a second-order factor is
+reflected when the sum of its standardized paths to its first-order factors
+is negative, so that the paths are reported with a positive sum under both
+metrics; a sum of exactly 0 leaves it as fitted. Each second-order factor is
+treated separately. A second-order factor with an indicator keeps the rule for any factor with indicators.
+
+{p 4 4 2}
+{bf:Recovery.} Under {cmd:metric(marker)} a second-order factor takes part in
+{help dwlsmv##recovery:recovery} like any other, with c_G = 1: its variance is 1
+under both metrics. When recovery fails and the converged first fit has a
+disturbance variance classed negative, the note says why:
+
+{p 8 8 2}
+{cmd:The marker-metric fit produced an invalid solution: F1 has a negative disturbance variance. A restart from the unit-variance solution,
+transformed to the marker metric, was attempted but failed. The first fit is retained. Its negative disturbance variance cannot be represented
+by the unit-variance parameterization, although the first fit itself converged.}
+
+{p 4 4 2}
+It is followed by a line naming the step that failed. "Variance" replaces
+"disturbance variance" for a factor with no path into it, and several factors are listed.
+
+{p 4 4 2}
+{bf:Standardized estimates} are available for a second-order model, with the
+paths from {cmd:G} to its first-order factors standardized as any structural
+path (see {help dwlsmv##standardized:Standardized estimates}); they agree with
+lavaan's {cmd:std.all}.
+
+{p 4 4 2}
+{bf:Comparing with {cmd:difftest}.} {helpb difftest} between a model with a
+second-order factor and one without, for example its correlated-factor parent,
+is refused, with rc 3498:
+
+{p 8 8 2}
+{cmd:dwlsmv check 8 (}{it:name0} {cmd:in} {it:name1}{cmd:): one model has a second-order factor and the other does not. DIFFTEST across
+these structures (for example a second-order model against its correlated-factor parent) is not available in this version; it is planned
+once its reference distribution is established (spec Module 12, B3.9).}
+
+{p 4 4 2}
+This is a limit of this version. Each such comparison needs its nesting, its
+identification and its reference distribution established before it is offered.
+A pair of second-order models is judged as any pair is.
+
+{p 4 4 2}
+{bf:Not yet available.} {opt group()} and {opt invariance()}, {opt efa()}, a
+covariate, and equality constraints on the paths from a second-order factor.
 
 
 {marker categories}{...}
@@ -1038,11 +1193,11 @@ estimates identically, standard errors to 2.5e-12).
 {title:Examples}
 
 {p 4 4 2}
-The example data, {cmd:dwlsmv_example.dta}, are an ancillary file of the
-package: {cmd:net install} does not copy them. {cmd:net get dwlsmv}, with the
-same {cmd:from()} location used to install, copies {cmd:dwlsmv_example.dta}
-into the current working directory (see {helpb net}); change to the directory
-where you want the file before running it.
+The example data, {cmd:dwlsmv_example.dta}, {cmd:dwlsmv_example_mg.dta} and
+{cmd:dwlsmv_example_so.dta}, are ancillary files of the package: {cmd:net install}
+does not copy them. {cmd:net get dwlsmv}, with the same {cmd:from()} location used
+to install, copies them into the current working directory (see {helpb net});
+change to the directory where you want the files before running it.
 
 {pstd}Setup{p_end}
 {phang2}{cmd:. net get dwlsmv, from(}{it:location}{cmd:)}{p_end}
@@ -1099,6 +1254,18 @@ cannot be combined with {opt group()}.{p_end}
 {pstd}A direct effect of the covariate on one item, {cmd:y5}: a shift of its
 thresholds between the groups beyond what the factor explains{p_end}
 {phang2}{cmd:. dwlsmv (F -> y1-y5) (F <- grp2) (y5 <- grp2)}{p_end}
+
+{pstd}A second-order factor: the third example dataset, also copied by
+{cmd:net get dwlsmv}, holds twelve ordinal indicators with four categories each
+({cmd:y1}-{cmd:y12}: four factors of three indicators) and a thirteenth
+({cmd:y13}), 1,000 observations. One second-order factor {cmd:G} stands over
+the four. {cmd:G} is scaled by its variance, and a note says so{p_end}
+{phang2}{cmd:. use dwlsmv_example_so.dta, clear}{p_end}
+{phang2}{cmd:. dwlsmv (F1 -> y1 y2 y3) (F2 -> y4 y5 y6) (F3 -> y7 y8 y9) (F4 -> y10 y11 y12) (G -> F1 F2 F3 F4)}{p_end}
+
+{pstd}The standardized solution of that fit: the paths from {cmd:G}
+to the four factors are the standardized second-order loadings{p_end}
+{phang2}{cmd:. dwlsmv, standardized}{p_end}
 
 
 {marker results}{...}

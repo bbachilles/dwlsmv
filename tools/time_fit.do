@@ -102,7 +102,7 @@ foreach f in src/mata/dwlsmv_types.mata             ///
              src/mata/dwlsmv_fdwls.mata             ///
              src/mata/dwlsmv_minimize.mata          ///
              src/mata/dwlsmv_signcanon.mata         ///
-             src/mata/dwls_fit.mata {
+             src/mata/dwls_fit.mata src/mata/dwlsmv_hof_start.mata {
     quietly do "`f'"
 }
 

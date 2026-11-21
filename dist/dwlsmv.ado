@@ -1,4 +1,4 @@
-*! version 0.5.0  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
+*! version 0.6.0  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
 *!
 *! Executed under StataMP 18 on 2026-10-04: tests/unit/test_dwlsmv.do;
 *! standardized on 2026-10-05: tests/unit/test_standardized.do.
@@ -236,6 +236,12 @@ program dwlsmv, eclass
     local ind      `r(ind)'
     local semnames `r(semnames)'
     local cov      `r(cov)'
+    local sofac    `r(sofac)'
+    if `"`efa'"' != "" & "`sofac'" != "" {
+        * release B, B3.5: a second-order factor with efa() is refused before anything is built
+        display as error "efa() is not available with a second-order factor (`sofac') in this version. No model was fitted."
+        exit 198
+    }
     if "`cov'" != "" {
         * a model conditional on a binary covariate (decisions 2026-11-13; owner's Stage 2 package 2026-11-14): standardized,
         * keepbound and efa() are refused (rc 198). keepbound is unavailable with a covariate: a boundary estimate (status 2)
@@ -388,7 +394,7 @@ program dwlsmv, eclass
         ereturn local recovery   "none"
         ereturn local indicators "`ind'"
         ereturn local cmdline    `"dwlsmv `0'"'
-        ereturn local version    "0.5.0"
+        ereturn local version    "0.6.0"
         // what difftest refits from at G > 1 (spec Module 12, 2026-10-31):
         // e(canon) and e(canon_configural) (dwlsmv_m11_post_g_e), the group
         // variable, keepbound, and the data signature over the indicators
@@ -447,6 +453,11 @@ program dwlsmv, eclass
             if "`one'" == ";" continue
             gettoken fac y1 : one
             local y1 = strtrim("`y1'")
+            if "`y1'" == "" {
+                * a factor with no loading line (second-order): its scale is its variance
+                display as error "Factor `fac' has no fixed scale: fix its variance with var(`fac'@1)."
+                continue
+            }
             display as error "Factor `fac' has no fixed scale: fix one of its loadings at 1,"
             display as error "e.g. (`fac' -> `y1'@1 ...), or specify metric(unitvariance)."
         }
@@ -576,7 +587,7 @@ program dwlsmv, eclass
     if "`cov'" != "" ereturn local covariates "`cov'"
     ereturn local cmdline  `"dwlsmv `0'"'
     // the release; must equal line 1 (test_dwlsmv_gaps.do G14, stage_release.ps1)
-    ereturn local version  "0.5.0"
+    ereturn local version  "0.6.0"
     // what difftest refits from (spec Module 12, D8d addition, 2026-10-23):
     // the canonical text as dwlsmv_m11_fit received it, keepbound, and the
     // data signature that check 2 tests with checkestimationsample

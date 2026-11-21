@@ -1,6 +1,9 @@
 *! dwlsmv -- Module 11: the estimation driver behind dwlsmv.ado (dwlsmv_m11_fit)
 *!
 *! Executed under StataMP 18 on 2026-10-04: tests/unit/test_dwlsmv.do.
+*! B3.8 change executed under StataMP 18 on 2026-11-20 (tests/unit/test_notes_so.do): the two dwlsmv_psi_unitnote(fit, metric) calls (B3.8 note (b), a fit
+*! that did not converge under metric(unitvariance) with a second-order factor), one in each notes path
+*! (conditional and ordinary), each directly after dwlsmv_psi_note(); tests/unit/test_notes_so.do.
 *!
 *! One file per function (test_loading.do's contract): dwlsmv_m11_stage1,
 *! _legend, _fit, _slab, _notes, _clear. Two steps, called by dwlsmv.ado in
@@ -208,7 +211,8 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
         st_local("grank",   strofreal(Gd[7, 1] == . ? . : Gd[7, 3], "%21.0g"))
         st_local("bratio",  strofreal(Bd[4, 1] == . ? . : Bd[4, 2], "%21.0g"))
         // ---- END ----
-        txt = rnote + dwlsmv_cx_admissnote(A, ind', fac', metric, fit.converged) +
+        txt = rnote + dwlsmv_psi_note(fit, fac', dwlsmv_cx_admissnote(A, ind', fac', metric, fit.converged)) +
+              dwlsmv_psi_unitnote(fit, metric) +
               dwlsmv_diagadvice(Gd, Cd, Bd, ind', slab, pname, Cg, cvn) +
               "Not computed for a model with a covariate in this version: the check for thresholds" + nl +
               "that move together on every observation. An item that is an exact function of another" + nl +
@@ -290,7 +294,7 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
               "duplicate (redundant) items, strong skew collapsing the table, or too few" + nl +
               "observations. The data cannot tell them apart; this is not a diagnosis." + nl
     }
-    txt = txt + dwlsmv_admissadvice(A, ind', fac')
+    txt = txt + dwlsmv_psi_note(fit, fac', dwlsmv_admissadvice(A, ind', fac')) + dwlsmv_psi_unitnote(fit, metric)
     slab  = dwlsmv_m11_slab(st.map, ind)
     pname = select(nm, par.free)
     Gd  = dwlsmv_gammadiag(st, *findexternal("dwlsmv_m11_Y"))

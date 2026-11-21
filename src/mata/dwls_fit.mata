@@ -97,7 +97,7 @@
 *! that call dwlsmv_fit_stack() without the flag keep refusing a conditional result.
 *!
 *! Load order: everything dwls_model() and dwls_delta() need, then
-*! dwlsmv_mg_check, dwlsmv_cx1_check, dwlsmv_cx1_fit_check, dwlsmv_fdwls, dwlsmv_minimize, dwlsmv_signcanon. dwlsmv_fit_w,
+*! dwlsmv_mg_check, dwlsmv_cx1_check, dwlsmv_cx1_fit_check, dwlsmv_fdwls, dwlsmv_minimize, dwlsmv_signcanon, dwlsmv_hof_start. dwlsmv_fit_w,
 *! dwlsmv_fit_stack and
 *! dwlsmv_fit_from are defined above dwls_fit(), in this file.
 *!
@@ -347,6 +347,11 @@ void dwlsmv_fit_uls(struct dwlsmv_stage1 vector sts,
     if (missing(start)) {
         _error("dwls_fit: fidx does not number the free rows 1..npar")
     }
+
+    // An item-anchored higher-order factor's paths start at 0.7, not at Module
+    // 3's 0 (spec Module 7; owner 2026-11-20, A-R; @sec-so-hof). After the rank
+    // check, so par.value is untouched; the retry's second start inherits it.
+    (void) dwlsmv_hof_start(par, start)
 
     // ULS, W = I: starting values only (spec Section 5, Module 7)
     (void) dwlsmv_minimize(s, J(rows(s), 1, 1), par, maps, start,

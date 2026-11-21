@@ -1,6 +1,7 @@
 *! dwlsmv -- Module 11: D11's unit-variance to marker transform
 *!
 *! Executed under StataMP 18 on 2026-10-07: tests/unit/test_marker_recovery.do.
+*! B3.3 change executed under StataMP 18 on 2026-11-20: tests/unit/test_recovery_so.do (all checks pass; mutants in its header).
 *!
 *!     real scalar dwlsmv_m11_rectransform(struct dwlsmv_parmap scalar parm,
 *!                                         struct dwlsmv_parmap scalar paru,
@@ -18,7 +19,11 @@
 *!   paru    the UNIT-VARIANCE table of the same model (dwls_identify() on
 *!           dwlsmv_m11_recuvtext()'s text)
 *!   thetau  the unit-variance fit's theta, in paru's order
-*!   marker  dwlsmv_m11_receligible()'s output: marker[f] = indicator row
+*!   marker  dwlsmv_m11_receligible()'s output: marker[f] = indicator row;
+*!           marker[f] == 0 is a factor scaled by its variance (a second-order G, release B, B3.3, derivation
+*!           @sec-so-recovery SO4.1): c_f = 1, no lookup. The transform is then the U -> V map: beta_fg *
+*!           c_f / 1, psi_fg * c_f * 1, and no lambda row of f exists to divide. psi_ff of such a factor is
+*!           fixed at 1 in BOTH tables, so it is never mapped.
 *!
 *! With c_f = the marker loading's value in the unit-variance point:
 *!     lambda_jf -> lambda_jf / c_f
@@ -72,6 +77,11 @@ real scalar dwlsmv_m11_rectransform(struct dwlsmv_parmap scalar parm,
     // c_f: the marker loading (ptype 1, row marker[f], col f) in the UV point
     c = J(rows(marker), 1, .)
     for (f = 1; f <= rows(marker); f++) {
+        if (marker[f] == 0) {
+            // scaled by its variance (B3.3): c_f = 1, exactly
+            c[f] = 1
+            continue
+        }
         k = 0
         for (i = 1; i <= paru.nall; i++) {
             if (paru.ptype[i] == 1) {

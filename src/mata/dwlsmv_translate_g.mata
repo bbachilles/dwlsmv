@@ -44,6 +44,7 @@ string colvector dwlsmv_translate_g(real scalar final, string scalar gname,
     string matrix st, sg
     real matrix C, Cg
     string colvector fac, ind, oxv, out, L
+    string rowvector sofac
     real colvector gi, skip, keep, J, rr
     real scalar G, j, r, k, g, gv, nzg, sumg
     string scalar co, rx1, rx2, f
@@ -159,6 +160,15 @@ string colvector dwlsmv_translate_g(real scalar final, string scalar gname,
             Cg = J(0, rows(J) + 1, 0)
         }
         L = dwlsmv_tr_core(sg[J, .], Cg, fac, ind, oxv, final)
+        if (final) {
+            // release B, B3.5: group() is refused with a second-order factor
+            sofac = dwlsmv_tr_sofac(L)
+            if (cols(sofac) > 0) {
+                errprintf("dwlsmv: a second-order factor (%s) is not available with group() in this version.\n", invtokens(sofac))
+                errprintf("No model was fitted.\n")
+                exit(198)
+            }
+        }
         if (g > 1) {
             for (k = 3; k <= rows(L); k++) {
                 if (substr(L[k], 1, 20) == "metric unitvariance ") {

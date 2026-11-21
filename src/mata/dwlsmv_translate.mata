@@ -24,8 +24,11 @@
 *! exogenous variable (one binary covariate is read as covariate, gamma and kappa
 *! lines, dwlsmv_tr_cxterm); a path between observed variables; more than one
 *! group; and,
-*! on the final pass, D3's non-unit scale fixes and factors with no observed
-*! indicator. A factor with no constraint at all (sem leaves it unanchored,
+*! on the final pass, D3's non-unit scale fixes, a factor with no observed
+*! indicator and no path to another factor, a nonzero fixed path out of a factor
+*! with no indicator, and such a factor with a covariate (release B, B3.1/B3.5;
+*! a second-order factor is otherwise accepted, scaled by 'metric
+*! unitvariance'). A factor with no constraint at all (sem leaves it unanchored,
 *! D3's random-intercept case) is NOT refused here: Module 3's rc 3498 says so.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
@@ -95,7 +98,7 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
     string colvector ind, string colvector oxv, real scalar final)
 {
     string colvector out, head
-    real colvector fixed, fixval, isvarfix, haslam, hasmet, fixnon1
+    real colvector fixed, fixval, isvarfix, haslam, hasmet, fixnon1, sopath, sofix
     real scalar j, r, nz, cj, f, fa, fz, kind
     string scalar eq, co, a, z, t, cvn
 
@@ -138,6 +141,10 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
     out      = J(0, 1, "")
     isvarfix = J(rows(fac), 1, 0)
     fixnon1  = J(rows(fac), 1, 0)
+    // release B (B3.1): sopath[f] = a beta row out of f that is free or fixed nonzero;
+    // sofix[f] = such a row fixed at a nonzero value (a beta fixed at 0 is no path)
+    sopath   = J(rows(fac), 1, 0)
+    sofix    = J(rows(fac), 1, 0)
     for (j = 1; j <= rows(st); j++) {
         co = st[j, 2]
         for (r = 1; r <= rows(fac); r++) {
@@ -207,11 +214,17 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
                     dwlsmv_tr_refuse("dwlsmv: a path involving an observed variable (" + eq +
                         " <- " + co + ") is not supported by dwlsmv.")
                 }
+                r = dwlsmv_tr_pos(fac, co)
                 if (fixed[j]) {
                     out = out \ ("beta " + eq + " " + co + " fixed " + dwlsmv_tr_num(fixval[j]))
+                    if (fixval[j] != 0) {
+                        sopath[r] = 1
+                        sofix[r]  = 1
+                    }
                 }
                 else {
                     out = out \ ("beta " + eq + " " + co + " free")
+                    sopath[r] = 1
                 }
             }
             continue
@@ -312,9 +325,25 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
     if (final) {
         for (f = 1; f <= rows(fac); f++) {
             if (!haslam[f]) {
-                errprintf("dwlsmv: factor %s has no observed indicator. Second-order factors\n", fac[f])
-                errprintf("are not supported: every factor must load on at least one indicator.\n")
-                exit(198)
+                // release B (B3.1, B3.5): a factor with no indicator and a path out of it is a
+                // second-order factor, scaled by its variance ('metric unitvariance')
+                if (!sopath[f]) {
+                    errprintf("dwlsmv: factor %s has no observed indicator and no path to another factor.\n", fac[f])
+                    errprintf("A factor needs an observed indicator, or paths to the factors it is\n")
+                    errprintf("measured by (a second-order factor).\n")
+                    exit(198)
+                }
+                if (sofix[f]) {
+                    errprintf("dwlsmv: factor %s has no observed indicator, and a path out of it is fixed at a nonzero value.\n", fac[f])
+                    errprintf("A factor with no indicator is scaled by its variance; fixing a path as well adds a second\n")
+                    errprintf("restriction. Free the path and write var(%s@1), or leave the scale to dwlsmv.\n", fac[f])
+                    exit(198)
+                }
+                if (cvn != "") {
+                    errprintf("dwlsmv: a second-order factor (%s) is not available with a covariate (%s) in this version.\n", fac[f], cvn)
+                    errprintf("No model was fitted.\n")
+                    exit(198)
+                }
             }
             if (!hasmet[f] & fixnon1[f]) {
                 errprintf("dwlsmv: factor %s is scaled by a loading or variance fixed at a value\n", fac[f])
@@ -332,6 +361,76 @@ string colvector dwlsmv_tr_core(string matrix st, real matrix C, string colvecto
         head = head \ ("covariate " + cvn)
     }
     return(head \ sort(out, 1))
+}
+
+// release B: the factors of canonical text P (lines, as dwlsmv_tr_core returns them) that have
+// no observed indicator (no lambda row, no 'metric marker' row) and a path out of them: a row
+// 'beta child F' that is free or fixed nonzero. A beta fixed at 0 is no path (spec 4.8).
+string rowvector dwlsmv_tr_sofac(string colvector P)
+{
+    string rowvector fac, out, t
+    real scalar k, i, hasind, outp
+
+    fac = tokens(substr(P[1], 8, .))
+    out = J(1, 0, "")
+    for (k = 1; k <= cols(fac); k++) {
+        hasind = 0
+        outp   = 0
+        for (i = 3; i <= rows(P); i++) {
+            t = tokens(P[i])
+            if (t[1] == "lambda") {
+                if (t[2] == fac[k]) {
+                    hasind = 1
+                }
+            }
+            else if (t[1] == "metric") {
+                if (t[2] == "marker") {
+                    if (t[3] == fac[k]) {
+                        hasind = 1
+                    }
+                }
+            }
+            else if (t[1] == "beta") {
+                if (t[3] == fac[k]) {
+                    if (t[4] == "free") {
+                        outp = 1
+                    }
+                    else if (strtoreal(t[5]) != 0) {
+                        outp = 1
+                    }
+                }
+            }
+        }
+        if (!hasind) {
+            if (outp) {
+                out = out, fac[k]
+            }
+        }
+    }
+    return(out)
+}
+
+// the same, for the ";"-joined text _dwlsmv_translate holds in a local
+string rowvector dwlsmv_tr_sofac_t(string scalar canon)
+{
+    string colvector P
+    string scalar s
+    real scalar p
+
+    P = J(0, 1, "")
+    s = canon
+    while (strlen(s) > 0) {
+        p = strpos(s, ";")
+        if (p == 0) {
+            P = P \ s
+            s = ""
+        }
+        else {
+            P = P \ substr(s, 1, p - 1)
+            s = substr(s, p + 1, .)
+        }
+    }
+    return(dwlsmv_tr_sofac(P))
 }
 
 end

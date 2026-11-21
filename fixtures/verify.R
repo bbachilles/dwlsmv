@@ -63,6 +63,10 @@
 #                                  92_efa_tie_data.R               (optional)
 #   fixtures/MANIFEST_lavaan_efa_tie.json  lavaan rotated EFA at a column-order tie, T/B,
 #                                  99r_lavaan_efa_tie.R            (optional)
+#   fixtures/MANIFEST_so_data.json  tier 1, second-order data, Cases H, I, J,
+#                                  93_so_data.R                    (optional)
+#   fixtures/MANIFEST_lavaan_so.json  lavaan second-order references, V and U,
+#                                  99s_lavaan_second_order.R       (optional)
 #
 # Tiers 2 and 3 are optional because they need lavaan and Mplus respectively,
 # and the whole point of the tier split is that tier 1 regenerates on any
@@ -224,7 +228,11 @@ optional <- list(
   list(file = "MANIFEST_efa_tie_data.json", label = "tier 1: near-tie EFA data (Cases T, B)",
        gen = "92_efa_tie_data.R"),
   list(file = "MANIFEST_lavaan_efa_tie.json", label = "lavaan rotated EFA at a column-order tie (release A, A4)",
-       gen = "99r_lavaan_efa_tie.R")
+       gen = "99r_lavaan_efa_tie.R"),
+  list(file = "MANIFEST_so_data.json", label = "tier 1: second-order data (Cases H, I, J)",
+       gen = "93_so_data.R"),
+  list(file = "MANIFEST_lavaan_so.json", label = "lavaan second-order references (release B, B4)",
+       gen = "99s_lavaan_second_order.R")
 )
 
 for (t in optional) {

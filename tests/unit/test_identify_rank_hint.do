@@ -95,11 +95,11 @@ foreach c in psibeta F {
     capture noisily mata: trh_`c'()
     local rc = _rc
     quietly log close trh
-    mata: st_local("has", strofreal(strpos(trh_slurp(st_local("lg")), "Freeing a psi covariance") > 0))
+    mata: st_local("has", strofreal(strpos(trh_slurp(st_local("lg")), "frees both a path and a disturbance covariance") > 0))
     mata: st_local("def", strofreal(strpos(trh_slurp(st_local("lg")), "rank deficient") > 0))
     local want = ("`c'" == "psibeta")
     mata: st_local("o7", strofreal(strpos(trh_slurp(st_local("lg")), "stayed at") > 0))
-    mata: st_local("art", strofreal(strpos(trh_slurp(st_local("lg")), "an artefact of") > 0))
+    mata: st_local("art", strofreal(strpos(trh_slurp(st_local("lg")), "The problem remained when the starting values were changed") > 0))
     display "`c': reference-value text `o7' artefact text `art'"
     if `o7' == `want' | `art' != `want' {
         local ++nfail

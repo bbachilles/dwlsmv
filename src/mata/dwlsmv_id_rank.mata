@@ -17,7 +17,9 @@
 *! groups, where it would also move nu, omega and alpha.
 *!
 *! Passing at theta2 writes theta2 into par.value (the optimizer's start).
-*! A deficiency at both points aborts with theta0's null directions.
+*! A deficiency at both points aborts with theta2's null directions, labelled a
+*! diagnostic at that point and not a proof of nonidentification (B3.13, owner,
+*! 2026-11-20; before then theta0's were printed).
 *!
 *! Load order: dwlsmv_types, dwls_delta (and what it needs), dwlsmv_numrank.
 *!
@@ -84,9 +86,8 @@ void dwlsmv_id_rank(struct dwlsmv_parmap scalar par,
     //
     // Section 4.8's second point (derivation Finding 5): a deficiency at the
     // symmetric starts alone is not a redundancy. Re-check at theta2 and abort
-    // only if that is deficient too. theta0's sv and V are kept for the
-    // message: its null directions are the clean ones. No note when theta2
-    // passes.
+    // only if that is deficient too; the message then reports theta2's sv2
+    // and V2 (B3.13). No note when theta2 passes.
     if (rank < npar) {
         phi    = (sqrt(5) - 1) / 2
         theta2 = theta0
@@ -112,16 +113,10 @@ void dwlsmv_id_rank(struct dwlsmv_parmap scalar par,
         }
     }
     if (rank < npar) {
-        errprintf("dwls_identify: rank(Delta) is %f at the starting values but %f parameter(s) are free.\n",
-                  rank, npar)
-        if (rank2 > rank) {
-            errprintf("%f parameter(s) are redundant here and %f at a second point. Singular values run %g down to %g.\n",
-                      npar - rank, npar - rank2, big, sv[npar])
-        }
-        else {
-            errprintf("%f parameter(s) are redundant. Singular values run %g down to %g.\n",
-                      npar - rank, big, sv[npar])
-        }
+        // Wording for an applied reader (owner, 2026-11-20): plain language
+        // first, the linear algebra in one closing "Technical detail" line.
+        errprintf("dwls_identify: the model appears not to be identified. It has %f free\n", npar)
+        errprintf("parameters, but the data seem to determine only %f of them.\n", rank2)
         // O7 leaves nu, omega and alpha out of theta2, so a free one at its
         // reference value was never moved, and the deficiency may be tied to it.
         hint = 0
@@ -133,9 +128,9 @@ void dwlsmv_id_rank(struct dwlsmv_parmap scalar par,
             }
         }
         if (hint) {
-            errprintf("At a second, perturbed point the rank is %f, still deficient. That point moves%s", rank2, char(10))
-            errprintf("lambda, beta and psi only. These free parameters stayed at\n")
-            errprintf("their reference values, and the deficiency may hold only at those values:\n")
+            errprintf("The check was repeated at changed starting values, but only loadings, paths\n")
+            errprintf("and (co)variances were changed. These free parameters stayed at their\n")
+            errprintf("reference values, and the problem may hold only at those values:\n")
             for (i = 1; i <= nall; i++) {
                 if (par.free[i] & par.ptype[i] >= 5) {
                     if (par.value[i] == (par.ptype[i] == 6 ? 1 : 0)) {
@@ -147,18 +142,26 @@ void dwlsmv_id_rank(struct dwlsmv_parmap scalar par,
             errprintf("but it does not identify the model if the true value is the reference value.\n")
         }
         else {
-            errprintf("At a second, perturbed point the rank is %f, still deficient, so this is not\n",
-                      rank2)
-            errprintf("an artefact of the symmetric starting values.\n")
+            errprintf("The problem remained when the starting values were changed, so it is unlikely\n")
+            errprintf("to come from the starting values alone. This is a numerical check at two sets\n")
+            errprintf("of trial values, not a proof that the model is unidentified.\n")
         }
 
         // Section 4.8: "a deficiency of k means k redundant parameters and the
         // NULL SPACE says which". Every right singular vector past the rank
         // spans it, and they all come from the decomposition already done, so
-        // report all k rather than only the last one.
-        for (k = rank + 1; k <= npar; k++) {
-            errprintf("Null direction %f of %f loads on:\n", k - rank, npar - rank)
-            nullv = V[k, .]'
+        // report all of them rather than only the last one. B3.13 (owner,
+        // 2026-11-20): the directions are theta2's, and are labelled a
+        // diagnostic at that point. theta0's mislead when B = 0 adds
+        // deficiencies of its own (G over two, @sec-second-order correction 6).
+        errprintf("Where to look: the parameters below appear to trade off against one another.\n")
+        errprintf("At the trial values, changing them together in approximately the proportions\n")
+        errprintf("shown has almost no effect on the model-implied quantities. This often\n")
+        errprintf("indicates that an identifying constraint is missing or that these parameters\n")
+        errprintf("should not all be free.\n")
+        for (k = rank2 + 1; k <= npar; k++) {
+            errprintf("Set %f of %f:\n", k - rank2, npar - rank2)
+            nullv = V2[k, .]'
             for (i = 1; i <= npar; i++) {
                 if (abs(nullv[i]) > 0.1) {
                     for (j = 1; j <= nall; j++) {
@@ -185,10 +188,18 @@ void dwlsmv_id_rank(struct dwlsmv_parmap scalar par,
             }
         }
         if (hint) {
-            errprintf("Freeing a psi covariance alongside a beta path between the same two factors does\n")
-            errprintf("this: Phi = (I-B)^-1 Psi (I-B)^-T already implies that covariance.\n")
+            errprintf("This model frees both a path and a disturbance covariance between the same\n")
+            errprintf("two factors. The path already accounts for that covariance, so the two cannot\n")
+            errprintf("both be estimated. Loadings listed in the same set belong to that problem.\n")
         }
-        _error("dwls_identify: Delta is rank deficient at the starting values")
+        errprintf("Technical detail: rank(Delta) is %f at the starting values and %f at a second\n",
+                  rank, rank2)
+        errprintf("point, with %f free parameters. The smallest singular value there is %s\n",
+                  npar, strtrim(sprintf("%9.3g", sv2[npar])))
+        errprintf("(largest: %s). Singular values at or below 1e-8 times the largest are\n",
+                  strtrim(sprintf("%9.3g", sv2[1])))
+        errprintf("treated as zero.\n")
+        _error("dwls_identify: the model appears not to be identified (Delta is rank deficient)")
     }
 }
 

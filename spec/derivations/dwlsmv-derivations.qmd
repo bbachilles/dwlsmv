@@ -8182,8 +8182,11 @@ without reference to any model.
 
 **The rule.** Check rank at $\theta^{(0)}$, as Finding 4 requires. If it is
 full, pass. If not, check at $\theta^{(2)}$, and abort only if that is also
-deficient, reporting the null directions from $\theta^{(0)}$, which are the
-clean ones. A deficiency at every point fails both checks. A drop at the
+deficient. (The null directions reported were $\theta^{(0)}$'s until
+2026-11-20, as the clean ones for the models here; they are now
+$\theta^{(2)}$'s, labelled a diagnostic at that point and not a proof of
+nonidentification, since $B=0$ at $\theta^{(0)}$ can add deficiencies of its own,
+@sec-second-order correction 6. The mathematics here is unchanged.) A deficiency at every point fails both checks. A drop at the
 starts alone fails only the first. The criterion at both points is the same
 singular-value ratio, $10^{-8}$ of the largest. When $\theta^{(2)}$ is what
 passes, it is also the optimizer's start: a rank drop at $\theta^{(0)}$ makes
@@ -28010,4 +28013,1776 @@ documentation.
 
 ```{r session}
 sessionInfo()
+```
+
+## Second-order factors: moments, identification, metrics, recovery, standardization, admissibility {#sec-second-order}
+
+*Added 2026-11-19, roadmap unit B2 (E-108 §5.1, items SO1 to SO6), derivation first.*
+Nothing in `src/` or `tests/` depends on this section. It derives, for a model with one or two
+higher-order factors $G$ over first-order factors $F_1,\dots,F_K$ of ordinal items: that $\sigma(\theta)$
+and $\Delta$ need no new term (SO1); local identification, the rank check's two points and what it
+reports, and the relation to the correlated-first-order model, kept apart from each other (SO2); the
+maps between four metrics and where each breaks down (SO3); the unit-variance to marker transform for a
+latent anchor (SO4); standardization for a factor without indicators (SO5); sign and admissibility,
+including what a numerical error in a $\hat\psi$ consists of (SO6). It decides nothing. The spelling of
+the latent marker, the metric offered, whether recovery is eligible, the anchor of $G$'s sign, the
+boundary policy of the disturbance-variance check and the release scope are unit B3's; the questions
+that bear on them are collected in the last subsection. New chunk names start with `so-` and every new R
+name with `so_`; the only thing taken from the rest of the file is the `setup` chunk, and lavaan is
+called only as a comparison target (`so-lavaan-setup` onward). Production facts are cited as file:line,
+read 2026-11-19 at commit `97f296f`; "production coordinates" means the parameter order, the starts and the
+second point of the Module 3 source, evaluated here in R (the run in Stata is B5's first step, since
+Module 3 rejects these models until then). Effort level, decided before the work (a project rule,
+proportionate effort): the standard checks (closed forms, complex-step and central differences, lavaan
+0.7-2 as tier 2); the boundary behaviour as $\psi_k\to0$ or a path $\to0$ is described by rates, not
+certified, since nothing here is a numerical component whose error reaches an SE or a test statistic.
+Drafted by a read-only agent; reviewed, corrected and run by the main session.
+
+### Setting, notation, the four metrics {#sec-so-setting}
+
+One group, ordinal items, delta parameterization, $\sigma(\theta)=(\tau,\ \operatorname{vech}_{\rm off}
+(\Lambda\Phi\Lambda^\top))$ with $\Phi=(I-B)^{-1}\Psi(I-B)^{-\top}$ and $\Theta$ derived (@sec-delta). A
+second-order model has $G$ (or $G_1,G_2$) exogenous and the $F_k$ endogenous: $B$ has the entries
+$\beta_{F_kG}=:b_k$ and nothing else, so $B^2=0$ and $(I-B)^{-1}=I+B$; $\Psi$ is diagonal (plus
+$\psi_{G_2G_1}$ with two $G$'s). **$\psi_{kk}$ is the disturbance variance of $F_k$, never its total
+variance** $\phi_{kk}=b_k^2\psi_G+\psi_{kk}$ (a project rule; spec §4.8). The production factor order is
+`e(lxvars)` then `e(lyvars)` (`dwlsmv_translate.mata:79`), so $G$ comes first and $F_1,\dots,F_K$ follow;
+$\theta$ is ordered thresholds, then $\lambda$ by (item, factor), $\beta$ by (to, from), $\psi$ lower
+triangle by (row, col) (`dwls_identify.mata:243-385`), and `fidx`, hence the second point's index $k$,
+counts the thresholds (`dwlsmv_id_rank.mata:90-96`). Starts are $\lambda=0.7$, $\beta=0$, $\psi_{gg}=1$,
+$\psi_{gh}=0$ (`dwlsmv_id_parse.mata:298,314,326`); a *fixed* row keeps its fixed value at the start.
+
+The four metrics, a scale for each $F_k$ crossed with a scale for $G$ (the names are used throughout):
+
+| | $F_k$ by an item marker ($\lambda_{m(k)k}=1$, $\psi_k$ free) | $F_k$ by its disturbance ($\psi_k=1$, loadings free) |
+|---|---|---|
+| **$G$ by a latent marker** ($b_1=1$, $\psi_G$ free) | **M**, `sem`'s default | **W** |
+| **$G$ by its variance** ($\psi_G=1$, paths free) | **V**, `sem`'s `var(G@1)`; already has a canonical spelling (`metric marker F_k y`, `metric unitvariance G`; B1 finding 1.1, D2c) | **U**, lavaan `std.lv`, dwlsmv `unitvariance` |
+
+$b_1$ is on the *first* child; $a_k$ is the marker item's loading in a metric where it is free, and
+$c=a_1b_1$ (SO3). With an item loading on $G$ (B0's MD) "marker" for $G$ means that item's loading fixed
+at 1 (what `sem` does, B1 probe P10) and no path is fixed. Models are named as in B0: M2, M3, M4, M5 ($G$
+over 2 to 5 factors of three items), M2c (both second-order loadings fixed at 1), MT2 and MT1 (the last
+factor with two items, one item), MD, M22 and M33 (two correlated $G$'s over $2+2$ and $3+3$), M22u (the
+same with $\psi_{G_2G_1}=0$). The builder `so_build()` writes the parameter table of each in each metric;
+`so_rankcheck()` is Module 3's check (`dwlsmv_id_rank.mata`, `dwlsmv_numrank.mata`) with the structural
+block of $\Delta$ taken as production takes it, a central difference at $h=10^{-5}\max(1,|v|)$
+(`dwlsmv_delta_cols.mata:122`), padded with the identity of the threshold block.
+
+Every verification below ends in `so_check()`, which counts; the last chunk prints `so-verify: N of N` and
+stops if any failed. Tolerances: algebraic identities $10^{-10}$ relative (most hold to $10^{-15}$);
+closed-form $\Delta$ against production's central difference $10^{-8}$, two decades above the $10^{-10}$
+rounding floor that @sec-delta records for the same $h$; every other tolerance is stated where it is used,
+and the ones chosen after seeing a measurement say so.
+
+```{r so-core}
+so_checks <- new.env(); so_checks$n <- 0; so_checks$ok <- 0; so_checks$bad <- character()
+so_check <- function(label, so_cond) {
+  so_cond <- isTRUE(all(so_cond)) && length(so_cond) > 0
+  so_checks$n <- so_checks$n + 1
+  if (so_cond) so_checks$ok <- so_checks$ok + 1 else so_checks$bad <- c(so_checks$bad, label)
+  invisible(so_cond)
+}
+so_rel <- function(so_a, so_b) max(abs(so_a - so_b)) / max(abs(so_b), 1e-300)   # relative to the largest reference entry
+
+# (I - B)^-1 for a nilpotent (recursive) B, as a finite sum: exact, and valid for complex entries
+so_A <- function(B) {
+  m <- nrow(B); A <- diag(m) + 0 * B; Bk <- diag(m) + 0 * B
+  for (k in seq_len(m - 1)) { Bk <- Bk %*% B; A <- A + Bk }
+  stopifnot(max(Mod(Bk %*% B)) == 0)
+  A
+}
+so_Phi   <- function(B, Psi) { A <- so_A(B); A %*% Psi %*% t(A) }          # t(), never conjugate
+so_Sig   <- function(L, B, Psi) { so_Ph <- so_Phi(B, Psi); L %*% so_Ph %*% t(L) }
+so_sigma <- function(L, B, Psi) { S <- so_Sig(L, B, Psi); S[lower.tri(S)] } # correlation block of sigma (delta)
+
+# A model = production's parameter table for one group: NA = no row (fixed 0), *f = free flag.
+# Theta order is dwls_identify()'s: thresholds, then lambda by (item, factor), beta by (to, from),
+# psi lower triangle by (row, col); fidx counts thresholds. Factor order is Module 11's:
+# e(lxvars) then e(lyvars), so G's come first.
+so_model <- function(Lv, Lf, Bv, Bf, Pv, so_Pf, nthr = 2, label = "") {
+  rowmajor <- function(so_V, F, lower = FALSE, ty) {
+    so_d <- NULL
+    for (so_r in seq_len(nrow(so_V))) for (c in seq_len(ncol(so_V))) {
+      if (lower && c > so_r) next
+      if (!is.na(so_V[so_r, c])) so_d <- rbind(so_d, data.frame(type = ty, r = so_r, c = c, free = F[so_r, c], val = so_V[so_r, c]))
+    }
+    so_d
+  }
+  tab <- rbind(rowmajor(Lv, Lf, FALSE, "l"), rowmajor(Bv, Bf, FALSE, "b"), rowmajor(Pv, so_Pf, TRUE, "p"))
+  fr <- tab[tab$free, ]
+  L0 <- Lv; L0[is.na(L0)] <- 0; B0 <- Bv; B0[is.na(B0)] <- 0
+  P0 <- Pv; P0[is.na(P0)] <- 0; P0[upper.tri(P0)] <- t(P0)[upper.tri(P0)]
+  list(label = label, p = nrow(Lv), m = ncol(Lv), nthr = nthr, tab = tab, fr = fr, npar_s = nrow(fr),
+       T = nthr * nrow(Lv), L0 = L0, B0 = B0, P0 = P0, start = fr$val)
+}
+so_mats <- function(so_md, so_th) {
+  so_z <- so_th[1] * 0; L <- so_md$L0 + so_z; B <- so_md$B0 + so_z; P <- so_md$P0 + so_z; fr <- so_md$fr
+  for (so_j in seq_len(nrow(fr))) {
+    so_r <- fr$r[so_j]; c <- fr$c[so_j]
+    if (fr$type[so_j] == "l") L[so_r, c] <- so_th[so_j]
+    else if (fr$type[so_j] == "b") B[so_r, c] <- so_th[so_j]
+    else { P[so_r, c] <- so_th[so_j]; P[c, so_r] <- so_th[so_j] }
+  }
+  list(L = L, B = B, P = P)
+}
+so_msigma <- function(so_md, so_th) { so_x <- so_mats(so_md, so_th); so_sigma(so_x$L, so_x$B, so_x$P) }
+
+# production's Delta, structural block: central difference, h = 1e-5 max(1, |v|) (dwlsmv_delta_cols)
+so_delta_fd <- function(so_md, so_th) {
+  so_D <- matrix(0, length(so_msigma(so_md, so_th)), length(so_th))
+  for (so_j in seq_along(so_th)) {
+    so_h <- 1e-5 * max(1, abs(so_th[so_j])); tp <- so_th; tm <- so_th; tp[so_j] <- so_th[so_j] + so_h; tm[so_j] <- so_th[so_j] - so_h
+    so_D[, so_j] <- (so_msigma(so_md, tp) - so_msigma(so_md, tm)) / (2 * so_h)
+  }
+  so_D
+}
+# closed form of @sec-delta's table
+so_delta_cf <- function(so_md, so_th) {
+  so_x <- so_mats(so_md, so_th); A <- so_A(so_x$B); so_Ph <- A %*% so_x$P %*% t(A)
+  Lm <- so_x$L %*% A; Gm <- so_x$L %*% so_Ph; lt <- lower.tri(diag(so_md$p)); fr <- so_md$fr
+  so_D <- matrix(0, sum(lt), nrow(fr))
+  for (so_j in seq_len(nrow(fr))) {
+    so_r <- fr$r[so_j]; c <- fr$c[so_j]; dS <- matrix(0, so_md$p, so_md$p)
+    if (fr$type[so_j] == "l") { e <- rep(0, so_md$p); e[so_r] <- 1; dS <- e %o% Gm[, c] + Gm[, c] %o% e }
+    else if (fr$type[so_j] == "b") dS <- Lm[, so_r] %o% Gm[, c] + Gm[, c] %o% Lm[, so_r]
+    else if (so_r != c) dS <- Lm[, so_r] %o% Lm[, c] + Lm[, c] %o% Lm[, so_r]
+    else dS <- Lm[, so_r] %o% Lm[, so_r]
+    so_D[, so_j] <- dS[lt]
+  }
+  so_D
+}
+so_delta_cs <- function(so_md, so_th, so_h = 1e-20) {
+  so_D <- matrix(0, length(so_msigma(so_md, so_th)), length(so_th))
+  for (so_j in seq_along(so_th)) { tz <- as.complex(so_th); tz[so_j] <- tz[so_j] + 1i * so_h; so_D[, so_j] <- Im(so_msigma(so_md, tz)) / so_h }
+  so_D
+}
+
+# the rank check of dwls_identify(): theta0 (starts), then theta2 (dwlsmv_id_rank) if theta0 is deficient
+so_phi <- (sqrt(5) - 1) / 2
+so_numrank <- function(Ds, T) {                       # Delta = blockdiag(I_T, Ds): singular values of both
+  so_sv <- sort(c(svd(Ds)$d, rep(1, T)), decreasing = TRUE)
+  list(rank = sum(so_sv > 1e-8 * so_sv[1]), n = length(so_sv), ratio = so_sv[length(so_sv)] / so_sv[1], sv = so_sv)
+}
+so_rankcheck <- function(so_md, delta = so_delta_fd) {
+  so_th0 <- so_md$start; k <- so_md$T + seq_along(so_th0)
+  th2 <- so_th0 + 0.1 * (((k * so_phi) %% 1) - 0.5)
+  so_r0 <- so_numrank(delta(so_md, so_th0), so_md$T); r2 <- so_numrank(delta(so_md, th2), so_md$T)
+  s <- svd(delta(so_md, so_th0)); nv <- s$v[, ncol(s$v)]
+  list(npar = so_md$npar_s + so_md$T, rank0 = so_r0$rank, ratio0 = so_r0$ratio, rank2 = r2$rank, ratio2 = r2$ratio,
+       th0 = so_th0, th2 = th2, pass0 = so_r0$rank == so_r0$n, pass2 = r2$rank == r2$n, nullv = nv)
+}
+
+# the builder. nk: items per first-order factor. gm: G by "marker" (b of the first child fixed 1; with md,
+# the item on G fixed 1) or "var" (psi_G = 1). fm: each F_k by "item" (first item fixed 1, psi_k free) or
+# "dist" (psi_k = 1 fixed, loadings free). M = (marker, item), U = (var, dist), V = (var, item), W = (marker, dist).
+so_build <- function(nk = c(3, 3, 3), gm = "marker", fm = "item", so_ng = 1, gsplit = length(nk),
+                     gcov = TRUE, fixb = integer(), mdi = FALSE, nthr = 2, glast = FALSE, label = "") {
+  so_K <- length(nk); p <- sum(nk) + mdi; m <- so_ng + so_K; i0 <- cumsum(c(0, nk))
+  Lv <- matrix(NA_real_, p, m); Lf <- matrix(FALSE, p, m)
+  Bv <- matrix(NA_real_, m, m); Bf <- matrix(FALSE, m, m)
+  Pv <- matrix(NA_real_, m, m); so_Pf <- matrix(FALSE, m, m)
+  for (k in seq_len(so_K)) for (so_i in seq_len(nk[k])) {
+    so_r <- i0[k] + so_i; Lv[so_r, so_ng + k] <- if (fm == "item" && so_i == 1) 1 else 0.7; Lf[so_r, so_ng + k] <- !(fm == "item" && so_i == 1)
+  }
+  kids <- split(seq_len(so_K), rep(seq_len(so_ng), gsplit))
+  for (so_g in seq_len(so_ng)) for (k in kids[[so_g]]) {
+    Bv[so_ng + k, so_g] <- 0; Bf[so_ng + k, so_g] <- TRUE
+    if (gm == "marker" && !mdi && k == kids[[so_g]][1]) { Bv[so_ng + k, so_g] <- 1; Bf[so_ng + k, so_g] <- FALSE }
+    if (k %in% fixb) { Bv[so_ng + k, so_g] <- 1; Bf[so_ng + k, so_g] <- FALSE }
+  }
+  if (mdi) { Lv[p, 1] <- if (gm == "marker") 1 else 0.7; Lf[p, 1] <- gm != "marker" }
+  for (so_g in seq_len(so_ng)) { Pv[so_g, so_g] <- 1; so_Pf[so_g, so_g] <- gm != "var" }
+  for (k in seq_len(so_K)) { Pv[so_ng + k, so_ng + k] <- 1; so_Pf[so_ng + k, so_ng + k] <- fm != "dist" }
+  if (so_ng == 2 && gcov) { Pv[2, 1] <- 0; so_Pf[2, 1] <- TRUE }
+  if (glast) {                                   # alternative factor order: the F's first, then the G's
+    o <- c(so_ng + seq_len(so_K), seq_len(so_ng))
+    Lv <- Lv[, o]; Lf <- Lf[, o]; Bv <- Bv[o, o]; Bf <- Bf[o, o]; Pv <- Pv[o, o]; so_Pf <- so_Pf[o, o]
+  }
+  so_md <- so_model(Lv, Lf, Bv, Bf, Pv, so_Pf, nthr, label)
+  so_md$facn <- c(paste0("G", seq_len(so_ng)), paste0("F", seq_len(so_K))); if (glast) so_md$facn <- so_md$facn[o]
+  so_md$itemn <- paste0("y", seq_len(p)); so_md$K <- so_K; so_md$ng <- so_ng; so_md$nk <- nk; so_md$gm <- gm; so_md$fm <- fm; so_md$mdi <- mdi
+  so_md
+}
+```
+
+The second group of helpers rescales latent variables, standardizes, and reads off the metric's fixed rows
+(used from SO3 on).
+
+```{r so-maps}
+# rescale every latent variable by d (Result 1 of @sec-marker-recovery, any invertible diagonal D)
+so_rescale <- function(so_x, so_d) {
+  Di <- diag(1 / so_d, length(so_d)); Dd <- diag(so_d, length(so_d))
+  list(L = so_x$L %*% Di, B = Dd %*% so_x$B %*% Di, P = Dd %*% so_x$P %*% Dd)
+}
+# the d that takes x into the metric of md, read off md's fixed rows: a fixed loading fixes d_f by lambda/d_f = v,
+# a fixed psi_ff by d_f^2 psi_ff = v, a fixed beta (the latent marker) by (b d_child)/d_f = v AFTER the children are
+# rescaled -- the order the roadmap asks about. Positive root for the psi rule.
+so_d_for <- function(so_x, so_md) {
+  m <- so_md$m; so_d <- rep(NA_real_, m); done <- rep(FALSE, m); tb <- so_md$tab
+  for (so_f in seq_len(m)) {
+    l <- tb[tb$type == "l" & tb$c == so_f & !tb$free & tb$val != 0, ]
+    p <- tb[tb$type == "p" & tb$r == so_f & tb$c == so_f & !tb$free, ]
+    if (nrow(l) >= 1) { so_d[so_f] <- so_x$L[l$r[1], so_f] / l$val[1]; done[so_f] <- TRUE }
+    else if (nrow(p) == 1) { so_d[so_f] <- sqrt(p$val / so_x$P[so_f, so_f]); done[so_f] <- TRUE }
+  }
+  for (so_f in which(!done)) {
+    so_b <- tb[tb$type == "b" & tb$c == so_f & !tb$free & tb$val != 0, ]
+    stopifnot(nrow(so_b) == 1)             # a NaN child (psi <= 0 under a disturbance rule) propagates: not representable
+    so_d[so_f] <- so_x$B[so_b$r, so_f] * so_d[so_b$r] / so_b$val
+  }
+  so_d
+}
+so_to_metric <- function(so_x, so_md) so_rescale(so_x, so_d_for(so_x, so_md))
+so_theta_of <- function(so_md, so_x) {
+  fr <- so_md$fr; so_th <- numeric(nrow(fr))
+  for (so_j in seq_len(nrow(fr))) so_th[so_j] <- switch(fr$type[so_j], l = so_x$L[fr$r[so_j], fr$c[so_j]], b = so_x$B[fr$r[so_j], fr$c[so_j]], p = so_x$P[fr$r[so_j], fr$c[so_j]])
+  so_th
+}
+# fixed rows of md must hold at the rescaled point
+so_fixed_ok <- function(so_x, so_md, tol = 1e-10) {
+  tb <- so_md$tab[!so_md$tab$free, ]; ok <- TRUE
+  for (so_j in seq_len(nrow(tb))) {
+    so_v <- switch(tb$type[so_j], l = so_x$L[tb$r[so_j], tb$c[so_j]], b = so_x$B[tb$r[so_j], tb$c[so_j]], p = so_x$P[tb$r[so_j], tb$c[so_j]])
+    ok <- ok && abs(so_v - tb$val[so_j]) <= tol * max(1, abs(tb$val[so_j]))
+  }
+  ok
+}
+# a point in standardized form (unit total variance for every F_k): b*_k, item loadings lam*
+so_std_point <- function(md0, bstar, lamstar = 0.7) {
+  m <- md0$m; so_K <- length(bstar); so_ng <- m - so_K
+  L <- md0$L0; L[L != 0] <- lamstar; B <- matrix(0, m, m); P <- diag(m)
+  B[cbind(so_ng + seq_len(so_K), 1)] <- bstar; P[cbind(so_ng + seq_len(so_K), so_ng + seq_len(so_K))] <- 1 - bstar^2
+  list(L = L, B = B, P = P)
+}
+# standardized solution (std.all under delta): lambda s_f, beta s_f / s_t, psi / (s s), Theta = 1 - diag(L Phi L')
+so_std_mats <- function(so_x) {
+  so_Ph <- so_Phi(so_x$B, so_x$P); s <- sqrt(diag(so_Ph)); Ds <- diag(s, length(s)); Di <- diag(1 / s, length(s))
+  list(L = so_x$L %*% Ds, B = Di %*% so_x$B %*% Ds, P = Di %*% so_x$P %*% Di, Th = 1 - diag(so_x$L %*% so_Ph %*% t(so_x$L)), s = s, Phi = so_Ph)
+}
+```
+
+### Result SO1: moments and $\Delta$ need no new term {#sec-so-moments}
+
+**SO1.1.** $\sigma(\theta)$ is the existing function of $(\Lambda,B,\Psi)$ with the first-order factors
+endogenous; nothing in @sec-theta-delta or @sec-delta assumed that an endogenous factor has no
+descendants *in the data* or that a factor has items.
+
+**SO1.2 (the direct form).** With $\gamma=(b_k)$ the vector of second-order loadings, for one $G$
+$$\Phi_{GG}=\psi_G,\qquad \Phi_{FG}=\psi_G\gamma,\qquad
+\Phi_{FF}=\psi_G\gamma\gamma^\top+\Psi_F,$$
+and with two $G$'s $\Phi_{FF}=\Gamma\Psi_{GG}\Gamma^\top+\Psi_F$ ($\Gamma$ the $K\times2$ matrix of paths).
+*Proof.* $B^2=0$ gives $(I-B)^{-1}=I+B$, and $\Phi=(I+B)\Psi(I+B)^\top$ has these blocks. $\square$
+
+**SO1.3 ($\Delta$).** The table of @sec-delta applies to every column unchanged. Its derivation used
+only $A=(I-B)^{-1}$, $L=\Lambda A$ and $G=\Lambda\Phi$ and the quadratic lemma. For a path $\beta_{F_kG}$
+($g=F_k$, $h=G$) the column is $L_{jg}G_{kh}+G_{jh}L_{kg}$ with $L_{\cdot g}=\Lambda_{\cdot F_k}$ and
+$G_{\cdot h}=\psi_G(\Lambda_{\cdot G}+\sum_k b_k\Lambda_{\cdot F_k})$; for $\psi_{F_kF_k}$ it is
+$\Lambda_{jF_k}\Lambda_{kF_k}$, and for $\psi_G$ it is $L_{jG}L_{kG}$ with
+$L_{\cdot G}=\Lambda_{\cdot G}+\sum_kb_k\Lambda_{\cdot F_k}$, so $\psi_G$ moves the correlation of every
+pair of items whose factors have a nonzero path from $G$, within a first-order factor ($b_k^2\lambda_{jk}\lambda_{ik}$)
+as well as across two.
+
+**SO1.4 (no truncation error).** The lemma of @sec-delta holds for every path: the condition is that $B$
+has no directed path $g\rightsquigarrow h$, i.e. none from $F_k$ to $G$, and there is none. So a central
+difference has rounding error only, at any step.
+
+*Verification (`so-1`).* For M3, M4, MD and M22 in each of the four metrics, at a seeded generic point:
+(a) $\Phi_{FF}$ and $\sigma$ from SO1.2 equal those of the $(I-B)^{-1}$ form (MD excepted, where $G$ also
+carries items; the direct form is the one-$G$ statement), $10^{-12}$; (b) the closed-form $\Delta$ equals the
+complex-step derivative ($10^{-10}$) and production's central difference ($10^{-8}$); (c) every path column
+is reproduced by a central difference at $H=1/8$ to $10^{-12}$, which a quadratic function allows and a
+cubic one does not.
+
+```{r so-1}
+so_mets <- list(M = c("marker", "item"), U = c("var", "dist"), V = c("var", "item"), W = c("marker", "dist"))
+so_rand_theta <- function(so_md, so_seed) {                 # a generic point: free entries only, fixed rows keep their values
+  set.seed(so_seed); fr <- so_md$fr; so_n <- nrow(fr)
+  so_v <- ifelse(fr$type == "l", runif(so_n, .4, .9), ifelse(fr$type == "b", runif(so_n, .3, .9), runif(so_n, .5, 1.5)))
+  so_v[fr$type == "p" & fr$r != fr$c] <- 0.2; so_v
+}
+so_1_models <- list(
+  M3 = list(nk = rep(3, 3)), M4 = list(nk = rep(3, 4)), MD = list(nk = rep(3, 3), mdi = TRUE),
+  M22 = list(nk = rep(3, 4), so_ng = 2, gsplit = c(2, 2)))
+so_1 <- list(); so_seed <- 100
+for (so_nm in names(so_1_models)) for (so_mn in names(so_mets)) {
+  so_seed <- so_seed + 1
+  so_md <- do.call(so_build, c(so_1_models[[so_nm]], list(gm = so_mets[[so_mn]][1], fm = so_mets[[so_mn]][2])))
+  so_th <- so_rand_theta(so_md, so_seed); so_x <- so_mats(so_md, so_th); so_K <- so_md$K; so_ng <- so_md$ng; so_Fi <- so_ng + seq_len(so_K)
+  # (a) the direct second-order form of the first-order block: Phi_FF = G' diag(psi_G) G + Psi_F  (one G: gamma gamma' psi_G)
+  so_Ph <- so_Phi(so_x$B, so_x$P); so_Gam <- so_x$B[so_Fi, seq_len(so_ng), drop = FALSE]
+  so_PhFF <- so_Gam %*% so_x$P[seq_len(so_ng), seq_len(so_ng), drop = FALSE] %*% t(so_Gam) + diag(diag(so_x$P)[so_Fi], so_K)
+  so_Sdir <- so_x$L[, so_Fi, drop = FALSE] %*% so_PhFF %*% t(so_x$L[, so_Fi, drop = FALSE])
+  if (!so_md$mdi) so_check(paste("SO1a direct form", so_nm, so_mn), so_rel(so_Ph[so_Fi, so_Fi], so_PhFF) < 1e-12 && so_rel(so_Sdir[lower.tri(so_Sdir)], so_msigma(so_md, so_th)) < 1e-12)
+  # (b) closed-form Delta against production's central difference and against the complex step
+  so_Dcf <- so_delta_cf(so_md, so_th); so_Dfd <- so_delta_fd(so_md, so_th); so_Dcs <- so_delta_cs(so_md, so_th)
+  so_1[[length(so_1) + 1]] <- data.frame(model = so_nm, metric = so_mn, npar = so_md$npar_s,
+    cf_vs_cs = so_rel(so_Dcf, so_Dcs), cf_vs_fd = so_rel(so_Dcf, so_Dfd))
+  so_check(paste("SO1b closed form = complex step", so_nm, so_mn), so_rel(so_Dcf, so_Dcs) < 1e-10)
+  so_check(paste("SO1b closed form = production difference", so_nm, so_mn), so_rel(so_Dcf, so_Dfd) < 1e-8)
+  # (c) the quadratic lemma on the beta columns: a central difference at H = 1/8 has no truncation error
+  so_H <- 1/8; so_jb <- which(so_md$fr$type == "b")
+  so_gap <- sapply(so_jb, function(so_j) {
+    tp <- so_th; tm <- so_th; tp[so_j] <- tp[so_j] + so_H; tm[so_j] <- tm[so_j] - so_H
+    max(abs((so_msigma(so_md, tp) - so_msigma(so_md, tm)) / (2 * so_H) - so_Dcf[, so_j]))
+  })
+  so_check(paste("SO1c beta columns exact at H=1/8", so_nm, so_mn), max(so_gap) < 1e-12)
+}
+so_1 <- do.call(rbind, so_1); so_1$cf_vs_cs <- signif(so_1$cf_vs_cs, 2); so_1$cf_vs_fd <- signif(so_1$cf_vs_fd, 2); so_1
+```
+
+Every check holds; the largest gap to the central difference is `r format(max(so_1$cf_vs_fd), digits = 2)`
+(relative), and to the complex step `r format(max(so_1$cf_vs_cs), digits = 2)`.
+**Status: ESTABLISHED** (proof above, verified in four models $\times$ four metrics).
+
+### Result SO2: identification, four statements kept apart {#sec-so-ident}
+
+The four statements are: (1) **local identification** (the rank of $\Delta$), (2) **the relation to the
+correlated-first-order model** (the same moment set, or not), (3) **metric equivalence** (the same model on
+another latent scale, SO3), (4) **release scope**, which this section does not touch. The third is the
+subject of SO3; the second is deliberately not read off the first: equal degrees of freedom and equal fit
+(statement 2) do not make the models the same, and neither says anything about identification.
+
+#### SO2.1 Local identification, in production order, at both points of the rank check
+
+**Principle.** $\sigma$ is a rational function of $\theta$ on the region where $(I-B)$ is invertible, here
+everywhere, so the rank of $\Delta$ is its generic rank except on a closed null set. Full column rank at *one*
+point therefore proves full generic rank, and a model is **locally identified at almost every parameter
+value**; a deficiency that holds at every point (a closed-form null direction) proves the opposite. The
+production check evaluates the criterion at two points (`dwlsmv_id_rank.mata:90-105`): the starts
+$\theta^{(0)}$ and, only if that is deficient, $\theta^{(2)}$, $\theta_k+0.1(\{k\varphi\}-\tfrac12)$ for every
+free $\lambda$, $\beta$, $\psi$ at its position $k$ in the full $\theta$; a singular value counts if it
+exceeds $10^{-8}$ of the largest (`dwlsmv_numrank.mata:67`). The ratio reported below is the criterion's own
+quantity, $\sigma_{\min}/\sigma_{\max}$ of $\Delta$ including the identity threshold block, and the *margin*
+is $\log_{10}(\text{ratio}/10^{-8})$. Each model is also run with 1 to 4 thresholds per item and with $G$
+last instead of first (8 variants), because $k$ moves with both.
+
+**Result SO2.1.** (i) M3, M4, M5, MT2, MD, M22, M33 (and M2c) are locally identified, at almost every point,
+in each of M, U, V, W. (ii) M2, MT1 and M22u are not identified, in any metric, at any point. Proof of (i):
+the rank at $\theta^{(2)}$ in the table below; of (ii): the closed-form null directions that follow.
+
+(ii) *M2.* The model's moments depend on $\theta$ through $\Phi_{11},\Phi_{22},\Phi_{12}$ only (three numbers; the
+loadings are separate parameters), while $G$ over two has four structural parameters
+($b_2,\psi_G,\psi_1,\psi_2$ in M). Explicitly the direction
+$(\mathrm db_2,\mathrm d\psi_G,\mathrm d\psi_1,\mathrm d\psi_2)\propto(b_2,\,-\psi_G,\,\psi_G,\,-b_2^2\psi_G)$ leaves
+$\Phi_{12}=\psi_Gb_2$, $\Phi_{11}=\psi_G+\psi_1$, $\Phi_{22}=b_2^2\psi_G+\psi_2$ fixed, at every point.
+*MT1.* A factor with one item $y_s$ enters the correlations only through $\Phi_{s\cdot}$ with its *other*
+factors: $\Phi_{ss}$ multiplies no pair of distinct items. In M and V, $\psi_s$ enters only $\Phi_{ss}$, so
+its column of $\Delta$ is identically zero; in U and W, $(\lambda_s,b_s)\mapsto(t\lambda_s,b_s/t)$ leaves every
+$\lambda_s\Phi_{s\cdot}$ unchanged. *M22u.* With $\psi_{G_2G_1}=0$ the two blocks of $\Phi_{FF}$ decouple and
+each is the M2 argument: deficiency 2.
+
+A model with one $G$ over **two** factors becomes identified by one more restriction (M2c, a second path
+fixed at 1: full rank already at $\theta^{(0)}$ in all four metrics), and **two** $G$'s are identified
+through their covariance (M22 identified, M22u not). A first-order factor with **two** items is
+identified through $G$ (MT2). All verdicts in the table are for production coordinates, in every one of
+the 8 variants. (In U and V, M2c reads "$\psi_G=1$ and $b_2=1$"; in M and W "both paths 1".)
+
+```{r so-2-rank}
+# ---- SO2: local identification in production coordinates, both points of the rank check
+so_specs <- list(
+  M2  = list(nk = c(3, 3)),            M2c = list(nk = c(3, 3), fixb = 2L),
+  M3  = list(nk = rep(3, 3)),          M4  = list(nk = rep(3, 4)),   M5 = list(nk = rep(3, 5)),
+  MT2 = list(nk = c(3, 3, 2)),         MT1 = list(nk = c(3, 3, 1)),
+  MD  = list(nk = rep(3, 3), mdi = TRUE),
+  M22 = list(nk = rep(3, 4), so_ng = 2, gsplit = c(2, 2)), M33 = list(nk = rep(3, 6), so_ng = 2, gsplit = c(3, 3)),
+  M22u = list(nk = rep(3, 4), so_ng = 2, gsplit = c(2, 2), gcov = FALSE))
+so_expect <- c(M2 = FALSE, M2c = TRUE, M3 = TRUE, M4 = TRUE, M5 = TRUE, MT2 = TRUE, MT1 = FALSE, MD = TRUE,
+               M22 = TRUE, M33 = TRUE, M22u = FALSE)           # identified (passes at some point)?
+so_variants <- function(spec, so_mn) {                            # 1 to 4 thresholds per item, G first and G last
+  out <- list()
+  for (nt in 1:4) for (gl in c(FALSE, TRUE)) {
+    so_md <- do.call(so_build, c(spec, list(gm = so_mets[[so_mn]][1], fm = so_mets[[so_mn]][2], nthr = nt, glast = gl)))
+    out[[length(out) + 1]] <- so_rankcheck(so_md)
+  }
+  out
+}
+so_2 <- list()
+for (so_nm in names(so_specs)) for (so_mn in names(so_mets)) {
+  so_md <- do.call(so_build, c(so_specs[[so_nm]], list(gm = so_mets[[so_mn]][1], fm = so_mets[[so_mn]][2])))
+  so_r <- so_rankcheck(so_md); so_v <- so_variants(so_specs[[so_nm]], so_mn)
+  so_worst <- min(sapply(so_v, function(so_z) so_z$ratio2)); so_allpass <- all(sapply(so_v, function(so_z) so_z$pass2 || so_z$pass0))
+  so_2[[length(so_2) + 1]] <- data.frame(model = so_nm, metric = so_mn, free = so_r$npar, rank0 = so_r$rank0, ratio0 = so_r$ratio0,
+    rank2 = so_r$rank2, ratio2 = so_r$ratio2, pass0 = so_r$pass0, pass2 = so_r$pass2, worst_ratio2_8variants = so_worst, passes_all8 = so_allpass,
+    margin_dec = log10(so_r$ratio2 / 1e-8))
+  so_check(paste("SO2 verdict", so_nm, so_mn), (so_r$pass0 || so_r$pass2) == so_expect[[so_nm]])
+  so_check(paste("SO2 verdict in all 8 variants", so_nm, so_mn), so_allpass == so_expect[[so_nm]])
+}
+so_2 <- do.call(rbind, so_2)
+so_2_show <- so_2; for (so_j in c("ratio0", "ratio2", "worst_ratio2_8variants")) so_2_show[[so_j]] <- signif(so_2_show[[so_j]], 2); so_2_show$margin_dec <- round(so_2_show$margin_dec, 1)
+so_2_show[, c("model", "metric", "free", "rank0", "rank2", "ratio2", "worst_ratio2_8variants", "margin_dec", "pass2")]
+```
+
+M2c's smallest ratio is `r format(min(so_2$ratio0[so_2$model == "M2c"]), digits = 2)`. Narrowest margin among the identified models and over the 8 variants:
+`r format(min(so_2$worst_ratio2_8variants[so_2$pass2]), digits = 2)` as a ratio, i.e.
+`r round(log10(min(so_2$worst_ratio2_8variants[so_2$pass2]) / 1e-8), 1)` decades above the criterion; in the
+default coordinates `r format(min(so_2$ratio2[so_2$pass2]), digits = 2)` (`r so_2$model[so_2$pass2][which.min(so_2$ratio2[so_2$pass2])]`,
+metric `r so_2$metric[so_2$pass2][which.min(so_2$ratio2[so_2$pass2])]`). The roadmap's "two orders or more" holds, with 2.7 decades at the narrowest.
+The failures are far on the other side: M2, MT1 and M22u have $\sigma_{\min}/\sigma_{\max}\le10^{-13}$ at
+$\theta^{(2)}$.
+**Status: (i) VERIFIED ONLY for the designs tabulated** (the rank at one point proves generic identification
+of the model *as built* there; the margin of $\theta^{(2)}$ is a measurement, and the order of $\lambda,\beta,\psi$
+in $\theta$ and of the factors is now read from the source; a different order was tried by B0 under 40
+random orders without a failure); **(ii) ESTABLISHED** (closed-form null directions, verified below).
+
+#### SO2.2 Why $\theta^{(0)}$ is deficient, in each metric
+
+B0 wrote that every second-order model is deficient at $\theta^{(0)}$ "because $B=0$ there". That is exact for
+U and V and not for M and W, where $b_1=1$ is fixed and $B\neq0$.
+
+**Result SO2.2.** At $\theta^{(0)}$ ($b_k=0$ for every free path): (a) in U and V every free path column of
+$\Delta$ is exactly zero and the deficiency is $K$; (b) in M the deficiency is 1, with null vector
+$(\mathrm d\psi_G,\mathrm d\psi_1)=(1,-1)$; (c) in W the deficiency is 1, with null vector $\mathrm d\psi_G=1$,
+$\mathrm d\lambda_{j,F_1}=-\lambda/(2\Phi_{11})$. *Proof.* (a) At $B=0$, $\mathrm d\Phi=\mathrm dB\,\Psi+\Psi\,\mathrm dB^\top$,
+and its only nonzero entries are $\Phi_{F_kG}$, which no item loads on: the path columns of $\Delta$ vanish.
+(b) With $b_1=1$ and $b_{k\ge2}=0$, $\psi_G$ enters only $\Phi_{11}=\psi_G+\psi_1$ (the cross terms carry
+$b_{k\ge2}$), exactly as $\psi_1$ does. (c) $\Phi_{11}=\psi_G+1$ and the loadings of $F_1$ enter through
+$\lambda\sqrt{\Phi_{11}}$. $\square$ The second point moves the paths off zero (and $\psi$, $\lambda$ off their
+starts), which is why it is the routine path for every second-order model, and why its being the optimizer's
+start (`dwlsmv_id_rank.mata:105-111`) is needed here and not an accident.
+
+```{r so-2-null}
+options(width = 150)
+# ---- why theta0 is deficient in each metric (K = 3, 4, 5), and what the null space is
+so_2_def <- list()
+for (so_K in 3:5) for (so_mn in names(so_mets)) {
+  so_md <- so_build(rep(3, so_K), so_mets[[so_mn]][1], so_mets[[so_mn]][2]); so_th0 <- so_md$start
+  so_D0 <- so_delta_cf(so_md, so_th0); so_sv <- svd(so_D0); so_rk <- sum(so_sv$d > 1e-8 * so_sv$d[1]); so_nb <- sum(so_md$fr$type == "b")
+  so_jb <- which(so_md$fr$type == "b")
+  if (so_mn %in% c("U", "V")) {       # every free path column vanishes where B = 0: G has no items
+    so_check(paste("SO2 theta0 U/V: path columns are zero, K =", so_K, so_mn), max(abs(so_D0[, so_jb])) < 1e-12 && so_rk == so_md$npar_s - so_K)
+  }
+  if (so_mn == "M") {                 # psi_G and psi_1 enter only Phi_11 = psi_G + psi_1 when b_2 = ... = 0, b_1 = 1
+    so_v <- rep(0, so_md$npar_s); so_v[which(so_md$fr$type == "p" & so_md$fr$r == 1)] <- 1; so_v[which(so_md$fr$type == "p" & so_md$fr$r == 2)] <- -1
+    so_check(paste("SO2 theta0 M: null vector (psi_G, psi_1) = (1, -1), K =", so_K), max(abs(so_D0 %*% so_v)) < 1e-9 && so_rk == so_md$npar_s - 1)
+  }
+  if (so_mn == "W") {                 # psi_G enters Phi_11 = psi_G + 1; compensated by the loadings of F_1
+    so_v <- rep(0, so_md$npar_s); so_v[which(so_md$fr$type == "p" & so_md$fr$r == 1)] <- 1
+    so_j1 <- which(so_md$fr$type == "l" & so_md$fr$c == 2); so_v[so_j1] <- -0.7 / (2 * 2)
+    so_check(paste("SO2 theta0 W: null vector (psi_G, F_1 loadings), K =", so_K), max(abs(so_D0 %*% so_v)) < 1e-9 && so_rk == so_md$npar_s - 1)
+  }
+  so_2_def[[length(so_2_def) + 1]] <- data.frame(K = so_K, metric = so_mn, free = so_md$npar_s, rank_theta0 = so_rk, deficiency = so_md$npar_s - so_rk)
+}
+so_2_def <- do.call(rbind, so_2_def); so_2_def
+
+# ---- the production report when both points fail (reconstructed from dwls_identify's messages)
+so_report <- function(so_md) {
+  so_r <- so_rankcheck(so_md); so_D0 <- so_delta_fd(so_md, so_r$th0); s <- svd(so_D0); nv <- s$v[, (so_r$rank0 - so_md$T + 1):so_md$npar_s, drop = FALSE]
+  so_nm <- paste0(ifelse(so_md$fr$type == "l", "lambda[", ifelse(so_md$fr$type == "b", "beta[", "psi[")),
+               ifelse(so_md$fr$type == "l", paste0(so_md$itemn[so_md$fr$r], ","), paste0(so_md$facn[so_md$fr$r], ",")),
+               ifelse(so_md$fr$type == "l", so_md$facn[so_md$fr$c], so_md$facn[so_md$fr$c]), "]")
+  list(rank0 = so_r$rank0, rank2 = so_r$rank2, npar = so_r$npar,
+       loads = lapply(seq_len(ncol(nv)), function(so_j) so_nm[abs(nv[, so_j]) > 0.1]))
+}
+so_m2 <- so_report(so_build(c(3, 3), "marker", "item")); so_mt1 <- so_report(so_build(c(3, 3, 1), "marker", "item"))
+so_mt1u <- so_report(so_build(c(3, 3, 1), "var", "dist"))
+str(so_m2[1:3]); so_m2$loads; str(so_mt1[1:3]); so_mt1$loads
+
+# G over two: the closed-form null direction at any point (M metric): (b_2, psi_G, psi_1, psi_2) -> (b_2, -psi_G, psi_G, -b_2^2 psi_G)
+so_md <- so_build(c(3, 3), "marker", "item"); so_r <- so_rankcheck(so_md); so_th <- so_r$th2
+so_v <- rep(0, so_md$npar_s); so_ip <- function(ty, rr, cc) which(so_md$fr$type == ty & so_md$fr$r == rr & so_md$fr$c == cc)
+so_b2 <- so_th[so_ip("b", 3, 1)]; so_pG <- so_th[so_ip("p", 1, 1)]
+so_v[so_ip("b", 3, 1)] <- so_b2; so_v[so_ip("p", 1, 1)] <- -so_pG; so_v[so_ip("p", 2, 2)] <- so_pG; so_v[so_ip("p", 3, 3)] <- -so_b2^2 * so_pG
+so_check("SO2 K=2 closed-form null direction (M)", max(abs(so_delta_cf(so_md, so_th) %*% so_v)) < 1e-12 * max(abs(so_v)) && so_r$rank2 == so_r$npar - 1)
+# ... and the constrained variants (both paths fixed at 1) are full rank at both points
+for (so_mn in names(so_mets)) so_check(paste("SO2 K=2 with b_2 fixed 1 is full rank", so_mn),
+  so_rankcheck(so_build(c(3, 3), so_mets[[so_mn]][1], so_mets[[so_mn]][2], fixb = 2L))$pass0)
+
+# a single-item first-order factor: exact null direction in each metric
+for (so_mn in names(so_mets)) {
+  so_md <- so_build(c(3, 3, 1), so_mets[[so_mn]][1], so_mets[[so_mn]][2]); so_th <- so_rand_theta(so_md, 7); so_D <- so_delta_cf(so_md, so_th)
+  so_ip <- function(ty, rr, cc) which(so_md$fr$type == ty & so_md$fr$r == rr & so_md$fr$c == cc); so_v <- rep(0, so_md$npar_s)
+  if (so_mn %in% c("M", "V")) so_v[so_ip("p", 5, 5)] <- 1            # psi_3 enters only Phi_33: no pair of distinct items sees it
+  else { so_v[so_ip("l", 7, 5)] <- so_th[so_ip("l", 7, 5)]; so_v[so_ip("b", 5, 1)] <- -so_th[so_ip("b", 5, 1)] }   # (lambda_s, b_3) -> (t lambda_s, b_3 / t)
+  so_check(paste("SO2 single-item factor: exact null direction", so_mn), max(abs(so_D %*% so_v)) < 1e-12)
+}
+```
+
+The table shows rank at $\theta^{(0)}$ for $K=3,4,5$: M and W lose one, U and V lose $K$, each by the
+vectors the checks assert. B0's "rank 11 of 12" (G over three) is the M and W figure; in U and V it is 9
+of 12.
+
+**What is reported when both points fail** (`dwlsmv_id_rank.mata:114-155`): the line "rank(Delta) is $r_0$
+at the starting values but $n$ parameter(s) are free", then either "$k$ parameter(s) are redundant" (if the
+second point has the same rank) or "$k$ parameter(s) are redundant here and $k_2$ at a second point", then
+one block per null direction **of $\theta^{(0)}$** listing the parameters with $|v_j|>0.1$. For **M2** (M metric) rank is
+`r so_m2$rank0` of `r so_m2$npar` at both points, one direction, and the parameters named are
+`r paste(so_m2$loads[[1]], collapse = " and ")` only: the redundancy's real form involves $b_2$ and $\psi_2$ as well, but
+$b_2=0$ at the start so those components vanish there. The report is accurate and incomplete. For **MT1** rank is
+`r so_mt1$rank0` at $\theta^{(0)}$ and `r so_mt1$rank2` at $\theta^{(2)}$ of `r so_mt1$npar`: "2 redundant here and 1 at a second
+point", two directions, one naming `r paste(so_mt1$loads[[1]], collapse = ", ")` (the real one) and one the starts-only
+$\psi_G,\psi_1$ pair. Neither says "a first-order factor with one item" or "$G$ over two factors"; that wording is B3's.
+
+#### SO2.3 The relation to the correlated-first-order model
+
+This is a statement about moment sets, not about identification.
+
+**$K=3$.** The correlated model has $\Phi_{FF}$ free (6 numbers), the second-order model (M) has
+$(\psi_G,b_2,b_3,\psi_1,\psi_2,\psi_3)$ (6 numbers) and the same $\Lambda$ (6 free loadings): **the same degrees
+of freedom** (24 at $p=9$), and $\sigma$ depends on the second-order parameters through $\Phi_{FF}$ only.
+
+**Result SO2.3 (the map).** For $\Phi_{12}\Phi_{13}\Phi_{23}\ne0$ the second-order point
+$$\psi_G=\frac{\Phi_{12}\Phi_{13}}{\Phi_{23}},\quad b_2=\frac{\Phi_{23}}{\Phi_{13}},\quad b_3=\frac{\Phi_{23}}{\Phi_{12}},\quad
+\psi_k=\Phi_{kk}-b_k^2\psi_G\ (b_1=1)$$
+has $\psi_G\gamma\gamma^\top+\Psi_F=\Phi_{FF}$ exactly, and it is the only one that does (the three
+off-diagonals determine $\psi_G,b_2,b_3$). It is **proper** ($\psi_G>0$, every $\psi_k\ge0$) **iff**
+$$\Phi_{12}\Phi_{13}\Phi_{23}>0\quad\text{and}\quad r_{kl}r_{km}/r_{lm}\le1\ \text{for each }k$$
+($r$ the factor correlations; the second is "every standardized second-order loading at most 1": $b_k^{*2}=r_{kl}r_{km}/r_{lm}$).
+*Proof.* $\psi_G=\Phi_{12}\Phi_{13}\Phi_{23}/\Phi_{23}^2$ has the sign of the product. Given that,
+$\psi_1=\Phi_{11}-\Phi_{12}\Phi_{13}/\Phi_{23}\ge0\iff r_{12}r_{13}/r_{23}\le1$, and likewise for $k=2,3$.
+A covariance matrix with exactly one off-diagonal zero has no preimage (it would need $\psi_Gb_kb_l=0$ for one
+pair and $\ne0$ for the others), and one with all three zero needs $\psi_G=0$ or two paths zero. $\square$
+So the two models have the same degrees of freedom and, for data whose correlated
+optimum has all three $\Phi_{kl}\neq0$, the **same minimized objective**; they are **the same model only on
+the region**; outside it the second-order fit is the correlated model's with an improper value, a negative
+$\psi_k$ (loading above 1) or a negative $\psi_G$ (product of correlations negative). The argument is the same in
+every metric (SO3 maps one to another); the improper value is representable in M and W (negative $\psi_G$), M and V
+(negative $\psi_k$), SO3.3.
+
+```{r so-2-rel}
+# ---- K = 3: the second-order model against the correlated first-order model (marker metric, items 1, 4, 7 are markers)
+so_k3_map <- function(Phi) {                 # Phi: the 3 x 3 factor covariance of the correlated model, item-marker scale
+  so_psiG <- Phi[1, 2] * Phi[1, 3] / Phi[2, 3]; so_b <- c(1, Phi[2, 3] / Phi[1, 3], Phi[2, 3] / Phi[1, 2])
+  list(psiG = so_psiG, b = so_b, psi = diag(Phi) - so_b^2 * so_psiG)
+}
+so_k3_status <- function(Phi) {              # region of equal models, read from the correlation matrix alone
+  so_R <- cov2cor(Phi); so_bs2 <- c(so_R[1, 2] * so_R[1, 3] / so_R[2, 3], so_R[1, 2] * so_R[2, 3] / so_R[1, 3], so_R[1, 3] * so_R[2, 3] / so_R[1, 2])
+  list(prod = so_R[1, 2] * so_R[1, 3] * so_R[2, 3], bstar2 = so_bs2, inside = so_R[1, 2] * so_R[1, 3] * so_R[2, 3] > 0 && all(so_bs2 <= 1))
+}
+so_md3 <- so_build(rep(3, 3), "marker", "item"); set.seed(11)
+so_Lam <- matrix(0, 9, 3); so_Lam[cbind(1:9, rep(1:3, each = 3))] <- c(1, .8, .7, 1, .6, .9, 1, .7, .8)
+so_mkPhi <- function(so_r, s = c(1, 1.3, .8)) { so_R <- diag(3); so_R[1, 2] <- so_R[2, 1] <- so_r[1]; so_R[1, 3] <- so_R[3, 1] <- so_r[2]; so_R[2, 3] <- so_R[3, 2] <- so_r[3]; diag(s) %*% so_R %*% diag(s) }
+so_cases <- list(inside = c(.6, .5, .4), inside_negpair = c(-.6, -.5, .4), loading_above_1 = c(.8, .8, .4),
+                 negative_product = c(.5, .5, -.4), mixed_improper = c(.9, -.8, -.6))
+so_k3 <- do.call(rbind, lapply(names(so_cases), function(so_nm) {
+  Phi <- so_mkPhi(so_cases[[so_nm]]); mp <- so_k3_map(Phi); st <- so_k3_status(Phi)
+  # the second-order model at the mapped point, items 1,4,7 markers
+  so_x <- so_mats(so_md3, c(so_Lam[cbind(c(2, 3, 5, 6, 8, 9), rep(1:3, each = 2))], mp$b[2:3], mp$psiG, mp$psi))
+  sig_so <- so_sigma(so_x$L, so_x$B, so_x$P)
+  sig_c <- so_sigma(so_Lam, matrix(0, 3, 3), Phi)
+  so_check(paste("SO2 K=3 round trip Phi = psi_G gamma gamma' + Psi_F:", so_nm), so_rel(mp$psiG * outer(mp$b, mp$b) + diag(mp$psi), Phi) < 1e-12)
+  so_check(paste("SO2 K=3 same sigma at the mapped point:", so_nm), so_rel(sig_so, sig_c) < 1e-12)
+  so_check(paste("SO2 K=3 proper iff inside the region:", so_nm), (mp$psiG > 0 && all(mp$psi >= 0)) == st$inside)
+  data.frame(case = so_nm, r12 = so_cases[[so_nm]][1], r13 = so_cases[[so_nm]][2], r23 = so_cases[[so_nm]][3], product = st$prod,
+             psi_G = mp$psiG, min_psi_k = min(mp$psi), max_bstar2 = max(st$bstar2), inside = st$inside)
+}))
+so_k3[, 5:9] <- lapply(so_k3[, 5:9], function(so_z) if (is.numeric(so_z)) signif(so_z, 3) else so_z); so_k3
+so_check("SO2 K=3 same number of free parameters (12) and moments", so_md3$npar_s == 12 && 12 == 6 + 3 + 3)
+
+# ---- K >= 4: K(K-3)/2 restrictions, by counting dimensions and by tetrads
+so_tetrads <- function(so_K) {                  # all tetrad polynomials phi_ij phi_kl - phi_ik phi_jl on the off-diagonal of Phi
+  idx <- which(lower.tri(diag(so_K)), arr.ind = TRUE); key <- function(so_i, so_j) which(idx[, 1] == max(so_i, so_j) & idx[, 2] == min(so_i, so_j))
+  out <- list()
+  for (cmb in if (so_K >= 4) combn(so_K, 4, simplify = FALSE) else list()) { so_a <- cmb[1]; so_b <- cmb[2]; c <- cmb[3]; so_d <- cmb[4]
+    out[[length(out) + 1]] <- c(key(so_a, so_b), key(c, so_d), key(so_a, c), key(so_b, so_d))
+    out[[length(out) + 1]] <- c(key(so_a, so_b), key(c, so_d), key(so_a, so_d), key(so_b, c)) }
+  list(idx = idx, t = out)
+}
+so_phioff <- function(so_b, so_psiG) { P <- so_psiG * outer(so_b, so_b); P[lower.tri(P)] }        # off-diagonal of Phi_FF under the second-order form
+so_2_tet <- list()
+for (so_K in 3:8) {
+  set.seed(so_K); so_b <- c(1, runif(so_K - 1, .4, 1.2)); so_psiG <- runif(1, .5, 1.5); so_n <- so_K * (so_K - 1) / 2
+  so_f <- function(so_z) so_phioff(c(1, so_z[-1]), so_z[1]); so_z0 <- c(so_psiG, so_b[-1])
+  so_J <- matrix(0, so_n, so_K); for (so_j in 1:so_K) { so_h <- 1e-6; so_zp <- so_z0; so_zm <- so_z0; so_zp[so_j] <- so_zp[so_j] + so_h; so_zm[so_j] <- so_zm[so_j] - so_h; so_J[, so_j] <- (so_f(so_zp) - so_f(so_zm)) / (2 * so_h) }
+  so_sv <- svd(so_J)$d; so_rk <- sum(so_sv > 1e-6 * so_sv[1])
+  so_tt <- so_tetrads(so_K); so_phi0 <- so_f(so_z0)
+  so_tv <- if (length(so_tt$t)) sapply(so_tt$t, function(q) so_phi0[q[1]] * so_phi0[q[2]] - so_phi0[q[3]] * so_phi0[q[4]]) else 0
+  # independent restrictions = rank of the tetrad gradients at a point of the model
+  if (length(so_tt$t)) { so_G <- t(sapply(so_tt$t, function(q) { so_g <- rep(0, so_n); so_g[q[1]] <- so_phi0[q[2]]; so_g[q[2]] <- so_phi0[q[1]]; so_g[q[3]] <- -so_phi0[q[4]]; so_g[q[4]] <- -so_phi0[q[3]]; so_g })); so_sg <- svd(so_G)$d; so_nr <- sum(so_sg > 1e-9 * so_sg[1]) } else so_nr <- 0
+  so_2_tet[[length(so_2_tet) + 1]] <- data.frame(K = so_K, offdiag_moments = so_n, model_dim = so_rk, restrictions = so_n - so_rk, KK3half = so_K * (so_K - 3) / 2, tetrad_gradient_rank = so_nr, max_abs_tetrad = max(abs(so_tv)))
+  so_check(paste("SO2 rank of the off-diagonal map is K, K =", so_K), so_rk == so_K)
+  so_check(paste("SO2 K(K-3)/2 restrictions, K =", so_K), so_n - so_rk == so_K * (so_K - 3) / 2 && so_nr == so_K * (so_K - 3) / 2)
+  so_check(paste("SO2 tetrads vanish on the second-order form, K =", so_K), max(abs(so_tv)) < 1e-14)
+}
+so_2_tet <- do.call(rbind, so_2_tet); so_2_tet$max_abs_tetrad <- signif(so_2_tet$max_abs_tetrad, 2); so_2_tet
+# degrees of freedom by the model's own parameter table: second-order minus correlated first-order
+so_dfgain <- sapply(3:7, function(so_K) { so_md <- so_build(rep(3, so_K), "marker", "item"); np <- so_md$npar_s; p <- 3 * so_K
+  (p * (p - 1) / 2 - np) - (p * (p - 1) / 2 - (2 * so_K + so_K * (so_K + 1) / 2)) })
+so_check("SO2 df gain K = 3..7 is K(K-3)/2", identical(as.numeric(so_dfgain), (3:7) * ((3:7) - 3) / 2))
+# two correlated G's: one covariance, and the gain K(K) = (K^2 - 3K - 2)/2 for K = K1 + K2 (M22: 1, M33: 8)
+so_g2 <- sapply(list(c(2, 2), c(3, 3)), function(sp) { so_K <- sum(sp); so_md <- so_build(rep(3, so_K), "marker", "item", so_ng = 2, gsplit = sp)
+  p <- 3 * so_K; (p * (p - 1) / 2 - so_md$npar_s) - (p * (p - 1) / 2 - (2 * so_K + so_K * (so_K + 1) / 2)) })
+so_check("SO2 two G's: df gain 1 (2+2) and 8 (3+3)", identical(as.numeric(so_g2), c(1, 8)))
+
+# ---- rank is lost at particular values: one path at zero (K = 3 only), all paths at zero (every K)
+so_2_zero <- list()
+for (so_K in 3:4) for (so_mn in names(so_mets)) {
+  so_md <- so_build(rep(3, so_K), so_mets[[so_mn]][1], so_mets[[so_mn]][2]); so_th <- so_rand_theta(so_md, 21 + so_K)
+  so_jb <- which(so_md$fr$type == "b"); so_th1 <- so_th; so_th1[so_jb[1]] <- 0; so_thall <- so_th; so_thall[so_jb] <- 0
+  so_r1 <- so_numrank(so_delta_cf(so_md, so_th1), 0); so_ra <- so_numrank(so_delta_cf(so_md, so_thall), 0); so_r0 <- so_numrank(so_delta_cf(so_md, so_th), 0)
+  so_2_zero[[length(so_2_zero) + 1]] <- data.frame(K = so_K, metric = so_mn, free = so_md$npar_s, generic = so_r0$rank, one_path_zero = so_r1$rank, all_paths_zero = so_ra$rank)
+  so_check(paste("SO2 one free path at zero: rank loss iff K = 3, K =", so_K, so_mn), so_r0$rank == so_md$npar_s && (so_r1$rank == so_md$npar_s - (so_K == 3)))
+  so_check(paste("SO2 all free paths at zero loses rank, K =", so_K, so_mn), so_ra$rank < so_md$npar_s)
+}
+so_2_zero <- do.call(rbind, so_2_zero); so_2_zero
+```
+
+The first table runs five designed correlation patterns: the model is proper only in the first two, and the
+mapped second-order point reproduces $\sigma$ in all five (the check asserts both). The B0 example
+$(.8,.8,.4)$ is the third row ($b^{*2}_1=1.6$, $\psi_1<0$). The B0 count that about 80% of uniformly drawn
+$3\times3$ correlation matrices lie outside the region is a statement about that sampling scheme and is not
+used here.
+**Status: ESTABLISHED.**
+
+**$K\ge4$: $K(K-3)/2$ restrictions.** The off-diagonal entries of $\Phi_{FF}$ are $\psi_Gb_kb_l$, $k<l$: $K(K-1)/2$ numbers
+generated by $K$ parameters ($\psi_G$ and $b_2,\dots,b_K$ with $b_1=1$) while the variances $\Phi_{kk}$ stay free through
+$\psi_k$.
+**Result SO2.4.** The map $(\psi_G,b)\mapsto(\psi_Gb_kb_l)_{k<l}$ has rank $K$ at every point with $\psi_G\prod b_k\ne0$
+for $K\ge3$, so the second-order model restricts $K(K-1)/2-K=K(K-3)/2$ combinations of the correlated model's
+covariances: 2 at $K=4$, 5 at $K=5$, 9 at $K=6$. *Proof.* Take logs of absolute values:
+$\log|\Phi_{kl}|=c+\beta_k+\beta_l$ with $c=\log|\psi_G|$, $\beta_k=\log|b_k|$. Its matrix is $[\mathbf 1\ |\ N]$, $N$ the
+vertex-edge incidence matrix of the complete graph $K_K$, which has rank $K$ for $K\ge3$ ($K_K$ is not bipartite);
+the shift $(c,\beta)\mapsto(c-2\delta,\beta+\delta)$ is its one null direction, leaving $K$ parameters of rank
+$K$. $\square$ Those restrictions are the tetrad conditions $\Phi_{ij}\Phi_{kl}=\Phi_{il}\Phi_{kj}$. The chunk
+verifies the rank of the numerical Jacobian, that every tetrad vanishes on the model to $10^{-14}$, that the
+gradients of the tetrads have rank $K(K-3)/2$ (so these are the independent ones), and that
+the degrees of freedom of the parameter tables differ by that amount, $K=3$ to 7 (the first table below
+the cases). For **two** correlated $G$'s over $K_1+K_2=K$ factors the off-diagonal entries are generated by
+$K+1$ numbers (two $\psi_G$, the covariance, and $K-2$ free paths), so the gain is $(K^2-3K-2)/2$:
+1 for $2+2$, 8 for $3+3$, as in B0, checked on the tables.
+**Status: ESTABLISHED.**
+
+**SO2.5 Rank lost at particular values.** *One path at zero* costs rank when $K=3$ and not when $K\ge4$. If
+$b_k=0$ the other $K-1$ factors give $\binom{K-1}{2}$ products $b_lb_m\psi_G$ with which to determine their $K-1$
+paths (and $b_k$ itself is seen through the different entries $\Phi_{kl}=b_kb_l\psi_G$, with derivative
+$b_l\psi_G\ne0$). For $K\ge4$ the incidence argument of SO2.4 on the $K-1\ge3$ other factors gives rank $K-1$
+there; $K=4$ is the square case $(b_lb_m,b_lb_n,b_mb_n)$, Jacobian determinant $-2b_lb_mb_n\ne0$. At $K=3$ one
+product, $b_2b_3$, cannot fix two paths, and the lost direction is
+$(\mathrm db_2,\mathrm db_3,\mathrm d\psi_2,\mathrm d\psi_3)\propto(b_2,-b_3,-2b_2^2,2b_3^2)$ (V; SO3.4). *All paths at zero*
+loses rank in every model (the last column of the table). **Status: ESTABLISHED** ($K=3$ in closed form;
+$K=4$ by the determinant, verified at $K=3,4$ in all four metrics; $K\ge5$ by the incidence argument only).
+**Scope (statement 4): none decided here.**
+
+### Result SO3: the maps between the four metrics, and where each breaks down {#sec-so-metrics}
+
+**SO3.1 (the maps).** @sec-marker-recovery Result 1 holds for *any* invertible diagonal $D$ over the latent
+variables, $G$ included: with $\eta'=D\eta$,
+$$\Lambda'=\Lambda D^{-1},\qquad B'=DBD^{-1},\qquad \Psi'=D\Psi D,\qquad \Phi'=D\Phi D,$$
+so $\Lambda'\Phi'\Lambda'^\top=\Lambda\Phi\Lambda^\top$ and $\sigma$, $\Theta$, $F$, df are unchanged. Elementwise:
+$\lambda_{jk}\mapsto\lambda_{jk}/d_k$, $b_k\mapsto b_kd_k/d_G$, $\psi_k\mapsto d_k^2\psi_k$, $\psi_G\mapsto d_G^2\psi_G$,
+and with two $G$'s $\psi_{G_2G_1}\mapsto d_{G_1}d_{G_2}\psi_{G_2G_1}$. A metric is a choice of $d$ by the
+target's fixed rows:
+
+| target | $d_k$ (scale of $F_k$) | $d_G$ (scale of $G$; taken **after** the $F_k$ are rescaled) |
+|---|---|---|
+| M | $a_k$ = the marker loading in the source | $a_1b_1$ ($b_1$ the source's first path) |
+| V | $a_k$ | $1/\sqrt{\psi_G}$ |
+| W | $1/\sqrt{\psi_k}$ | $b_1d_1=b_1/\sqrt{\psi_1}$ |
+| U | $1/\sqrt{\psi_k}$ | $1/\sqrt{\psi_G}$ |
+
+where $a_k,b_1,\psi_k,\psi_G$ are the **source's** values (equal to 1 where the source fixes them). Order matters
+because $b_1$ changes when $F_1$ is rescaled: $d_G=b_1$ instead of $a_1b_1$ leaves $b_1\ne1$ (checked). The
+maps are consistent: doing U$\to$V$\to$M is U$\to$M, for all twelve ordered pairs (the groupoid of
+the four metrics). The recovery draft's formulas are the U row of this table:
+U$\to$M $\ \lambda\mapsto\lambda/a_k,\ b_k\mapsto a_kb_k/c,\ \psi_k\mapsto a_k^2,\ \psi_G\mapsto c^2$, $c=a_1b_1$;
+U$\to$V $\ \lambda\mapsto\lambda/a_k,\ b_k\mapsto a_kb_k,\ \psi_k\mapsto a_k^2$, $\psi_G=1$.
+M$\to$U needs $\psi_k>0$, $\psi_G>0$ and gives $b^U_k=b^M_k\sqrt{\psi_G}/\sqrt{\psi_k}$; M$\to$V needs only $\psi_G>0$.
+**Status: ESTABLISHED** (algebra; the chunk checks the explicit $d$ against the generic map, that $\sigma$ is
+unchanged and the target's fixed rows hold, and the composition, at generic points of each source metric;
+SO4 checks the same maps against lavaan fits).
+
+**SO3.2 (what keeps its meaning).** Every quantity that is a function of $\sigma$ alone: thresholds, fit,
+df, the free-parameter count (the same in all four metrics), and the **standardized solution**
+$\lambda s_f,\ b s_G/s_k,\ \psi/(s_fs_g)$: under $D$, $s_f=\sqrt{\Phi_{ff}}\mapsto d_fs_f$, so each of these is
+invariant. What does not: the raw $\lambda$ of a first-order factor, the raw $b_k$, $\psi_k$ and $\psi_G$;
+and **an equality or a fixed value of a raw path**, which is a restriction on $b_kd_k/d_G$ and so a different
+set of models in different metrics (SO3.5). With unit disturbance variances the raw path equals
+$b^*/\sqrt{1-b^{*2}}$ and is not a correlation (a standardized 0.847 is 1.59). The chunk
+asserts the standardized solution equal to $10^{-12}$ across the four metrics at a generic point ($K=3,4$) and
+prints the raw third path in each.
+
+```{r so-3}
+
+# ---- SO3.1  the twelve maps: d_k and d_G by the target metric, from named parameters of the source point
+so_d_explicit <- function(so_x, so_K, nk, so_to, so_ng = 1) {          # one G; marker item = first item of each F_k; paths on G = column 1
+  so_r1 <- cumsum(c(0, nk))[seq_len(so_K)] + 1; so_Fi <- so_ng + seq_len(so_K)
+  so_dk <- if (so_to %in% c("M", "V")) sapply(seq_len(so_K), function(k) so_x$L[so_r1[k], so_Fi[k]]) else 1 / sqrt(diag(so_x$P)[so_Fi])
+  b1p <- so_x$B[so_Fi[1], 1] * so_dk[1]                              # the first path AFTER the first-order factors are rescaled
+  dG <- if (so_to %in% c("M", "W")) b1p else 1 / sqrt(so_x$P[1, 1])
+  c(dG, so_dk)
+}
+for (so_src in names(so_mets)) {
+  so_mds <- so_build(rep(3, 3), so_mets[[so_src]][1], so_mets[[so_src]][2]); so_th <- so_rand_theta(so_mds, 300); so_x <- so_mats(so_mds, so_th)
+  for (so_to in names(so_mets)) {
+    so_mdt <- so_build(rep(3, 3), so_mets[[so_to]][1], so_mets[[so_to]][2])
+    so_d <- so_d_explicit(so_x, 3, rep(3, 3), so_to); so_y <- so_rescale(so_x, so_d)
+    so_check(paste("SO3 explicit d reproduces the generic map", so_src, "to", so_to), max(abs(so_d - so_d_for(so_x, so_mdt))) < 1e-12)
+    so_check(paste("SO3 sigma unchanged and the target's fixed rows hold", so_src, "to", so_to),
+             so_rel(so_sigma(so_y$L, so_y$B, so_y$P), so_sigma(so_x$L, so_x$B, so_x$P)) < 1e-12 && so_fixed_ok(so_y, so_mdt))
+    so_mdv <- so_build(rep(3, 3), "var", "item"); so_z <- so_to_metric(so_to_metric(so_x, so_mdv), so_mdt); so_w <- so_to_metric(so_x, so_mdt)
+    so_check(paste("SO3 maps compose through V:", so_src, "to", so_to), max(abs(unlist(so_z) - unlist(so_w))) < 1e-10)
+  }
+}
+# order matters: scaling G by the path BEFORE the first-order factors are rescaled does not give b_1 = 1
+so_mdU <- so_build(rep(3, 3), "var", "dist")
+so_xU <- so_mats(so_mdU, so_rand_theta(so_mdU, 5)); so_dk <- so_d_explicit(so_xU, 3, rep(3, 3), "M")[-1]
+so_ywrong <- so_rescale(so_xU, c(so_xU$B[2, 1], so_dk)); so_ygood <- so_rescale(so_xU, so_d_explicit(so_xU, 3, rep(3, 3), "M"))
+so_check("SO3 order of the two rescalings: c = a_1 b_1, not b_1", abs(so_ygood$B[2, 1] - 1) < 1e-12 && abs(so_ywrong$B[2, 1] - 1) > 0.05)
+
+# ---- SO3.2  what keeps its meaning: the standardized solution, df, the free-parameter count, sigma
+so_3_std <- list()
+for (so_K in 3:4) {
+  so_mdl <- lapply(so_mets, function(m) so_build(rep(3, so_K), m[1], m[2])); so_x0 <- so_mats(so_mdl$U, so_rand_theta(so_mdl$U, 40 + so_K))
+  so_sg <- lapply(so_mdl, function(so_md) { so_y <- so_to_metric(so_x0, so_md); list(y = so_y, g = so_std_mats(so_y)) })
+  so_gap <- sapply(so_sg, function(so_z) max(abs(c(so_z$g$L - so_sg$U$g$L, so_z$g$B - so_sg$U$g$B, so_z$g$P - so_sg$U$g$P, so_z$g$Th - so_sg$U$g$Th))))
+  so_check(paste("SO3 standardized solution is the same in all four metrics, K =", so_K), max(so_gap) < 1e-12)
+  so_check(paste("SO3 same number of free parameters in all four metrics, K =", so_K), length(unique(sapply(so_mdl, function(m) m$npar_s))) == 1)
+  so_3_std[[length(so_3_std) + 1]] <- data.frame(K = so_K, free = so_mdl$M$npar_s, max_gap_std = signif(max(so_gap), 2),
+    raw_b3_M = round(so_sg$M$y$B[3, 1], 3), raw_b3_U = round(so_sg$U$y$B[3, 1], 3), raw_b3_V = round(so_sg$V$y$B[3, 1], 3),
+    raw_b3_W = round(so_sg$W$y$B[3, 1], 3), std_b3 = round(so_sg$U$g$B[3, 1], 3))
+}
+do.call(rbind, so_3_std)
+
+# ---- SO3.3  where each metric breaks: representability of improper and boundary points
+so_improper <- function(kind) {
+  so_md <- so_build(rep(3, 3), "marker", "item")
+  if (kind == "proper")  return(so_to_metric(so_std_point(so_md, c(.8, .7, .6)), so_md))
+  if (kind == "psi_k<0") return(so_to_metric(so_std_point(so_md, c(1.2, .4, .4)), so_md))
+  if (kind == "psi_k=0") return(so_to_metric(so_std_point(so_md, c(1, .5, .5)), so_md))
+  if (kind == "psi_G<0") { so_x <- so_mats(so_md, so_rand_theta(so_md, 9)); so_x$P[1, 1] <- -0.5; so_x$P[2:4, 2:4] <- diag(c(1, 1.2, 1.1)); so_x$B[3:4, 1] <- c(.8, .7); return(so_x) }
+}
+so_3_rep <- do.call(rbind, lapply(c("proper", "psi_k<0", "psi_k=0", "psi_G<0"), function(kind) {
+  so_x <- so_improper(kind); row <- list(point = kind)
+  for (so_to in names(so_mets)) {
+    so_mdt <- so_build(rep(3, 3), so_mets[[so_to]][1], so_mets[[so_to]][2])
+    so_y <- suppressWarnings(so_to_metric(so_x, so_mdt)); row[[so_to]] <- all(is.finite(unlist(so_y))) && so_fixed_ok(so_y, so_mdt)
+  }
+  as.data.frame(row)
+}))
+so_3_rep
+so_check("SO3 representability: psi_k<0 and psi_k=0 in M and V only; psi_G<0 in M and W only; the proper point in all four",
+  identical(unname(unlist(so_3_rep[2, 2:5])), c(TRUE, FALSE, TRUE, FALSE)) && identical(unname(unlist(so_3_rep[3, 2:5])), c(TRUE, FALSE, TRUE, FALSE)) &&
+  identical(unname(unlist(so_3_rep[4, 2:5])), c(TRUE, FALSE, FALSE, TRUE)) && all(unlist(so_3_rep[1, 2:5])))
+# U's sigma range for K >= 3 is r_kl = b*_k b*_l with |b*| < 1, so b*_k^2 = r_kl r_km / r_lm < 1; the improper point is outside it
+so_xi <- so_improper("psi_k<0"); so_R <- cov2cor(so_Phi(so_xi$B, so_xi$P)[2:4, 2:4])
+so_check("SO3 U cannot represent psi_1<0: b*_1^2 = r12 r13 / r23 > 1 at the point", so_R[1, 2] * so_R[1, 3] / so_R[2, 3] > 1 + 1e-9)
+
+# ---- SO3.5  K = 2: the same moments, two different "equal paths" (tie in M, tie in U)
+so_Phi2 <- matrix(c(1, .5, .5, 1.5), 2); so_r12 <- so_Phi2[1, 2] / sqrt(so_Phi2[1, 1] * so_Phi2[2, 2])
+so_bM <- c(sqrt(so_Phi2[1, 2] / so_Phi2[1, 1]), sqrt(so_Phi2[1, 2] / so_Phi2[2, 2]))   # M tie b = (1, 1): psi_G = Phi_12, psi_k = Phi_kk - Phi_12
+so_bU <- rep(sqrt(so_r12), 2)                                                  # U tie: equal standardized paths, product r12
+so_3_tie <- c(r12 = so_r12, M_tie_bstar1 = so_bM[1], M_tie_bstar2 = so_bM[2], prod_M = prod(so_bM), U_tie_bstar1 = so_bU[1], U_tie_bstar2 = so_bU[2], prod_U = prod(so_bU))
+round(so_3_tie, 4)
+so_check("SO3 K=2: the two ties give different standardized paths and the same product r12",
+  abs(prod(so_bM) - so_r12) < 1e-12 && abs(prod(so_bU) - so_r12) < 1e-12 && abs(so_bM[1] - so_bU[1]) > 0.05)
+```
+
+**SO3.3 (what each metric can represent).** Read the table of SO3.1: **M** needs only $a_k\ne0$ and $c\ne0$ and has no sign restriction;
+**V** needs $\psi_G>0$ (its $d_G=1/\sqrt{\psi_G}$) and nothing of $\psi_k$; **W** needs $\psi_k>0$ for every $k$ ($d_k=1/\sqrt{\psi_k}$) and nothing of $\psi_G$; **U** needs both.
+So **U cannot represent $\psi_k\le0$**. At $\sigma$ level: in U, $b^{*2}=b^2/(1+b^2)<1$, every $\sigma$ in its range has $r_{kl}=b^*_kb^*_l$ with $|b^*|<1$, and at $K\ge3$
+$b^{*2}_k=r_{kl}r_{km}/r_{lm}$ is determined by $\sigma$, so a point with $b^{*2}_k>1$ has no preimage. **V and M can** represent $\psi_k<0$ and $\psi_k=0$ (their $\psi_k$ is free);
+**V cannot represent $\psi_G<0$** (at $K=3$ V's $\Phi_{12}\Phi_{13}\Phi_{23}=(b_1b_2b_3)^2>0$, so the improper region of SO2.3 with a negative product is outside V, as it is outside U); **W and M can**. The boundary
+$\psi_k=0$ (a standardized loading of exactly 1) is a point of M and V and is at infinity in U and W. The table asserts exactly this on four points, each mapped from M into every
+metric: proper, $\psi_1<0$, $\psi_1=0$, $\psi_G<0$.
+
+**SO3.4 (conditioning).** *Measurement.* The structural block of $\Delta$ at one *population* point written in each metric, along three axes: a standardized second-order loading
+$b^*_1=\varepsilon$ (the others $.7$), the standardized disturbance $\psi^*_1=\varepsilon^2$ (so $b^*_1\to1$), and the marker item's standardized loading $\varepsilon$; $K=3$ and $4$. Two condition
+numbers: **unscaled** (production's own object: the rank check reads these singular values) and **scaled** (columns normalized to unit length, so that the size of a parameter does not
+count). The table prints $\sigma_{\max}/\sigma_{\min}$ at $\varepsilon=10^{-3},10^{-4}$ and the slopes $d\log_{10}\text{cond}/d\log_{10}(1/\varepsilon)$ between $10^{-2}$ and $10^{-3}$ (the next
+decade reaches $10^{16}$, double precision's limit, on several axes).
+
+```{r so-3-cond}
+# ---- SO3.4  conditioning of Delta along three axes, four metrics (structural block, closed form)
+# unscaled = production's own object (the rank check reads the unscaled singular values); scaled = columns normalized to unit length
+so_condprof <- function(so_K, so_axis, eps, so_mn) {
+  so_md <- so_build(rep(3, so_K), so_mets[[so_mn]][1], so_mets[[so_mn]][2]); bs <- rep(.7, so_K)
+  if (so_axis == "b1") bs[1] <- eps
+  if (so_axis == "psi1") bs[1] <- sqrt(1 - eps^2)
+  so_x <- so_std_point(so_md, bs); if (so_axis == "marker") so_x$L[1, so_md$ng + 1] <- eps
+  so_y <- so_to_metric(so_x, so_md); stopifnot(so_fixed_ok(so_y, so_md)); so_D <- so_delta_cf(so_md, so_theta_of(so_md, so_y))
+  so_sv <- svd(so_D)$d; ss <- svd(sweep(so_D, 2, sqrt(colSums(so_D^2)), "/"))$d
+  c(unscaled = so_sv[1] / so_sv[length(so_sv)], scaled = ss[1] / ss[length(ss)])
+}
+so_3_cond <- list(); so_epss <- 10^-(1:5)
+for (so_K in 3:4) for (so_axis in c("b1", "psi1", "marker")) for (so_mn in names(so_mets)) {
+  so_cv <- sapply(so_epss, function(e) so_condprof(so_K, so_axis, e, so_mn)); so_sl <- apply(log10(so_cv), 1, function(so_z) diff(so_z) / 1)
+  so_3_cond[[length(so_3_cond) + 1]] <- data.frame(K = so_K, axis = so_axis, metric = so_mn, cond_1e3 = signif(so_cv[1, 3], 3), cond_1e4 = signif(so_cv[1, 4], 3),
+    slope_unscaled = unname(round(so_sl[2, "unscaled"], 3)), cond_scaled_1e3 = signif(so_cv[2, 3], 3), slope_scaled = unname(round(so_sl[2, "scaled"], 3)))
+}
+so_3_cond <- do.call(rbind, so_3_cond); rownames(so_3_cond) <- NULL; so_3_cond
+so_slu <- function(so_K, so_axis, so_mn) so_3_cond$slope_unscaled[so_3_cond$K == so_K & so_3_cond$axis == so_axis & so_3_cond$metric == so_mn]
+so_sls <- function(so_K, so_axis, so_mn) so_3_cond$slope_scaled[so_3_cond$K == so_K & so_3_cond$axis == so_axis & so_3_cond$metric == so_mn]
+# slopes are over eps = 1e-2 to 1e-3 (one decade; the 1e-3 to 1e-4 window reaches cond ~ 1e16 on some axes, where double precision is the limit).
+# The windows below (0.02) were chosen after measuring: the measured slopes are within 0.005 of an integer, or of 0.
+so_w <- function(so_v, target, tol = .02) all(abs(so_v - target) < tol)
+so_check("SO3 b_1 -> 0, K = 3, unscaled: V and U eps^-1; M and W eps^-4",
+  so_w(c(so_slu(3, "b1", "U"), so_slu(3, "b1", "V")), 1) && so_w(c(so_slu(3, "b1", "M"), so_slu(3, "b1", "W")), 4))
+so_check("SO3 b_1 -> 0, K = 4, unscaled: V and U bounded; M and W eps^-4", so_w(c(so_slu(4, "b1", "U"), so_slu(4, "b1", "V")), 0) && so_w(c(so_slu(4, "b1", "M"), so_slu(4, "b1", "W")), 4))
+so_check("SO3 b_1 -> 0, scaled: eps^-1 in all four at K = 3; at K = 4 bounded for V and U, eps^-1 for M and W",
+  so_w(sapply(names(so_mets), function(m) so_sls(3, "b1", m)), 1) && so_w(c(so_sls(4, "b1", "U"), so_sls(4, "b1", "V")), 0) && so_w(c(so_sls(4, "b1", "M"), so_sls(4, "b1", "W")), 1))
+so_check("SO3 psi_1 -> 0 (eps = sqrt of the standardized disturbance), unscaled: M and V bounded, U eps^-4, W eps^-5",
+  so_w(c(so_slu(3, "psi1", "M"), so_slu(3, "psi1", "V")), 0) && so_w(so_slu(3, "psi1", "U"), 4) && so_w(so_slu(3, "psi1", "W"), 5))
+so_check("SO3 psi_1 -> 0, scaled: M and V bounded, U and W eps^-2", so_w(c(so_sls(3, "psi1", "M"), so_sls(3, "psi1", "V")), 0) && so_w(c(so_sls(3, "psi1", "U"), so_sls(3, "psi1", "W")), 2))
+so_check("SO3 marker item loading -> 0: M and V eps^-4 unscaled and eps^-1 scaled (item markers); U and W bounded",
+  so_w(c(so_slu(3, "marker", "M"), so_slu(3, "marker", "V")), 4, .05) && so_w(c(so_sls(3, "marker", "M"), so_sls(3, "marker", "V")), 1) &&
+  so_w(c(so_slu(3, "marker", "U"), so_slu(3, "marker", "W"), so_sls(3, "marker", "U"), so_sls(3, "marker", "W")), 0))
+# conditioning through and beyond the boundary: psi_1 < 0 (M and V only)
+so_3_imp <- do.call(rbind, lapply(c(1.0001, 1.01, 1.05, 1.2, 1.5), function(b1) {
+  so_r <- sapply(c("M", "V"), function(so_mn) { so_md <- so_build(rep(3, 3), so_mets[[so_mn]][1], so_mets[[so_mn]][2])
+    so_x <- so_std_point(so_md, c(b1, .7, .7)); so_y <- so_to_metric(so_x, so_md); so_sv <- svd(so_delta_cf(so_md, so_theta_of(so_md, so_y)))$d
+    c(so_sv[1] / so_sv[length(so_sv)], sum(so_sv > 1e-8 * so_sv[1])) })
+  data.frame(bstar_1 = b1, psi_1 = round(1 - b1^2, 4), cond_M = signif(so_r[1, 1], 3), cond_V = signif(so_r[1, 2], 3), rank_M = so_r[2, 1], rank_V = so_r[2, 2])
+}))
+so_3_imp
+so_check("SO3 M and V keep full rank and a modest condition number through psi_1 < 0 (chosen after measuring: 30)",
+  all(so_3_imp$rank_M == 12 & so_3_imp$rank_V == 12) && max(so_3_imp$cond_V) < 30)
+# the rate for V, K = 3, b_1 = eps: an exact null direction at eps = 0, and Delta(eps) v0 = O(eps)
+so_mdV <- so_build(rep(3, 3), "var", "item")
+so_v0at <- function(eps) {
+  so_x <- so_to_metric(so_std_point(so_mdV, c(eps, .7, .7)), so_mdV); so_th <- so_theta_of(so_mdV, so_x); fr <- so_mdV$fr
+  so_v <- rep(0, nrow(fr)); ib <- function(k) which(fr$type == "b" & fr$r == 1 + k)
+  so_b2 <- so_th[ib(2)]; b3 <- so_th[ib(3)]; so_v[ib(2)] <- so_b2; so_v[ib(3)] <- -b3
+  so_v[which(fr$type == "p" & fr$r == 3)] <- -2 * so_b2^2; so_v[which(fr$type == "p" & fr$r == 4)] <- 2 * b3^2
+  list(D = so_delta_cf(so_mdV, so_th), v = so_v)
+}
+so_z0 <- so_v0at(0)
+so_check("SO3 V, K = 3, b_1 = 0: v0 = (b_2, -b_3, -2 b_2^2, 2 b_3^2) is an exact null direction", max(abs(so_z0$D %*% so_z0$v)) < 1e-12)
+so_rt <- sapply(10^-(2:5), function(e) { so_z <- so_v0at(e); sqrt(sum((so_z$D %*% so_z$v)^2)) / (e * sqrt(sum(so_z$v^2))) })
+so_smn <- sapply(10^-(2:5), function(e) { so_z <- so_v0at(e); min(svd(so_z$D)$d) / e })
+so_check("SO3 V, K = 3: |Delta(eps) v0| / (eps |v0|) and sigma_min / eps tend to constants (ratios of the last two within 1%)",
+  abs(so_rt[4] / so_rt[3] - 1) < 1e-2 && abs(so_smn[4] / so_smn[3] - 1) < 1e-2)
+rbind(`|Delta v0| / (eps |v0|)` = so_rt, `sigma_min / eps` = so_smn)
+```
+
+The result, with slopes from the table (a number is the exponent of $1/\varepsilon$; "b" is bounded):
+
+| axis | M | U | V | W |
+|---|---|---|---|---|
+| $b_1^*\to0$, $K=3$ | 4 (scaled 1) | 1 (1) | 1 (1) | 4 (1) |
+| $b_1^*\to0$, $K=4$ | 4 (1) | b (b) | b (b) | 4 (1) |
+| $\psi_1^*\to0$ ($\varepsilon=\sqrt{\psi_1^*}$) | b (b) | 4 (2) | b (b) | 5 (2) |
+| $\psi_1<0$ | represents; cond 12 to 17 | cannot | represents; cond 8.8 to 13 | cannot |
+| marker item loading $\to0$ | 4 (1) | b (b) | 4 (1) | b (b) |
+
+**The question the owner asked about V.** *V combines U's conditioning at small second-order paths with M's ability to represent an improper solution: confirmed, with one caveat.*
+(a) At $b_1\to0$ V is as well-conditioned as U, in both measures: $\varepsilon^{-1}$ at $K=3$ (where the model itself loses rank at $b_1=0$, SO2.5) and bounded at $K\ge4$, against M's 4 (unscaled) and 1 (scaled) at $K\ge4$.
+(b) V represents $\psi_k=0$ and $\psi_k<0$ with a condition number of 8.8 to 13 through $b^*_1$ from 1.0001 to 1.5 (`so_3_imp`; M: 12 to 17), while U's grows like $\varepsilon^{-4}$ toward the
+boundary and then has no point. (c) The caveat: V keeps M's **item** markers, so it inherits M's rate when a *marker item's* loading goes to 0 (4 unscaled, 1 scaled), which U and W do not. (d) V cannot represent $\psi_G<0$;
+M and W can. W is the worst on every axis it can represent: it has M's latent marker ($b_1\to0$: 4) and U's unit disturbances ($\psi^*\to0$: 5) and represents neither improper value of $\psi_k$.
+The unscaled and scaled rates differ by a function of parameter size (in M at $K=3$, the other paths are of order $1/\varepsilon$ and $\psi_G$ of order $\varepsilon^2$); that the metric changes the *scale* of the
+parameters but not (at $K=3$) the rate in the scaled measure is the sense in which the metric choice is not about identification.
+
+*What is derived, and what is only measured.* $K=3$, V (and U): at $b_1=0$ the direction
+$v_0=(\mathrm db_2,\mathrm db_3,\mathrm d\psi_2,\mathrm d\psi_3)=(b_2,-b_3,-2b_2^2,2b_3^2)$ is an exact null direction of $\Delta$: $\mathrm d\Phi_{12}=b_2\mathrm db_1+b_1\mathrm db_2=b_2\mathrm db_1$ and
+$\mathrm d\Phi_{13}=b_3\mathrm db_1$ force $\mathrm db_1=0$ in the null space, $\mathrm d\Phi_{23}=b_3\mathrm db_2+b_2\mathrm db_3=0$ gives $v_0$'s first two entries, $\mathrm d\Phi_{kk}=0$ its last two.
+At $b_1=\varepsilon$ the same $v_0$ gives $\mathrm d\Phi_{12}=\varepsilon b_2$ and $\mathrm d\Phi_{13}=-\varepsilon b_3$, so $\Delta(\varepsilon)v_0=O(\varepsilon)$ and not $o(\varepsilon)$, while every other singular value stays away
+from 0 (rank 11 of 12 at $\varepsilon=0$): $\sigma_{\min}=\Theta(\varepsilon)$, cond $\propto\varepsilon^{-1}$. The chunk finds both $\|\Delta(\varepsilon)v_0\|/(\varepsilon\|v_0\|)$ and $\sigma_{\min}/\varepsilon$ equal to
+`r round(so_smn[4], 4)` for $\varepsilon\le10^{-3}$. At $K\ge4$ the point $b_1=0$ has full rank (SO2.5), so the conditioning is bounded near it by continuity. At $\psi^*_1\to0$ the coordinates of M and V stay finite
+and the point $\psi_1=0$ is a regular point of $\Delta$ (full rank, a polynomial in these coordinates), so they stay bounded; U's and W's coordinates diverge ($b\to\infty$). **Not derived:** the rates 4 and 5 (unscaled), and
+the scaled rate 2 for U and W at $\psi^*\to0$, 1 for M and W at $K=4$; they are measured (slopes within 0.005 of the integer). A bound through $\Delta_M=\Delta_VJ$, $J=\partial\theta_V/\partial\theta_M$,
+only gives the bound $\operatorname{cond}\Delta_M\le\operatorname{cond}\Delta_V\operatorname{cond}J$, which is not used. The recovery note's $\varepsilon^{-4}$ for M and for U at $\psi\to0$ are reproduced.
+**Status: the $\varepsilon^{-1}$ rate of V and U at $K=3$, boundedness of V and U ($K\ge4$) and of M and V ($\psi\to0$): ESTABLISHED. The other rates, scaled and unscaled: VERIFIED ONLY (windows chosen after measuring).**
+
+**SO3.5 (K = 2: a raw-path equality is metric-dependent).** In M, "both paths 1" fixes $b_1=b_2=1$:
+$\Phi_{12}=\psi_G$, $\Phi_{kk}=\psi_G+\psi_k$, a bijection with the three entries of $\Phi$, so the tie
+restricts nothing and the standardized paths are $b^*_k=\sqrt{\Phi_{12}/\Phi_{kk}}$. In U, "both paths equal"
+gives $b^*_1=b^*_2=\sqrt{r_{12}}$. For the same $\sigma$ ($\Phi=(1,.5;.5,1.5)$, $r_{12}=.408$) the first gives
+$(0.707,0.577)$, the second $(0.639,0.639)$; the product, the factor correlation, is the same. Both ties are
+the correlated model reparameterized (equal $\sigma$, 15 moments, 7 free parameters), but they pick different
+points of the same identified set, so "the second-order loadings are equal" means a different thing in M
+(equal in marker-scaled units, not scale-free) than in U (equal standardized loadings). An equality of raw
+second-order paths is therefore only meaningful stated together with its metric. **Status: ESTABLISHED.**
+
+### Result SO4: the unit-variance to marker transform for a latent anchor {#sec-so-recovery}
+
+The question is whether @sec-marker-recovery extends to a factor whose anchor is a path. This subsection
+derives what the mathematics gives and decides nothing about eligibility (the E1 to E3 rule of
+`dwlsmv_m11_receligible.mata:11-15` as it stands refuses these models: $G$ has "no loading fixed at 1" and
+the path fixed at 1 is "a fixed nonzero beta").
+
+**Setup.** $\mathcal U$: every $\psi$ fixed 1 for $F_k$ and $G$ (unit disturbance, unit variance), loadings and
+paths free. $\mathcal M$: item markers on the $F_k$, $b_1=1$, $\psi_k$ and $\psi_G$ free. Let $a_k=\lambda^{\mathcal U}_{m(k)k}$ be
+the marker item's unit-variance loading and $c=a_1b^{\mathcal U}_1$. $\mathcal V$ is the intermediate metric
+(item markers, $\psi_G=1$).
+
+The point-level checks (no lavaan: explicit formulas against the generic map, the reflection orbit, stationarity, the improper case) are in the chunk below, which also defines the numbers quoted in SO4.4.
+
+```{r so-4}
+# ---- SO4: the unit-variance to marker transform for a latent anchor (point-level checks, no lavaan)
+# explicit formulas for a U point (L, B, P) over K factors, one G; marker items are the first item of each F_k
+so_h_UM <- function(so_x, so_K) {                    # U -> M: lambda / a_k, b_k a_k / c, psi_k = a_k^2, psi_G = c^2, c = a_1 b_1
+  so_r1 <- 3 * (seq_len(so_K) - 1) + 1; so_a <- sapply(seq_len(so_K), function(k) so_x$L[so_r1[k], 1 + k]); so_b <- so_x$B[1 + seq_len(so_K), 1]; cc <- so_a[1] * so_b[1]
+  L <- so_x$L; for (k in seq_len(so_K)) L[, 1 + k] <- L[, 1 + k] / so_a[k]
+  B <- so_x$B; B[1 + seq_len(so_K), 1] <- so_a * so_b / cc
+  P <- diag(c(cc^2, so_a^2), so_K + 1); list(L = L, B = B, P = P, a = so_a, c = cc)
+}
+so_h_UV <- function(so_x, so_K) {                    # U -> V: lambda / a_k, b_k a_k, psi_k = a_k^2, psi_G = 1
+  so_r1 <- 3 * (seq_len(so_K) - 1) + 1; so_a <- sapply(seq_len(so_K), function(k) so_x$L[so_r1[k], 1 + k]); so_b <- so_x$B[1 + seq_len(so_K), 1]
+  L <- so_x$L; for (k in seq_len(so_K)) L[, 1 + k] <- L[, 1 + k] / so_a[k]
+  B <- so_x$B; B[1 + seq_len(so_K), 1] <- so_a * so_b
+  list(L = L, B = B, P = diag(c(1, so_a^2), so_K + 1))
+}
+so_mdUk <- lapply(3:4, function(so_K) so_build(rep(3, so_K), "var", "dist")); so_mdMk <- lapply(3:4, function(so_K) so_build(rep(3, so_K), "marker", "item"))
+so_mdVk <- lapply(3:4, function(so_K) so_build(rep(3, so_K), "var", "item"))
+for (so_i in 1:2) {
+  so_K <- so_i + 2; set.seed(400 + so_K)
+  for (so_rep_ in 1:20) {
+    so_th <- so_rand_theta(so_mdUk[[so_i]], 1000 * so_K + so_rep_)
+    so_sg <- sample(c(-1, 1), so_K + 1, replace = TRUE)                   # a random point of the reflection orbit (U's sign group)
+    so_x <- so_rescale(so_mats(so_mdUk[[so_i]], so_th), so_sg)
+    so_hM <- so_h_UM(so_x, so_K); so_hV <- so_h_UV(so_x, so_K); so_gM <- so_to_metric(so_x, so_mdMk[[so_i]]); so_gV <- so_to_metric(so_x, so_mdVk[[so_i]])
+    so_check(paste("SO4.1 explicit U->M = generic map, K =", so_K, so_rep_), max(abs(c(so_hM$L - so_gM$L, so_hM$B - so_gM$B, so_hM$P - so_gM$P))) < 1e-10 &&
+             so_fixed_ok(so_hM, so_mdMk[[so_i]]) && so_rel(so_sigma(so_hM$L, so_hM$B, so_hM$P), so_sigma(so_x$L, so_x$B, so_x$P)) < 1e-12 && so_hM$P[1, 1] > 0 && all(diag(so_hM$P) > 0))
+    so_check(paste("SO4.1 explicit U->V = generic map, K =", so_K, so_rep_), max(abs(c(so_hV$L - so_gV$L, so_hV$B - so_gV$B, so_hV$P - so_gV$P))) < 1e-10 &&
+             so_fixed_ok(so_hV, so_mdVk[[so_i]]) && so_rel(so_sigma(so_hV$L, so_hV$B, so_hV$P), so_sigma(so_x$L, so_x$B, so_x$P)) < 1e-12)
+    # SO4.2: h is constant on the orbit: the M and V images do not depend on the signs sg (and c may have either sign)
+    so_x0 <- so_mats(so_mdUk[[so_i]], so_th); so_h0 <- so_h_UM(so_x0, so_K); so_v0 <- so_h_UV(so_x0, so_K)
+    so_check(paste("SO4.2 h_UM is constant on the 2^(K+1) reflection orbit; h_UV is constant under the F-flips and its paths change sign with G, K =", so_K, so_rep_),
+             max(abs(c(so_hM$L - so_h0$L, so_hM$B - so_h0$B, so_hM$P - so_h0$P, so_hV$L - so_v0$L, so_hV$P - so_v0$P, so_hV$B - so_sg[1] * so_v0$B))) < 1e-10)
+  }
+}
+# the reflection group of the U table has exactly 2^(K+1) elements (every sign vector preserves the fixed rows)
+so_signgroup <- function(so_md, tol = 1e-10) {
+  m <- so_md$m; so_th <- so_rand_theta(so_md, 77); so_x <- so_mats(so_md, so_th); cnt <- 0
+  for (k in 0:(2^m - 1)) { so_d <- ifelse(bitwAnd(k, 2^(0:(m - 1))) > 0, -1, 1); so_y <- so_rescale(so_x, so_d)
+    if (so_fixed_ok(so_y, so_md, tol) && so_rel(so_sigma(so_y$L, so_y$B, so_y$P), so_sigma(so_x$L, so_x$B, so_x$P)) < 1e-12) cnt <- cnt + 1 }
+  cnt
+}
+so_check("SO4.2 |sign group of U| = 2^(K+1) for K = 3, 4", identical(c(so_signgroup(so_mdUk[[1]]), so_signgroup(so_mdUk[[2]])), c(16, 32)))
+
+# SO4.3: Delta_U = Delta_M J exactly, with J = dh/dtheta_U; and the gradient of the DWLS objective transfers as g_U = J' g_M
+so_K <- 3; so_th <- so_rand_theta(so_mdUk[[1]], 4242); so_mU <- so_mdUk[[1]]; so_mM <- so_mdMk[[1]]
+so_h_th <- function(t) so_theta_of(so_mM, so_to_metric(so_mats(so_mU, t), so_mM))
+so_cs_jac_plain <- function(so_f, so_th, so_h = 1e-20) { f0 <- so_f(so_th); so_J <- matrix(0, length(f0), length(so_th))
+  for (so_j in seq_along(so_th)) { tz <- as.complex(so_th); tz[so_j] <- tz[so_j] + 1i * so_h; so_J[, so_j] <- Im(so_f(tz)) / so_h }; so_J }
+so_Jm <- so_cs_jac_plain(so_h_th, so_th); so_thM <- so_h_th(so_th)
+so_DU <- so_delta_cf(so_mU, so_th); so_DM <- so_delta_cf(so_mM, so_thM)
+so_check("SO4.3 Delta_U = Delta_M J (complex-step J), relative", so_rel(so_DU, so_DM %*% so_Jm) < 1e-10)
+set.seed(9); so_s_obs <- so_msigma(so_mU, so_th) + rnorm(nrow(so_DU), 0, .03); so_w <- runif(nrow(so_DU), .5, 2)
+so_gU <- -2 * drop(t(so_DU) %*% (so_w * (so_s_obs - so_msigma(so_mU, so_th)))); so_gM <- -2 * drop(t(so_DM) %*% (so_w * (so_s_obs - so_msigma(so_mM, so_thM))))
+so_check("SO4.3 gradient transfers: g_U = J' g_M", so_rel(so_gU, drop(t(so_Jm) %*% so_gM)) < 1e-10)
+so_check("SO4.3 J is square and nonsingular where every a_k and c are nonzero", nrow(so_Jm) == ncol(so_Jm) && min(svd(so_Jm)$d) > 1e-6)
+
+# SO4.5: a unit-variance refit cannot reproduce an improper marker-metric solution (K = 3).
+# The closure of U's sigma-range, in standardized coordinates (item loadings lambda*, paths b*, psi_k = 1 - b*^2), is a compact set:
+so_u_closure_fit <- function(s0, nst = 25, so_seed = 3) {
+  so_md <- so_build(rep(3, 3), "marker", "item"); set.seed(so_seed); best <- list(value = Inf)
+  so_f <- function(so_z) { so_x <- so_std_point(so_md, so_z[10:12], 1); so_x$L[so_x$L != 0] <- so_z[1:9]; sum((so_sigma(so_x$L, so_x$B, so_x$P) - s0)^2) }
+  for (so_i in seq_len(nst)) { so_z0 <- c(runif(9, .4, .9), runif(3, -.9, .9))
+    o <- optim(so_z0, so_f, method = "L-BFGS-B", lower = rep(-1, 12), upper = rep(1, 12), control = list(maxit = 2000, factr = 10, pgtol = 0))
+    if (o$value < best$value) best <- o }
+  best
+}
+so_mdM3 <- so_mdMk[[1]]; so_xi <- so_std_point(so_mdM3, c(1.2, .4, .4)); so_xp <- so_std_point(so_mdM3, c(.8, .7, .6))
+so_fi <- so_u_closure_fit(so_sigma(so_xi$L, so_xi$B, so_xi$P)); so_fp <- so_u_closure_fit(so_sigma(so_xp$L, so_xp$B, so_xp$P))
+so_4_improper <- c(improper_min = so_fi$value, improper_bstar1 = so_fi$par[10], proper_min = so_fp$value)
+signif(so_4_improper, 3)
+so_check("SO4.5 the closure of U's range misses the improper sigma by a positive amount (> 1e-3, chosen after measuring), attained at b*_1 = 1",
+         so_fi$value > 1e-3 && abs(so_fi$par[10] - 1) < 1e-6)
+so_check("SO4.5 the control (proper marker point) is reproduced (< 1e-12)", so_fp$value < 1e-12)
+# exact statement behind it, for K = 3 and all three correlations nonzero: U's sigma-range is {r_kl = b*_k b*_l, |b*| < 1}
+so_Rr <- cov2cor(so_Phi(so_xi$B, so_xi$P)[2:4, 2:4]); so_bs2 <- c(so_Rr[1, 2] * so_Rr[1, 3] / so_Rr[2, 3], so_Rr[1, 2] * so_Rr[2, 3] / so_Rr[1, 3], so_Rr[1, 3] * so_Rr[2, 3] / so_Rr[1, 2])
+so_check("SO4.5 the squared standardized paths implied by the improper correlations are (1.44, .16, .16): b*_1^2 > 1",
+         max(abs(so_bs2 - c(1.44, .16, .16))) < 1e-12)
+```
+
+**Result SO4.1 (the transform, and $\sigma$ is unchanged).** For $a_k\ne0$ and $c\ne0$ (either sign), $D=\operatorname{diag}(d_G,d_1,\dots,d_K)$ with
+$d_k=a_k$ and $d_G=c$ (to $\mathcal M$) or $d_G=1$ (to $\mathcal V$) gives
+$$\mathcal U\to\mathcal M:\ \lambda\mapsto\lambda/a_k,\ \ b_k\mapsto a_kb_k/c,\ \ \psi_k\mapsto a_k^2,\ \ \psi_G\mapsto c^2;\qquad
+\mathcal U\to\mathcal V:\ \lambda\mapsto\lambda/a_k,\ \ b_k\mapsto a_kb_k,\ \ \psi_k\mapsto a_k^2,\ \ \psi_G=1,$$
+the marker rows are met by construction ($\lambda_{m(k)k}\mapsto1$, $b_1\mapsto a_1b_1/c=1$), $\sigma$ and every
+function of it are unchanged, and $\psi^{\mathcal M}_k=a_k^2>0$, $\psi^{\mathcal M}_G=c^2>0$ always. With two
+$G$'s the same with $d_{G_j}=a_{1(j)}b_{1(j)}$ for each, and $\psi_{G_2G_1}\mapsto d_{G_1}d_{G_2}\psi_{G_2G_1}$.
+*Proof.* SO3.1 with this $D$. $\square$ This is the existing transform
+(`dwlsmv_m11_rectransform.mata:21-26`: $\lambda/c_f$, $\beta c_f/c_g$, $\psi c_fc_g$, $c_f$ the marker loading)
+with the one new ingredient $c_G=a_1b_1$, which the existing code has no source for (its $c_f$ is read from a
+marker loading, and $G$ has none).
+
+**Result SO4.2 (reflections; the sign of $c$).** $\mathcal U$ has the $2^{K+1}$ sign symmetries $\eta_f\to-\eta_f$ for $f\in\{G,F_1,\dots,F_K\}$ (enumerated below),
+under which $a_k\to s_ka_k$ and $b_k\to s_ks_Gb_k$, so $c\to s_Gc$. The $\mathcal M$ image is **constant on the whole orbit**:
+$\lambda/a_k$ and $b_ka_k/c$ are invariant (the signs cancel), $\psi$'s are squares. So $c$ may have either sign and nothing needs a sign
+rule, as in Result 3 of @sec-marker-recovery. The $\mathcal V$ image is constant under the $F$-flips and its paths change sign
+with $G$'s flip ($d_G=1$ does not absorb it): $\mathcal V$ keeps one sign symmetry, $G$'s. **ESTABLISHED**; 40 random
+points of the orbit at $K=3$ and $K=4$ confirm both statements to $10^{-10}$.
+
+**Result SO4.3 (stationarity).** On $\{a_k\ne0,c\ne0\}$ the map $h:\theta_{\mathcal U}\mapsto\theta_{\mathcal M}$ is a square, smooth local diffeomorphism ($2^{K+1}$-to-1 by SO4.2), and
+$\Delta_{\mathcal U}=\Delta_{\mathcal M}J$ with $J=\partial h/\partial\theta_{\mathcal U}$, hence $g_{\mathcal U}=J^\top g_{\mathcal M}$ for $F=r^\top Wr$, and a stationary point maps to a stationary point; a strict local
+minimizer of $F_{\mathcal U}$ to one of $F_{\mathcal M}$ (the argument of @sec-marker-recovery Result 4, unchanged). *Verified*
+at a generic point with a complex-step $J$ (relative $10^{-10}$), including the gradient identity, and $J$'s
+nonsingularity. **ESTABLISHED.** The thresholds are not transformed: $\hat\tau=s_\tau$ in both metrics, the
+block of $\Delta$ is the identity in both, and $h$ is the identity on them (Result 5 of @sec-marker-recovery,
+no change).
+
+**Result SO4.4 (a $\mathcal U$ refit cannot reproduce an improper $\mathcal M$ solution).** Every $\mathcal U$ point maps to an $\mathcal M$ point with $\psi_k>0$ and $\psi_G>0$, so $h$'s image misses
+every $\mathcal M$ point with $\psi_k\le0$ or $\psi_G\le0$. At $\sigma$ level this is stronger than missing a point: for $K\ge3$ and all factor correlations nonzero,
+$\mathcal U$'s moment set is $\{r_{kl}=b^*_kb^*_l,\ |b^*|<1\}$ and $b^{*2}_k=r_{kl}r_{km}/r_{lm}$ is *determined* by $\sigma$, so an $\mathcal M$ point
+with a standardized loading above 1 has $\sigma$ outside $\mathcal U$'s range, and so does one with $\psi_G<0$ (the product $r_{12}r_{13}r_{23}$ is positive on $\mathcal U$'s range). The closure of the range
+is compact; minimizing the squared moment distance over the closure from 25 starts for the owner's improper point
+$b^*=(1.2,.4,.4)$ gives `r format(so_4_improper["improper_min"], digits = 3)`, attained at $b^*_1=1$ (a $\mathcal U$ refit
+runs to $b\to\infty$ and a non-converged fit), against `r format(so_4_improper["proper_min"], digits = 2)` for a proper point. The gap
+> $10^{-3}$ is a threshold chosen after measuring; the control tolerance $10^{-12}$ was set before.
+**ESTABLISHED** (algebra) and verified. The consequence for recovery is the roadmap's: at the second level it
+fails exactly where an improper solution is the reason it would be wanted; a refit in $\mathcal V$ is different: $\mathcal V$ represents $\psi_k\le0$ (SO3.3), so it can reproduce an improper $\psi_k$; it cannot
+reproduce a negative $\psi_G$, and neither can $\mathcal U$.
+
+**What eligibility would need, stated and not decided.** $h$ preserves the fixed rows of $\mathcal M$ for every $\mathcal U$ point iff each factor has exactly one
+anchor (a fixed loading 1 for $F_k$; a fixed path 1 to a child whose own scale is an item marker for $G$) and every other fixed $\lambda,\beta,\psi_{fg}$
+is 0 (the proof of Result 2 of @sec-marker-recovery, with the path anchor allowed for $G$ because $c_G=a_1b_1$
+is *defined* by it). Domain: $a_k\ne0$, $c\ne0$.
+
+
+#### SO4 against lavaan 0.7-2
+
+Four lavaan fits of the same data ($G$ over four factors, three four-category items each, $N=1000$, true standardized
+paths $.8,.7,.6,.75$, `WLSMV`, delta, all four metrics written explicitly) give the same scaled $\chi^2$ and df 50. Every one of the twelve
+ordered maps is applied to the source fit's estimates and, through a complex-step Jacobian of the map, to its covariance matrix of the free
+parameters; the target fit's own estimates and covariance are the reference. Then the same for two correlated $G$'s over $2+2$ ($N=1500$, df 49).
+Thresholds go through by name. Tolerances: set from an earlier measurement (E-114, recovery)
+($3.4\times10^{-7}$ and $5\times10^{-7}$), then $10^{-5}$ for the one-$G$ design and $10^{-4}$ for the two-$G$
+design **chosen after measuring** (the observed ones are below).
+
+```{r so-lavaan-setup}
+suppressPackageStartupMessages(library(lavaan))
+# data: G over K first-order factors, three 4-category items each (seeded)
+so_sim <- function(N, bs, lam = c(.8, .7, .6), so_seed = 20261119, so_ng = 1, gsplit = length(bs), rG = 0.5) {
+  set.seed(so_seed); so_K <- length(bs)
+  Gs <- matrix(rnorm(N * so_ng), N, so_ng)
+  if (so_ng == 2) Gs[, 2] <- rG * Gs[, 1] + sqrt(1 - rG^2) * Gs[, 2]
+  par <- rep(seq_len(so_ng), gsplit)
+  Fm <- sapply(seq_len(so_K), function(k) bs[k] * Gs[, par[k]] + sqrt(1 - bs[k]^2) * rnorm(N))
+  ys <- do.call(cbind, lapply(seq_len(so_K), function(k) sapply(lam, function(l) l * Fm[, k] + sqrt(1 - l^2) * rnorm(N))))
+  so_y <- apply(ys, 2, function(so_v) as.integer(cut(so_v, c(-Inf, -1, 0, 0.8, Inf))) - 1L)
+  so_d <- as.data.frame(so_y); names(so_d) <- paste0("y", seq_len(ncol(so_d))); so_d
+}
+# lavaan syntax for G over K factors in the four metrics (everything explicit)
+so_syn <- function(so_K, nk = rep(3, so_K), gm, fm, so_ng = 1, gsplit = so_K) {
+  i0 <- cumsum(c(0, nk)); s <- character()
+  for (k in seq_len(so_K)) {
+    so_it <- paste0("y", i0[k] + seq_len(nk[k]))
+    pre <- if (fm == "item") c("1*", rep("", nk[k] - 1)) else c("NA*", rep("", nk[k] - 1))
+    s <- c(s, paste0("F", k, " =~ ", paste0(pre, so_it, collapse = " + ")))
+    if (fm == "dist") s <- c(s, paste0("F", k, " ~~ 1*F", k))
+  }
+  kids <- split(seq_len(so_K), rep(seq_len(so_ng), gsplit))
+  for (so_g in seq_len(so_ng)) {
+    ch <- kids[[so_g]]; pre <- if (gm == "marker") c("1*", rep("", length(ch) - 1)) else c("NA*", rep("", length(ch) - 1))
+    s <- c(s, paste0("G", so_g, " =~ ", paste0(pre, "F", ch, collapse = " + ")))
+    if (gm == "var") s <- c(s, paste0("G", so_g, " ~~ 1*G", so_g))
+  }
+  if (so_ng == 2) s <- c(s, "G1 ~~ G2")
+  paste(s, collapse = "\n")
+}
+so_fit <- function(dat, syn) cfa(syn, data = dat, ordered = names(dat), estimator = "WLSMV", parameterization = "delta", auto.fix.first = FALSE, auto.cov.lv.x = FALSE, std.lv = FALSE)
+# ---- lavaan bridge: partable rows <-> (Lambda, B, Psi) in production's factor order (G's first, then F's)
+so_lav_info <- function(fit, so_K, so_ng = 1) {
+  pt <- partable(fit); lat <- c(paste0("G", seq_len(so_ng)), paste0("F", seq_len(so_K))); items <- unique(pt$rhs[pt$op == "=~" & !(pt$rhs %in% lat)])
+  items <- items[order(as.integer(sub("y", "", items)))]
+  S <- which(pt$op %in% c("=~", "~~") & pt$lhs %in% lat & pt$rhs %in% c(items, lat))
+  fr <- which(pt$free > 0); fr <- fr[order(pt$free[fr])]
+  list(pt = pt, lat = lat, items = items, S = S, fr = fr, key = paste(pt$lhs, pt$op, pt$rhs)[fr], K = so_K, so_ng = so_ng,
+       vc = vcov(fit), th = coef(fit))
+}
+so_lav_est <- function(so_inf, so_th) { e <- so_inf$pt$est + 0 * so_th[1]; e[so_inf$fr] <- so_th; e }   # full est vector, complex-safe
+so_lav_mats <- function(so_inf, est) {
+  pt <- so_inf$pt; p <- length(so_inf$items); m <- length(so_inf$lat)
+  L <- matrix(0, p, m) + 0 * est[1]; B <- matrix(0, m, m) + 0 * est[1]; P <- B
+  for (so_i in so_inf$S) {
+    so_a <- pt$lhs[so_i]; so_b <- pt$rhs[so_i]; ia <- match(so_a, so_inf$lat)
+    if (pt$op[so_i] == "=~") { ib <- match(so_b, so_inf$items); if (!is.na(ib)) L[ib, ia] <- est[so_i] else B[match(so_b, so_inf$lat), ia] <- est[so_i] }
+    else { ib <- match(so_b, so_inf$lat); P[ia, ib] <- est[so_i]; P[ib, ia] <- est[so_i] }
+  }
+  list(L = L, B = B, P = P)
+}
+# value of structural row i of a (L,B,P) triple
+so_row_val <- function(so_inf, so_x, so_i) {
+  pt <- so_inf$pt; ia <- match(pt$lhs[so_i], so_inf$lat)
+  if (pt$op[so_i] == "=~") { ib <- match(pt$rhs[so_i], so_inf$items); if (!is.na(ib)) so_x$L[ib, ia] else so_x$B[match(pt$rhs[so_i], so_inf$lat), ia] }
+  else so_x$P[ia, match(pt$rhs[so_i], so_inf$lat)]
+}
+# lavaan's free vector of a fit in metric A  ->  the free vector of a fit in metric B (map of @sec-second-order SO3/SO4),
+# structural rows through the rescaling that md_B's fixed rows dictate; thresholds copied by name
+so_map_theta <- function(infA, infB, mdB, so_th) {
+  so_x <- so_lav_mats(infA, so_lav_est(infA, so_th)); so_y <- so_to_metric(so_x, mdB)
+  out <- so_th[1] * 0 * numeric(length(infB$fr))
+  for (so_j in seq_along(infB$fr)) {
+    so_i <- infB$fr[so_j]
+    out[so_j] <- if (so_i %in% infB$S) so_row_val(infB, so_y, so_i) else so_th[match(infB$key[so_j], infA$key)]
+  }
+  out
+}
+so_cs_jac <- function(so_f, so_th, so_h = 1e-20) {
+  f0 <- so_f(so_th); so_J <- matrix(0, length(f0), length(so_th))
+  for (so_j in seq_along(so_th)) { tz <- as.complex(so_th); tz[so_j] <- tz[so_j] + 1i * so_h; so_J[, so_j] <- Im(so_f(tz)) / so_h }
+  so_J
+}
+so_std_vec <- function(so_inf, so_th) {            # the standardized value of every structural row, then Theta_jj
+  so_x <- so_lav_mats(so_inf, so_lav_est(so_inf, so_th)); so_g <- so_std_mats(so_x)
+  c(sapply(so_inf$S, function(so_i) so_row_val(so_inf, so_g, so_i)), so_g$Th)
+}
+# the analytic Jacobian of the standardization, line by line as dwlsmv_m11_std.mata forms it
+# (derivative of Phi, ds, then the lambda / beta / psi rows and Theta). Columns: the rows in `cols`
+# (data.frame type l/b/p, r, c); returns g (lambda,beta,psi rows then Theta) and Jg.
+so_m11std <- function(so_x, rows, cols) {
+  m <- ncol(so_x$L); p <- nrow(so_x$L); A <- so_A(so_x$B); so_Ph <- A %*% so_x$P %*% t(A); s <- sqrt(diag(so_Ph)); LPh <- so_x$L %*% so_Ph
+  val <- function(rw) switch(rw$type, l = so_x$L[rw$r, rw$c], b = so_x$B[rw$r, rw$c], p = so_x$P[rw$r, rw$c])
+  so_g <- numeric(0); for (so_i in seq_len(nrow(rows))) { rw <- rows[so_i, ]; so_v <- val(rw)
+    so_g <- c(so_g, switch(rw$type, l = so_v * s[rw$c], b = so_v * s[rw$c] / s[rw$r], p = so_v / (s[rw$r] * s[rw$c]))) }
+  # exogenous fixed-or-free psi_ff: standardizes to exactly 1 with a zero Jacobian row (the routine's last loop)
+  exo_diag <- function(rw) rw$type == "p" && rw$r == rw$c && !any(so_x$B[rw$r, ] != 0)
+  for (so_i in seq_len(nrow(rows))) if (exo_diag(rows[so_i, ])) so_g[so_i] <- 1
+  Th <- 1 - rowSums(LPh * so_x$L); so_g <- c(so_g, Th)
+  Jg <- matrix(0, length(so_g), nrow(cols))
+  for (cc in seq_len(nrow(cols))) {
+    so_cl <- cols[cc, ]; dL <- matrix(0, p, m); dB <- matrix(0, m, m); dP <- matrix(0, m, m)
+    if (so_cl$type == "l") dL[so_cl$r, so_cl$c] <- 1 else if (so_cl$type == "b") dB[so_cl$r, so_cl$c] <- 1 else { dP[so_cl$r, so_cl$c] <- 1; dP[so_cl$c, so_cl$r] <- 1 }
+    dPh <- A %*% dB %*% so_Ph + so_Ph %*% t(dB) %*% t(A) + A %*% dP %*% t(A); ds <- diag(dPh) / (2 * s)
+    for (so_i in seq_len(nrow(rows))) {
+      rw <- rows[so_i, ]; so_v <- val(rw)
+      if (exo_diag(rw)) next
+      Jg[so_i, cc] <- switch(rw$type,
+        l = dL[rw$r, rw$c] * s[rw$c] + so_v * ds[rw$c],
+        b = { t <- rw$r; so_f <- rw$c; dB[t, so_f] * s[so_f] / s[t] + so_v * (ds[so_f] / s[t] - s[so_f] * ds[t] / s[t]^2) },
+        p = { so_f <- rw$r; t <- rw$c; ss <- s[so_f] * s[t]; dss <- s[t] * ds[so_f] + s[so_f] * ds[t]; dP[so_f, t] / ss - so_v * dss / ss^2 })
+    }
+    for (so_j in seq_len(p)) Jg[nrow(rows) + so_j, cc] <- -2 * sum(LPh[so_j, ] * dL[so_j, ]) - drop(so_x$L[so_j, ] %*% dPh %*% so_x$L[so_j, ])
+  }
+  list(g = so_g, Jg = Jg)
+}
+so_rows_of <- function(so_inf, idx) {
+  pt <- so_inf$pt; do.call(rbind, lapply(idx, function(so_i) {
+    ia <- match(pt$lhs[so_i], so_inf$lat)
+    if (pt$op[so_i] == "=~") { ib <- match(pt$rhs[so_i], so_inf$items); if (!is.na(ib)) data.frame(type = "l", r = ib, c = ia) else data.frame(type = "b", r = match(pt$rhs[so_i], so_inf$lat), c = ia) }
+    else { ib <- match(pt$rhs[so_i], so_inf$lat); data.frame(type = "p", r = max(ia, ib), c = min(ia, ib)) }
+  }))
+}
+```
+
+```{r so-lavaan}
+# ---- SO4 against lavaan 0.7-2: the four metrics are four fits of the same data; every directed map is applied to one fit's
+# estimates and delta-method covariance and compared with the other fit's.
+# Tolerances: estimates 1e-5 and covariance 1e-5 (relative to its largest entry) for the single-G design; 1e-4 for the two-G design.
+# Set from recovery.md's earlier measurement (3.4e-7 and 5e-7) and then widened for the two-G design after measuring
+# (observed 4.5e-6 and 7.1e-6): chosen after measuring.
+so_dat1 <- so_sim(1000, c(.8, .7, .6, .75)); so_K1 <- 4
+so_fit1 <- lapply(so_mets, function(mt) so_fit(so_dat1, so_syn(so_K1, gm = mt[1], fm = mt[2])))
+so_inf1 <- lapply(so_fit1, so_lav_info, so_K = so_K1); so_md1 <- lapply(so_mets, function(mt) so_build(rep(3, so_K1), mt[1], mt[2]))
+so_conv <- sapply(so_fit1, function(so_f) c(converged = lavInspect(so_f, "converged"), chisq = unname(fitMeasures(so_f, "chisq.scaled")), df = unname(fitMeasures(so_f, "df.scaled"))))
+print(so_conv)
+so_check("SO4 lavaan: four metrics converge, same scaled chi-square and df", all(so_conv["converged", ] == 1) &&
+         max(abs(so_conv["chisq", ] - so_conv["chisq", 1])) < 1e-6 && all(so_conv["df", ] == 50))
+so_maptest <- function(infs, so_mds, pairs, tol_est, tol_vc) {
+  out <- list()
+  for (pr in pairs) {
+    so_a <- pr[1]; so_b <- pr[2]; so_th <- infs[[so_a]]$th; pred <- so_map_theta(infs[[so_a]], infs[[so_b]], so_mds[[so_b]], so_th)
+    so_J <- so_cs_jac(function(t) so_map_theta(infs[[so_a]], infs[[so_b]], so_mds[[so_b]], t), so_th)
+    Vp <- so_J %*% infs[[so_a]]$vc %*% t(so_J); Vb <- infs[[so_b]]$vc
+    ge <- max(abs(pred - infs[[so_b]]$th)); gv <- max(abs(Vp - Vb)) / max(abs(Vb))
+    gs <- max(abs(sqrt(diag(Vp)) - sqrt(diag(Vb))) / sqrt(diag(Vb)))
+    so_check(paste("SO4 lavaan:", so_a, "->", so_b, "estimates and covariance"), ge < tol_est && gv < tol_vc)
+    out[[length(out) + 1]] <- data.frame(map = paste(so_a, "->", so_b), est_gap = signif(ge, 2), vcov_gap_rel_max = signif(gv, 2), se_gap_rel = signif(gs, 2))
+  }
+  do.call(rbind, out)
+}
+so_pairs <- unlist(lapply(names(so_mets), function(so_a) lapply(setdiff(names(so_mets), so_a), function(so_b) c(so_a, so_b))), recursive = FALSE)
+so_4_tab1 <- so_maptest(so_inf1, so_md1, so_pairs, 1e-5, 1e-5); so_4_tab1
+# two correlated G's over 2 + 2 first-order factors (N = 1500): the same maps, with psi_{G2 G1} rescaled by d_G1 d_G2
+so_dat2 <- so_sim(1500, c(.8, .7, .6, .75), so_ng = 2, gsplit = c(2, 2), so_seed = 7)
+so_fit2 <- lapply(so_mets, function(mt) so_fit(so_dat2, so_syn(4, gm = mt[1], fm = mt[2], so_ng = 2, gsplit = c(2, 2))))
+so_inf2 <- lapply(so_fit2, so_lav_info, so_K = 4, so_ng = 2); so_md2 <- lapply(so_mets, function(mt) so_build(rep(3, 4), mt[1], mt[2], so_ng = 2, gsplit = c(2, 2)))
+so_2g_chisq <- sapply(so_fit2, function(so_f) fitMeasures(so_f, "chisq.scaled")); print(signif(so_2g_chisq, 8))
+so_check("SO4 lavaan, two G's: four metrics converge, chi-square equal to 1e-3 (chosen after measuring), df 49", all(sapply(so_fit2, function(so_f) lavInspect(so_f, "converged"))) &&
+         max(abs(so_2g_chisq - so_2g_chisq[1])) < 1e-3 && all(sapply(so_fit2, function(so_f) fitMeasures(so_f, "df.scaled")) == 49))
+so_4_tab2 <- so_maptest(so_inf2, so_md2, so_pairs, 1e-4, 1e-4); so_4_tab2
+```
+
+The twelve one-$G$ maps agree with the refitted metric to `r format(max(so_4_tab1$est_gap), digits = 2)` in the estimates and
+`r format(max(so_4_tab1$vcov_gap_rel_max), digits = 2)` in the covariance (relative to its largest entry; standard errors
+`r format(max(so_4_tab1$se_gap_rel), digits = 2)`); the two-$G$ maps to `r format(max(so_4_tab2$est_gap), digits = 2)` and
+`r format(max(so_4_tab2$vcov_gap_rel_max), digits = 2)`. The remaining gap is the two optimizers' stopping error (each fit is converged
+to about $10^{-7}$ in $\theta$), not the map.
+**Status of SO4: ESTABLISHED** (SO4.1 to SO4.4) and **VERIFIED** against lavaan (estimates and covariance, 24 ordered maps).
+Eligibility, the spelling of $G$'s anchor, and the trigger are not decided here (B3).
+
+### Result SO5: standardization with a factor that has no indicator {#sec-so-standardize}
+
+**SO5.1 (the map).** @sec-standardize derived $g(\theta)$ for any recursive $B$ and any $\Psi$ and assumed nothing
+about items; the second-order case is that map with $\Phi_{GG}=\psi_G$, $\Phi_{kk}=\phi_{kk}$. For one $G$,
+$$\phi_{kk}=b_k^2\psi_G+\psi_k,\qquad b^*_k=\frac{b_k\sqrt{\psi_G}}{\sqrt{\phi_{kk}}},\qquad
+\psi^*_k=\frac{\psi_k}{\phi_{kk}},\qquad R^2_k=\frac{b_k^2\psi_G}{\phi_{kk}}=b^{*2}_k=1-\psi^*_k,$$
+the standardized loading of an item is $\lambda_{jk}\sqrt{\phi_{kk}}$, and $\psi^*_G=1$. With two correlated $G$'s
+$\phi_{kk}=b_k^2\psi_{G(k)}+\psi_k$ and the standardized covariance of the $G$'s is the correlation
+$\psi_{G_2G_1}/\sqrt{\psi_{G_1}\psi_{G_2}}$; with an item on $G$ the general $\Phi$ is used. Its Jacobian is the one of
+@sec-standardize ($\mathrm d\Phi=A\mathrm dB\Phi+\Phi\mathrm dB^\top A^\top+A\mathrm d\Psi A^\top$, $\mathrm ds_f=\mathrm d\Phi_{ff}/(2s_f)$)
+and nothing in it distinguishes a factor with items from one without. The standardized vector is the same
+in all four metrics (SO3.2), hence so is its covariance (SO5.4).
+
+**SO5.2 (does the existing routine cover $\beta$ rows as written? Yes).** `dwlsmv_m11_std.mata` rebuilds
+$\Lambda,B,\Psi$ from `e(b)`'s stripe, classifying each row by name: a stripe `y:F` with `y` an indicator is a loading
+(`:86`), any other `X:F` is a path (`kind = 2`, `:92`), `/var(...)` and `/cov(...)` are $\psi$ entries; the order of factors
+is fixed by the `/var(` stripes, one per factor. It computes $g$ for a path as
+`b * s[from] / s[to]` (`:139`) and its Jacobian row as $\mathrm d\beta\,s_f/s_t+\beta(\mathrm ds_f/s_t-s_f\mathrm ds_t/s_t^2)$
+(`:183-184`), nothing asks whether a factor has items, and $\psi_{ff}$ of a factor with no incoming path (an exogenous $G$,
+free or fixed) is set to exactly 1 with a zero Jacobian row (`:201-207`). The last loop's test is `!any(B[r1[i], .])`,
+so an endogenous $F_k$ is not treated that way, as it must not be. An item on $G$ (`y10:G`) is `kind = 1`.
+The chunk re-implements the routine's formulas line by line (`so_m11std`, derivative of $\Phi$, then $\lambda$, $\beta$,
+$\psi$ rows and $\Theta$) and compares them below. **ESTABLISHED** (source reading plus the check that the formulas as read
+equal the complex-step Jacobian and lavaan).
+
+**SO5.3 (against lavaan).** `standardizedSolution(type = "std.all")` of lavaan 0.7-2 is computed from the fit's own ACOV by a
+complex-step Jacobian of its own standardization; the comparison below uses the *same* fits as SO4 (the
+four metrics of $G$ over four factors, and two correlated $G$'s over $2+2$, in M and U), evaluates the map at lavaan's estimates and propagates the
+fit's covariance through the Jacobian of this section. The default fit (M) and the `std.lv` fit (U) are the two B1
+named; V and W are added. Every structural row is compared (loadings, second-order loadings, first-order disturbance
+rows, factor variance and covariance rows, item residual rows).
+
+```{r so-std-lavaan}
+# ---- SO5: standardization with a factor that has no indicator
+# the closed forms for one G: phi_kk = b_k^2 psi_G + psi_k, b*_k = b_k sqrt(psi_G) / sqrt(phi_kk), psi*_k = psi_k / phi_kk, R2_k = b*_k^2
+so_std_closed <- function(so_b, so_psiG, psik) { phi <- so_b^2 * so_psiG + psik; list(phi = phi, bstar = so_b * sqrt(so_psiG) / sqrt(phi), psistar = psik / phi, r2 = so_b^2 * so_psiG / phi) }
+so_x <- so_mats(so_md1$M, so_rand_theta(so_md1$M, 5)); so_sg <- so_std_mats(so_x); so_Fi <- 2:5
+so_cl <- so_std_closed(so_x$B[so_Fi, 1], so_x$P[1, 1], diag(so_x$P)[so_Fi])
+so_check("SO5 closed forms (one G) equal the matrix map: phi, b*, psi*, R2 = 1 - psi* = b*^2",
+  max(abs(c(so_cl$phi - so_sg$s[so_Fi]^2, so_cl$bstar - so_sg$B[so_Fi, 1], so_cl$psistar - diag(so_sg$P)[so_Fi], so_cl$r2 - so_cl$bstar^2, so_cl$r2 - (1 - so_cl$psistar)))) < 1e-12)
+# two G's: phi_kk = b_k^2 psi_{G(k)} + psi_k; the G-G correlation is psi_12 / sqrt(psi_11 psi_22)
+so_x2 <- so_mats(so_md2$M, so_rand_theta(so_md2$M, 6)); so_g2 <- so_std_mats(so_x2); so_F2i <- 3:6; so_gk <- c(1, 1, 2, 2)
+so_phi2 <- so_x2$B[so_F2i, cbind(1, 2)][cbind(1:4, so_gk)]^2 * diag(so_x2$P)[so_gk] + diag(so_x2$P)[so_F2i]
+so_bst2 <- so_x2$B[so_F2i, cbind(1, 2)][cbind(1:4, so_gk)] * sqrt(diag(so_x2$P)[so_gk]) / sqrt(so_phi2)
+so_check("SO5 two correlated G's: phi_kk, b*_k and the standardized G-G covariance",
+  max(abs(c(so_phi2 - so_g2$s[so_F2i]^2, so_bst2 - so_g2$B[cbind(so_F2i, so_gk)], so_g2$P[2, 1] - so_x2$P[2, 1] / sqrt(so_x2$P[1, 1] * so_x2$P[2, 2])))) < 1e-12)
+
+# the standardized value and its delta-method SE against lavaan's standardizedSolution(type = "std.all"), every fit
+so_5_row <- function(fit, so_inf, so_K, so_nm) {
+  ss <- standardizedSolution(fit); key <- paste(ss$lhs, ss$op, ss$rhs)
+  so_f <- function(t) so_std_vec(so_inf, t); so_g <- so_f(so_inf$th); so_J <- so_cs_jac(so_f, so_inf$th); so_V <- so_J %*% so_inf$vc %*% t(so_J); se <- sqrt(pmax(diag(so_V), 0))
+  keys <- c(paste(so_inf$pt$lhs, so_inf$pt$op, so_inf$pt$rhs)[so_inf$S], paste(so_inf$items, "~~", so_inf$items)); idx <- match(keys, key)
+  pos <- se > 0 & ss$se[idx] > 0
+  so_check(paste("SO5 every row matched:", so_nm), !anyNA(idx))
+  so_check(paste("SO5 estimates equal lavaan std.all (1e-10):", so_nm), max(abs(so_g - ss$est.std[idx])) < 1e-10)
+  so_check(paste("SO5 SEs equal lavaan std.all (relative 1e-6, chosen after measuring: seen 4e-8):", so_nm), max(abs(se[pos] - ss$se[idx][pos]) / ss$se[idx][pos]) < 1e-6)
+  so_check(paste("SO5 exactly-1 rows (an exogenous psi_ff) have SE 0 in lavaan and below 1e-12 here:", so_nm), all(se[abs(so_g - 1) < 1e-14 & ss$se[idx] == 0] < 1e-12) && any(abs(so_g - 1) < 1e-14 & ss$se[idx] == 0))
+  # the analytic Jacobian of dwlsmv_m11_std.mata (formulas as read), against the complex step
+  so_R <- so_inf$fr[so_inf$fr %in% so_inf$S]; so_a <- so_m11std(so_lav_mats(so_inf, so_lav_est(so_inf, so_inf$th)), so_rows_of(so_inf, so_inf$S), so_rows_of(so_inf, so_R))
+  so_check(paste("SO5 the routine's analytic Jacobian (beta rows included) = complex step (1e-10):", so_nm), max(abs(so_a$Jg - so_J[, match(so_R, so_inf$fr)])) < 1e-10 && max(abs(so_a$g - so_g)) < 1e-12)
+  data.frame(fit = so_nm, rows = length(so_g), est_gap = signif(max(abs(so_g - ss$est.std[idx])), 2), se_rel_gap = signif(max(abs(se[pos] - ss$se[idx][pos]) / ss$se[idx][pos]), 2),
+             analytic_vs_cs_J = signif(max(abs(so_a$Jg - so_J[, match(so_R, so_inf$fr)])), 2), V_std = I(list(so_V)), g = I(list(so_g)), keys = I(list(keys)))
+}
+so_5 <- list()
+for (so_mn in names(so_mets)) so_5[[paste0("K4_", so_mn)]] <- so_5_row(so_fit1[[so_mn]], so_inf1[[so_mn]], 4, paste("G over 4,", so_mn))
+for (so_mn in c("M", "U")) so_5[[paste0("M22_", so_mn)]] <- so_5_row(so_fit2[[so_mn]], so_inf2[[so_mn]], 4, paste("two G's,", so_mn))
+so_5_tab <- do.call(rbind, so_5); so_5_tab[, c("fit", "rows", "est_gap", "se_rel_gap", "analytic_vs_cs_J")]
+# the standardized solution and its covariance are the same from every metric's fit (they are one function of sigma's parameters)
+so_key1 <- so_5$K4_M$keys[[1]]; so_gg <- sapply(c("K4_M", "K4_U", "K4_V", "K4_W"), function(so_n) so_5[[so_n]]$g[[1]][match(so_key1, so_5[[so_n]]$keys[[1]])])
+so_Vs <- lapply(c("K4_M", "K4_U", "K4_V", "K4_W"), function(so_n) { o <- match(so_key1, so_5[[so_n]]$keys[[1]]); so_v <- so_5[[so_n]]$V_std[[1]]; so_v[o, o] })
+so_5_inv <- c(est = max(abs(so_gg - so_gg[, 1])), vcov_rel = max(sapply(so_Vs, function(so_v) max(abs(so_v - so_Vs[[1]])) / max(abs(so_Vs[[1]])))))
+signif(so_5_inv, 2)
+so_check("SO5 the standardized estimates and covariance agree across the four fits (1e-5, chosen after measuring)", all(so_5_inv < 1e-5))
+
+# ---- the three statements
+# (1) psi_k -> 0: SE(b*_k) -> SE(psi_k) / (2 phi_kk), SE(R2_k) -> SE(psi_k) / phi_kk (a fixed covariance V of the estimates, from the M fit)
+so_inf <- so_inf1$M; so_V <- so_inf$vc; so_th <- so_inf$th; so_ipsi1 <- match("F1 ~~ F1", so_inf$key); so_ib1 <- match("G1 =~ F1", so_inf$key)
+so_rowsB <- function(t) { so_x <- so_lav_mats(so_inf, so_lav_est(so_inf, t)); so_g <- so_std_mats(so_x); c(bstar = so_g$B[2, 1], r2 = so_g$B[2, 1]^2) }
+so_lim <- sapply(c(1e-3, 1e-6, 1e-9), function(e) {
+  t <- so_th; t[so_ipsi1] <- e; so_J <- so_cs_jac(so_rowsB, t); so_x <- so_lav_mats(so_inf, so_lav_est(so_inf, t)); phi <- so_x$B[2, 1]^2 * so_x$P[1, 1] + so_x$P[2, 2]
+  c(eps = e, se_bstar = sqrt(drop(so_J[1, ] %*% so_V %*% so_J[1, ])), lim_bstar = sqrt(so_V[so_ipsi1, so_ipsi1]) / (2 * phi),
+    se_r2 = sqrt(drop(so_J[2, ] %*% so_V %*% so_J[2, ])), lim_r2 = sqrt(so_V[so_ipsi1, so_ipsi1]) / phi) })
+so_5_lim <- t(so_lim); signif(so_5_lim, 4)
+so_check("SO5 SE(b*) and SE(R2) tend to SE(psi_k)/(2 phi) and SE(psi_k)/phi, not to 0 (relative gap < 1e-6 at psi_k = 1e-9)",
+  abs(so_5_lim[3, "se_bstar"] / so_5_lim[3, "lim_bstar"] - 1) < 1e-6 && abs(so_5_lim[3, "se_r2"] / so_5_lim[3, "lim_r2"] - 1) < 1e-6 && so_5_lim[3, "se_bstar"] > 1e-3)
+# (2) b_k = 0: the gradient of R2_k is exactly zero, so its delta-method SE is exactly 0, while SE(b*_k) is not
+so_ib2 <- match("G1 =~ F2", so_inf$key); so_t0 <- so_th; so_t0[so_ib2] <- 0
+so_rowsB2 <- function(t) { so_x <- so_lav_mats(so_inf, so_lav_est(so_inf, t)); so_g <- so_std_mats(so_x); c(bstar = so_g$B[3, 1], r2 = so_g$B[3, 1]^2, psistar = so_g$P[3, 3]) }
+so_J0 <- so_cs_jac(so_rowsB2, so_t0); so_se0 <- sqrt(pmax(0, c(drop(so_J0[1, ] %*% so_V %*% so_J0[1, ]), drop(so_J0[2, ] %*% so_V %*% so_J0[2, ]), drop(so_J0[3, ] %*% so_V %*% so_J0[3, ]))))
+so_xz <- so_lav_mats(so_inf, so_lav_est(so_inf, so_t0)); so_R <- so_inf$fr[so_inf$fr %in% so_inf$S]
+so_az <- so_m11std(so_xz, so_rows_of(so_inf, so_inf$S), so_rows_of(so_inf, so_R)); so_kF2 <- which(paste(so_inf$pt$lhs, so_inf$pt$op, so_inf$pt$rhs)[so_inf$S] == "F2 ~~ F2")
+so_Vfull <- so_V[match(so_R, so_inf$fr), match(so_R, so_inf$fr)]; so_seA <- sqrt(max(0, drop(so_az$Jg[so_kF2, ] %*% so_Vfull %*% so_az$Jg[so_kF2, ])))
+so_5_b0 <- c(se_bstar = so_se0[1], se_R2 = so_se0[2], se_psistar_cs = so_se0[3], se_psistar_routine = so_seA, max_abs_grad_R2 = max(abs(so_J0[2, ])), max_abs_grad_psistar_routine = max(abs(so_az$Jg[so_kF2, ])))
+signif(so_5_b0, 3)
+so_check("SO5 b_k = 0: SE(R2_k) = 0 (gradient 0 to 1e-15), SE(b*_k) > 0", max(abs(so_J0[2, ])) < 1e-15 && so_se0[2] == 0 && so_se0[1] > 1e-3 && max(abs(so_az$Jg[so_kF2, ])) < 1e-15)
+# the Mata routine treats a standardized row with Vs[i,i] == 0 as a constant (an `nfixs` constraint row): at b_k = 0 exactly,
+# whether the psi*_k row hits that test depends on whether its SE is exactly 0 in floating point
+so_5_b0["se_psistar_routine"] == 0
+```
+
+At lavaan's own estimates the standardized values agree with `std.all` to `r format(max(as.numeric(so_5_tab$est_gap)), digits = 2)` (rounding),
+the standard errors to `r format(max(as.numeric(so_5_tab$se_rel_gap)), digits = 2)` relative (lavaan's complex step against ours),
+and the routine's analytic Jacobian equals the complex-step Jacobian to `r format(max(as.numeric(so_5_tab$analytic_vs_cs_J)), digits = 2)`.
+The standardized estimates computed from the four different fits agree to `r format(so_5_inv["est"], digits = 2)` and the
+covariance to `r format(so_5_inv["vcov_rel"], digits = 2)` (relative), which is the two optimizers' stopping error. For two
+correlated $G$'s the map of SO3.1 and the map of SO5.1 hold as stated (the closed-form $\phi_{kk}$, $b^*_k$ and the $G$ correlation
+are asserted at a generic point; lavaan matches to the same digits, including the row `G1 ~~ G2`, SE 0.046). That closes B0's open item
+for two higher-order factors. **ESTABLISHED / VERIFIED.**
+
+**SO5.4 (invariance across metrics).** $g$ is a function of $\sigma$'s parameters up to the rescaling of SO3.1: $\lambda s_f$,
+$b s_G/s_k$ and $\psi/(s_fs_g)$ are each invariant under $D$ because $s_f\mapsto d_fs_f$. So **the standardized estimates and their
+covariance are the same from any metric's fit**, and the standardization can be applied to whichever metric the user's fit is in (the check above
+asserts it on four fits). The standardized covariance is singular by construction ($\psi^*_k$ and $R^2_k$ are functions of $b^*_k$).
+
+#### The three statements the roadmap asks for
+
+**(1) The SE of a standardized second-order loading does not go to 0 as $\psi_k\to0$.** $b^{*2}_k=1-\psi_k/\phi_{kk}$ with
+$\phi_{kk}=b_k^2\psi_G+\psi_k$. At $\psi_k=0$: $\partial b^*_k/\partial\psi_k=-1/(2\phi_{kk})$, and
+$\partial b^*_k/\partial b_k=\partial b^*_k/\partial\psi_G=0$ (both carry the factor $\psi_k$). So the gradient has one nonzero entry and
+$$\mathrm{SE}(b^*_k)\to\frac{\mathrm{SE}(\psi_k)}{2\phi_{kk}},\qquad \mathrm{SE}(R^2_k)\to\frac{\mathrm{SE}(\psi_k)}{\phi_{kk}}\qquad(\psi_k\to0),$$
+neither zero as long as the fit reports $\mathrm{SE}(\psi_k)>0$; the Wald interval is symmetric about a boundary value (1 for $b^*$, which cannot be exceeded
+by a proper solution but can be by the interval). For $\psi_k<0$ the quantities are defined while $\phi_{kk}>0$ ($b^*>1$, $R^2>1$), with the Jacobian growing like
+$\phi_{kk}^{-2}$; at $\phi_{kk}\le0$ nothing is real. *Verified* ($\psi_k=10^{-3},10^{-6},10^{-9}$ in the M fit with its own covariance matrix).
+
+**(2) $R^2_k$ has delta-method SE exactly 0 when its path is 0.** $R^2_k=b_k^2\psi_G/(b_k^2\psi_G+\psi_k)$ has gradient $(2b_k\psi_G\psi_k,\ b_k^2\psi_k,\ -b_k^2\psi_G)/\phi_{kk}^2$ in
+$(b_k,\psi_G,\psi_k)$, which is the zero vector at $b_k=0$ and so is its SE, while $\mathrm{SE}(b^*_k)$ is not zero (its gradient is $\sqrt{\psi_G}/\sqrt{\phi_{kk}}$ in $b_k$). The same holds for $\psi^*_k$, which is the
+row the routine reports ($1-R^2$): the printed rows show the gradient at $b_k=0$ **exactly** 0.0 in the routine's own formulas, not merely small,
+so `Vs[i,i] == 0` holds and the routine, which lists every row with a zero standardized variance as a constant
+(`nfixs`, `dwlsmv_m11_std.mata:219-224`), would write that $\psi^*$ row as a constrained value 1. For a *user-fixed* zero path that is right, the factor
+has no incoming path and the routine's last loop already sets it to 1; for an *estimated* $\hat b_k$ that happens to be exactly 0 it is a coincidence of the arithmetic, and whether
+the display says so is a question for B3. The event has probability zero for a continuous estimate. **ESTABLISHED.**
+
+**(3) With $K=2$ a raw-path equality means different things in M and U.** SO3.5 above. **ESTABLISHED.**
+
+**Status of SO5: ESTABLISHED** (the map, the coverage of the existing routine, the three statements) and **VERIFIED** against lavaan
+(estimates, standard errors, both fits and two $G$'s).
+
+### Result SO6: sign canonicalization and admissibility {#sec-so-admiss}
+
+The chunk below runs every check of this subsection (the sign groups, the invariants, the admissibility rows, the numerical-error experiments); the text that follows quotes its objects.
+
+```{r so-6}
+# ---- SO6: sign group, anchors, admissibility, and the numerical error of a psi estimate
+# (a) the sign group of each metric's table: sign vectors d with D B D, D Psi D, Lambda D keeping every fixed row
+so_6_sg <- do.call(rbind, lapply(list(K3 = list(nk = rep(3, 3)), K4 = list(nk = rep(3, 4)), M22 = list(nk = rep(3, 4), so_ng = 2, gsplit = c(2, 2))), function(sp) {
+  so_r <- sapply(names(so_mets), function(so_mn) so_signgroup(do.call(so_build, c(sp, list(gm = so_mets[[so_mn]][1], fm = so_mets[[so_mn]][2])))))
+  data.frame(t(so_r))
+}))
+so_6_sg$model <- rownames(so_6_sg); so_6_sg
+so_check("SO6.1 sign groups: M trivial; V = G alone (2); U = 2^(K+1); W = 2^K (one G); two G's: 1, 4, 2^(K+2), 2^K",
+  identical(as.numeric(unlist(so_6_sg[1, 1:4])), c(1, 16, 2, 8)) && identical(as.numeric(unlist(so_6_sg[2, 1:4])), c(1, 32, 2, 16)) &&
+  identical(as.numeric(unlist(so_6_sg[3, 1:4])), c(1, 64, 4, 16)))
+# flipping ONE path alone is not a symmetry (K = 3, U): sigma changes
+so_mU3 <- so_build(rep(3, 3), "var", "dist"); so_xu <- so_mats(so_mU3, so_rand_theta(so_mU3, 12)); so_xf <- so_xu; so_xf$B[2, 1] <- -so_xf$B[2, 1]
+so_check("SO6.1 reversing a single path is not a symmetry", so_rel(so_sigma(so_xf$L, so_xf$B, so_xf$P), so_sigma(so_xu$L, so_xu$B, so_xu$P)) > 1e-3)
+
+# (b) the F-flip invariants s_k = sign(b_k lambda_{a_k k}) are what G's sign has to be read from; G's flip negates all of them
+so_invs <- function(so_x, so_K) sapply(seq_len(so_K), function(k) sign(so_x$B[1 + k, 1] * so_x$L[3 * (k - 1) + 1, 1 + k]))
+so_ok_inv <- TRUE; so_ok_rules <- TRUE; so_K <- 4; so_mU4 <- so_build(rep(3, 4), "var", "dist")
+so_rules <- list(first_child = function(so_x) so_invs(so_x, so_K)[1] > 0,
+              sum_of_paths = function(so_x) sum(so_x$B[1 + 1:so_K, 1] * so_x$L[3 * (1:so_K - 1) + 1, 1 + 1:so_K] * 1) > 0,
+              largest_path = function(so_x) { so_v <- so_x$B[1 + 1:so_K, 1] * so_x$L[3 * (1:so_K - 1) + 1, 1 + 1:so_K]; so_v[which.max(abs(so_v))] > 0 })
+for (so_i in 1:200) {
+  so_x <- so_mats(so_mU4, so_rand_theta(so_mU4, 5000 + so_i)); so_x$B[1 + 1:so_K, 1] <- so_x$B[1 + 1:so_K, 1] * sample(c(-1, 1), so_K, TRUE)   # signs of the paths vary
+  so_sF <- sample(c(-1, 1), so_K + 1, TRUE); so_y <- so_rescale(so_x, so_sF); so_sG <- c(-1, rep(1, so_K)); so_z <- so_rescale(so_y, so_sG)
+  so_ok_inv <- so_ok_inv && all(so_invs(so_y, so_K) == so_sF[1] * so_invs(so_x, so_K)) && all(so_invs(so_z, so_K) == -so_invs(so_y, so_K))
+  so_ok_rules <- so_ok_rules && all(sapply(so_rules, function(so_f) so_f(so_y) != so_f(so_z)))        # each rule selects exactly one of the two G-versions
+}
+so_check("SO6.2 the invariants s_k change sign under G's flip and are unchanged by F-flips", so_ok_inv)
+so_check("SO6.2 each candidate rule (first child, sum of signed paths, largest path) picks exactly one of G's two versions", so_ok_rules)
+
+# (c) admissibility: the first four rows of dwlsmv_admissible.mata, from their definitions
+so_adm <- function(so_x) {
+  so_Ph <- so_Phi(so_x$B, so_x$P); C <- so_x$L %*% so_Ph %*% t(so_x$L); m <- nrow(so_Ph); r2 <- NA; pr <- c(0, 0)
+  for (so_i in 1:(m - 1)) for (so_j in (so_i + 1):m) if (so_Ph[so_i, so_i] > 0 && so_Ph[so_j, so_j] > 0) { so_r <- so_Ph[so_i, so_j] / sqrt(so_Ph[so_i, so_i] * so_Ph[so_j, so_j]); if (is.na(r2) || abs(so_r) > abs(r2)) { r2 <- so_r; pr <- c(so_i, so_j) } }
+  so_R <- C; diag(so_R) <- 1
+  c(row1_flag = min(1 - diag(C)) < 0, row1_val = min(1 - diag(C)), row2_flag = !is.na(r2) && abs(r2) > 1, row2_val = r2, row2_i = pr[1], row2_j = pr[2],
+    row3_flag = min(eigen((so_Ph + t(so_Ph)) / 2, symmetric = TRUE, only.values = TRUE)$values) <= 0,
+    row3_val = min(eigen((so_Ph + t(so_Ph)) / 2, symmetric = TRUE, only.values = TRUE)$values),
+    row4_flag = min(eigen(so_R, symmetric = TRUE, only.values = TRUE)$values) <= 0)
+}
+so_mM3 <- so_build(rep(3, 3), "marker", "item")
+# the owner's example (2026-11-16): gamma = (1.2, .4, .4), Psi_F = diag(-.44, .84, .84), psi_G = 1, every item loading .7 on a factor of total variance 1
+so_xo <- list(L = so_std_point(so_mM3, c(1.2, .4, .4), 0.7)$L, B = so_std_point(so_mM3, c(1.2, .4, .4))$B, P = so_std_point(so_mM3, c(1.2, .4, .4))$P)
+so_Pf <- so_xo$B[2:4, 1] %o% so_xo$B[2:4, 1] * so_xo$P[1, 1] + diag(diag(so_xo$P)[2:4])
+so_ev_FF <- eigen(so_Pf)$values; so_ev_eta <- eigen(so_Phi(so_xo$B, so_xo$P))$values; so_ao <- so_adm(so_xo)
+so_6_owner <- list(psi_F = diag(so_xo$P)[2:4], eig_first_order_block = round(so_ev_FF, 4), eig_Phi_eta = round(so_ev_eta, 4), rows = round(so_ao, 4)); so_6_owner
+so_check("SO6.4 owner's example: the first-order block is PD (1.76, .84, .40) with psi_1 = -.44; Phi_eta has one negative eigenvalue -.21",
+  max(abs(so_ev_FF - c(1.76, .84, .40))) < 5e-3 && min(so_ev_FF) > 0 && abs(min(so_ev_eta) + 0.21) < 5e-3 && abs(max(so_ev_eta) - 2.70) < 5e-3)
+so_check("SO6.4 owner's example: rows 2 (|r| = 1.2 for the pair G, F1) and 3 fire; rows 1 and 4 do not",
+  so_ao["row2_flag"] == 1 && abs(so_ao["row2_val"] - 1.2) < 1e-12 && so_ao["row2_i"] == 1 && so_ao["row2_j"] == 2 && so_ao["row3_flag"] == 1 && so_ao["row1_flag"] == 0 && so_ao["row4_flag"] == 0)
+# random second-order points with Psi of either sign
+set.seed(606); so_neg_inert <- function(M) sum(eigen((M + t(M)) / 2, symmetric = TRUE, only.values = TRUE)$values < 0)
+so_res <- data.frame(); so_okin <- TRUE; so_okeq <- TRUE; so_okD <- TRUE
+for (so_i in 1:2000) {
+  so_K <- sample(3:5, 1); so_md <- so_build(rep(3, so_K), "marker", "item"); so_th <- so_rand_theta(so_md, 9000 + so_i); so_x <- so_mats(so_md, so_th)
+  so_sgn <- sample(c(-1, 1), so_K + 1, TRUE, prob = c(.4, .6)); so_Pd <- abs(diag(so_x$P)) * so_sgn; so_x$P <- diag(so_Pd)
+  so_Ph <- so_Phi(so_x$B, so_x$P); so_okin <- so_okin && (so_neg_inert(so_Ph) == sum(so_Pd < 0))             # Sylvester: inertia of Phi_eta = inertia of Psi
+  so_phik <- diag(so_Ph)[-1]; so_a <- so_adm(so_x)
+  if (so_Pd[1] > 0 && all(so_phik > 0)) so_okeq <- so_okeq && ((so_a["row2_flag"] == 1) == any(so_Pd[-1] < 0))   # row 2 fires iff some psi_k < 0
+  so_okD <- so_okD && ((so_a["row3_flag"] == 1) == any(so_Pd <= 0))                                          # row 3 fires iff Psi is not PD
+}
+so_check("SO6.3 inertia of Phi_eta equals the inertia of Psi (2000 random recursive second-order points)", so_okin)
+so_check("SO6.3 row 3 fires exactly when some psi (G included) is <= 0", so_okD)
+so_check("SO6.3 with psi_G > 0 and every phi_kk > 0, row 2 fires exactly when some psi_k < 0", so_okeq)
+# two G's: Psi_GG a 2 x 2 block; Phi_eta is PD iff Psi is, i.e. iff the block and every psi_k are PD / positive
+so_okin2 <- TRUE; so_mM22 <- so_build(rep(3, 4), "marker", "item", so_ng = 2, gsplit = c(2, 2))
+for (so_i in 1:500) { so_x <- so_mats(so_mM22, so_rand_theta(so_mM22, 7000 + so_i)); set.seed(so_i); so_Pm <- matrix(rnorm(4), 2); so_Pm <- so_Pm %*% t(so_Pm) * ifelse(runif(1) < .5, 1, -1)
+  so_x$P[1:2, 1:2] <- so_Pm; so_x$P[3:6, 3:6] <- diag(abs(diag(so_x$P)[3:6]) * sample(c(-1, 1), 4, TRUE)); so_okin2 <- so_okin2 && (so_neg_inert(so_Phi(so_x$B, so_x$P)) == so_neg_inert(so_x$P)) }
+so_check("SO6.3 two G's: inertia of Phi_eta equals the inertia of the full Psi, with a 2 x 2 block", so_okin2)
+# what row 2 and row 3 do NOT do: psi_G < 0 (Phi_GG < 0, so every pair with G is skipped by row 2), and phi_kk <= 0 with psi_k < 0
+so_xg <- so_improper("psi_G<0"); so_ag <- so_adm(so_xg)
+so_xk <- so_mats(so_mM3, so_rand_theta(so_mM3, 3)); so_xk$P[3, 3] <- -1.5; so_xk$B[3, 1] <- 0.5; so_xk$P[1, 1] <- 1; so_ak <- so_adm(so_xk)     # phi_22 = .25 - 1.5 < 0
+so_6_skip <- rbind(psi_G_neg = so_ag[c("row2_flag", "row3_flag")], phi_kk_nonpos = so_ak[c("row2_flag", "row3_flag")]); so_6_skip
+so_check("SO6.3 a negative psi_G, and a non-positive phi_kk, are missed by row 2 and caught by row 3", all(so_6_skip[, "row2_flag"] == 0) && all(so_6_skip[, "row3_flag"] == 1))
+# the first-order block can be PD with exactly one psi_k < 0 iff 1 + psi_G sum gamma_k^2 / psi_k < 0 (matrix determinant lemma + interlacing)
+set.seed(8); so_pd_ok <- TRUE; so_n_pd <- 0; so_n_neg <- 0
+for (so_i in 1:5000) { so_K <- sample(3:5, 1); so_g <- runif(so_K, .1, 1.6); so_ps <- runif(so_K, .1, 1.2); so_ps[sample(so_K, 1)] <- -runif(1, .05, .8); so_pG <- runif(1, .5, 1.5)
+  so_Pf <- so_pG * so_g %o% so_g + diag(so_ps); so_pd <- min(eigen(so_Pf, symmetric = TRUE, only.values = TRUE)$values) > 0; so_cond <- 1 + so_pG * sum(so_g^2 / so_ps) < 0
+  so_pd_ok <- so_pd_ok && (so_pd == so_cond); so_n_pd <- so_n_pd + so_pd; so_n_neg <- so_n_neg + (1 - so_pd) }
+so_check("SO6.4 first-order block PD <=> 1 + psi_G sum gamma_k^2/psi_k < 0, when exactly one psi_k < 0 (5000 draws, both outcomes occur)", so_pd_ok && so_n_pd > 100 && so_n_neg > 100)
+# psi_k = 0 exactly: what rows 2 and 3 return in floating point (the exact values are |r| = 1 and a zero eigenvalue)
+set.seed(33); so_z <- t(sapply(1:400, function(so_i) { so_md <- so_build(rep(3, 3), "marker", "item"); so_x <- so_mats(so_md, so_rand_theta(so_md, 800 + so_i)); so_x$P[2, 2] <- 0
+  # make Phi_22 positive through the path, then read rows 2 and 3
+  so_a <- so_adm(so_x); c(r = so_a["row2_val"], w = so_a["row3_val"], f2 = so_a["row2_flag"], f3 = so_a["row3_flag"]) }))
+so_6_zero <- c(row2_flag_fraction = mean(so_z[, "f2.row2_flag"]), row3_flag_fraction = mean(so_z[, "f3.row3_flag"]),
+              max_abs_row2_minus_1 = max(abs(abs(so_z[, "r.row2_val"]) - 1)), max_abs_row3_value = max(abs(so_z[, "w.row3_val"])))
+signif(so_6_zero, 3)
+so_check("SO6.5 at psi_k = 0 exactly, row 2's |r| and row 3's smallest eigenvalue are 1 and 0 to rounding (1e-14); their flags are decided by that rounding",
+  so_6_zero["max_abs_row2_minus_1"] < 1e-14 && so_6_zero["max_abs_row3_value"] < 1e-14)
+
+# (d) numerical error of a psi estimate, to first order. K = 4, marker metric, DWLS objective F = r'Wr, r = s - sigma(theta)
+so_mE <- so_build(rep(3, 4), "marker", "item"); set.seed(77); so_th_true <- so_rand_theta(so_mE, 66)
+so_s_obs <- so_msigma(so_mE, so_th_true) + rnorm(length(so_msigma(so_mE, so_th_true)), 0, 0.01); so_wts <- runif(length(so_s_obs), .5, 2)
+so_grad <- function(so_th, Dfun = so_delta_cf) -2 * drop(t(Dfun(so_mE, so_th)) %*% (so_wts * (so_s_obs - so_msigma(so_mE, so_th))))
+so_th_hat <- so_th_true
+for (so_it in 1:300) { so_D <- so_delta_cf(so_mE, so_th_hat); so_d <- solve(t(so_D) %*% (so_wts * so_D), t(so_D) %*% (so_wts * (so_s_obs - so_msigma(so_mE, so_th_hat)))); so_th_hat <- so_th_hat + drop(so_d); if (max(abs(so_d)) < 1e-15) break }
+so_check("SO6.6 the Gauss-Newton run reaches a stationary point (|g| < 1e-12)", max(abs(so_grad(so_th_hat))) < 1e-12)
+so_Hgn <- function(so_th) 2 * t(so_delta_cf(so_mE, so_th)) %*% (so_wts * so_delta_cf(so_mE, so_th))
+so_Hex <- function(so_th) { so_n <- length(so_th); so_H <- matrix(0, so_n, so_n); for (so_j in 1:so_n) { so_h <- 1e-6 * max(1, abs(so_th[so_j])); tp <- so_th; tm <- so_th; tp[so_j] <- tp[so_j] + so_h; tm[so_j] <- tm[so_j] - so_h; so_H[, so_j] <- (so_grad(tp) - so_grad(tm)) / (2 * so_h) }; (so_H + t(so_H)) / 2 }
+so_H0 <- so_Hex(so_th_hat); so_Hg <- so_Hgn(so_th_hat); so_ipsi <- which(so_mE$fr$type == "p")
+so_rres <- sqrt(sum(so_wts * (so_s_obs - so_msigma(so_mE, so_th_hat))^2))
+# (i) stopping rule: theta_s = theta_hat + t u; e = theta_s - theta_hat ~ H^{-1} g(theta_s)'
+set.seed(5); so_u <- rnorm(length(so_th_hat)); so_u <- so_u / sqrt(sum(so_u^2)); so_H0i <- solve(so_H0)
+so_6_stop <- t(sapply(c(1e-2, 1e-3, 1e-4), function(so_tt) { ts <- so_th_hat + so_tt * so_u; so_g <- so_grad(ts); e <- ts - so_th_hat
+  pe <- drop(so_H0i %*% so_g); pg <- drop(solve(so_Hg, so_g)); nd <- drop(so_g %*% solve(so_Hg, so_g)); bnd <- sqrt(diag(so_H0i) * drop(so_g %*% so_H0i %*% so_g))
+  c(t = so_tt, rel_err_exactH = sqrt(sum((pe - e)^2)) / sqrt(sum(e^2)), rel_err_GN_H = sqrt(sum((pg - e)^2)) / sqrt(sum(e^2)),
+    max_psi_err = max(abs(e[so_ipsi])), cs_bound_ok = all(abs(pe) <= bnd * (1 + 1e-9)), newton_decrement = nd) }))
+signif(so_6_stop, 3)
+so_check("SO6.6 stopping error: e = H^-1 g to first order (relative error falls ~ in proportion to t), Cauchy-Schwarz bound |e_j| <= sqrt([H^-1]_jj g'H^-1 g)",
+  so_6_stop[2, "rel_err_exactH"] < 0.2 * so_6_stop[1, "rel_err_exactH"] && so_6_stop[3, "rel_err_exactH"] < 0.2 * so_6_stop[2, "rel_err_exactH"] && all(so_6_stop[, "cs_bound_ok"] == 1))
+# (ii) the finite-difference Delta: the gradient uses Delta + E; its root is displaced by e ~ 2 H^-1 E'W r
+so_E0 <- matrix(rnorm(length(so_s_obs) * length(so_th_hat)), length(so_s_obs), length(so_th_hat)); so_E0 <- so_E0 / max(abs(so_delta_cf(so_mE, so_th_hat)))
+so_6_fd <- t(sapply(c(1e-4, 1e-5, 1e-6), function(eta) { E <- eta * so_E0; so_th <- so_th_hat
+  for (so_it in 1:400) { so_D <- so_delta_cf(so_mE, so_th); so_d <- solve(t(so_D) %*% (so_wts * so_D), t(so_D + E) %*% (so_wts * (so_s_obs - so_msigma(so_mE, so_th)))); so_th <- so_th + drop(so_d); if (max(abs(so_d)) < 1e-15) break }
+  e <- so_th - so_th_hat; so_r_hat <- so_s_obs - so_msigma(so_mE, so_th_hat); pe <- drop(2 * so_H0i %*% t(E) %*% (so_wts * so_r_hat))
+  c(eta = eta, rel_err = sqrt(sum((pe - e)^2)) / sqrt(sum(e^2)), max_psi_shift = max(abs(e[so_ipsi]))) }))
+signif(so_6_fd, 3)
+so_check("SO6.6 finite-difference error: e = 2 H^-1 E'W r to first order in E (relative error falls ~ in proportion to eta)",
+  so_6_fd[2, "rel_err"] < 0.2 * so_6_fd[1, "rel_err"] && so_6_fd[3, "rel_err"] < 0.2 * so_6_fd[2, "rel_err"])
+# production's own E at theta_hat (central difference, h = 1e-5 max(1, |v|)) against the closed form
+so_Eprod <- so_delta_fd(so_mE, so_th_hat) - so_delta_cf(so_mE, so_th_hat); so_r_hat <- so_s_obs - so_msigma(so_mE, so_th_hat); so_ePsi <- drop(2 * so_H0i %*% t(so_Eprod) %*% (so_wts * so_r_hat))[so_ipsi]
+so_6_prod <- c(max_abs_E = max(abs(so_Eprod)), max_abs_E_rel = max(abs(so_Eprod)) / max(abs(so_delta_cf(so_mE, so_th_hat))), max_psi_shift_predicted = max(abs(so_ePsi)))
+signif(so_6_prod, 3)
+# (iii) the polish: Gauss-Newton steps from theta_s contract at rho = spectral radius of I - Hgn^-1 Hex
+so_rho <- max(abs(eigen(diag(nrow(so_H0)) - solve(so_Hg, so_H0), only.values = TRUE)$values)); so_th <- so_th_hat + 1e-3 * so_u; so_errs <- numeric()
+for (so_it in 1:6) { so_D <- so_delta_cf(so_mE, so_th); so_d <- solve(t(so_D) %*% (so_wts * so_D), t(so_D) %*% (so_wts * (so_s_obs - so_msigma(so_mE, so_th)))); so_th <- so_th + drop(so_d); so_errs <- c(so_errs, sqrt(sum((so_th - so_th_hat)^2))) }
+so_ratio <- so_errs[5] / so_errs[4]; so_th1 <- so_th_hat + 1e-3 * so_u; so_D1 <- so_delta_cf(so_mE, so_th1); so_th1 <- so_th1 + drop(solve(t(so_D1) %*% (so_wts * so_D1), t(so_D1) %*% (so_wts * (so_s_obs - so_msigma(so_mE, so_th1))))); so_Mgn <- diag(nrow(so_H0)) - solve(so_Hg, so_H0)
+so_lin_gap <- sqrt(sum((so_th1 - so_th_hat - drop(so_Mgn %*% (1e-3 * so_u)))^2)) / sqrt(sum((so_th1 - so_th_hat)^2))
+so_6_polish <- c(rho = so_rho, observed_ratio_late = so_ratio, one_step_linearization_gap = so_lin_gap, residual_norm_W = so_rres); signif(so_6_polish, 3)
+so_check("SO6.6 polish: one Gauss-Newton step maps the error by I - H_GN^-1 H to first order (relative gap < 0.1); rho = rho(I - H_GN^-1 H) is the asymptotic rate",
+  so_lin_gap < 0.1 && so_rho < 1)
+# which pair row 2 reports: the single largest |r|, which is an F-F pair as soon as two factors have b* > 1 (B1 finding 1.2's MD fit)
+so_x2b <- so_std_point(so_mM3, c(1.2, 1.1, .4)); so_a2b <- so_adm(list(L = so_x2b$L, B = so_x2b$B, P = so_x2b$P)); so_a2b[c("row2_val", "row2_i", "row2_j")]
+so_check("SO6.3 row 2 names ONE pair, the largest |r|: with b* = (1.2, 1.1, .4) it is (F1, F2) at 1.32, not an F-G pair",
+  so_a2b["row2_i"] == 2 && so_a2b["row2_j"] == 3 && abs(so_a2b["row2_val"] - 1.32) < 1e-12)
+```
+
+#### SO6.1 The sign group in each metric
+
+A sign vector $d\in\{\pm1\}^{m}$ is a symmetry of a table if $D$ preserves every fixed row ($\lambda/d_k$, $b_kd_k/d_G$, $\psi_{fg}d_fd_g$ with the
+fixed value) and then $\sigma$ is unchanged by SO3.1. So the group is read from the fixed rows: a fixed loading $1$ forces $d_k=+1$, a fixed path $1$ forces $d_k=d_G$, a fixed
+$\psi_{ff}$ constrains nothing (it is squared). The chunk enumerates all $2^m$ vectors.
+
+| | M | V | U | W |
+|---|---|---|---|---|
+| one $G$ over $K$ | 1 | 2 ($G$) | $2^{K+1}$ | $2^K$ ($d_G=d_1$) |
+| two $G$'s over $2+2$ | 1 | 4 | 64 | 16 |
+
+Reversing one path alone is not a symmetry (asserted). **ESTABLISHED.** The production rule (`dwlsmv_signcanon.mata:8-40`, `:75-106`) turns every *reflectable* factor, one with no
+fixed nonzero parameter in the positions the reflection touches, so that its **first free loading** is non-negative; $F_k$ in U and W is reflectable and has one; $G$ in U and V is reflectable
+(its path is free, $\psi_G=1$ is a diagonal element and does not move) and has **no loading**, so `anchor` stays 0 and the factor is left where the optimizer ended. In M nothing is
+reflectable and in W the pair ($G$, $F_1$) is tied by the fixed $b_1$.
+
+#### SO6.2 Candidate anchors for $G$'s sign (none chosen)
+
+The paths' signs are only meaningful after the $F_k$ are anchored: reversing $F_k$ negates $b_k$. The quantities unchanged by every $F$-flip and negated by $G$'s flip are
+$$s_k=\operatorname{sign}\bigl(b_k\,\lambda_{a(k),k}\bigr),\qquad a(k)=\text{the anchor loading of }F_k,$$
+(verified: 200 random orbits of K=4 in U). Any rule that is a function of $(s_k)$ and the magnitudes, odd under negation, selects one of $G$'s two versions;
+the candidates, each checked to select exactly one on 200 random orbits: (A) the first child, $b_1\lambda_{a(1),1}>0$ (`sem`'s own anchoring child); (B) the sum $\sum_kb_k\lambda_{a(k),k}>0$;
+(C) the largest in absolute value; (D) a user-named child; (E) with an item on $G$, the sign of that item's loading (already the anchor `dwlsmv_signcanon` would find, since the item is a free loading
+of $G$). Their properties: (A) is undefined at exactly $b_1=0$ and noisy when $b_1$ is near 0 (the rank at $b_1=0$ is lost at $K=3$, SO2.5); (B) has a measure-zero set where it vanishes; (C) is stable
+against a small path but the chosen child can change between fits; (D) is the user's responsibility. No source (lavaan, `sem`) has a convention to follow (B1 finding 2.6). **Which anchor is B3's.**
+The rule must run *after* the $F_k$ anchors, and in M none is needed ($b_1=1$ anchors $G$), in V one for $G$ only.
+
+#### SO6.3 Admissibility: the condition on $\Psi$ itself
+
+**Result SO6.3.** The model's structural requirement is $\Psi\succeq0$: for diagonal $\Psi$, every diagonal element $\ge0$ ($\psi_G\ge0$ and every $\psi_k\ge0$); in general (two $G$'s) $\Psi_{GG}\succeq0$ and $\psi_k\ge0$.
+For every model release B would accept ($B$ recursive, hence $(I-B)$ invertible),
+$$\Phi_\eta=(I-B)^{-1}\Psi(I-B)^{-\top}\ \text{is positive definite}\iff\Psi\ \text{is positive definite},$$
+and more precisely they have the same inertia (number of negative, zero, positive eigenvalues). *Proof.* Sylvester's law of inertia for the congruence $\Psi\mapsto A\Psi A^\top$, $A=(I-B)^{-1}$ invertible. $\square$ Row 3 of
+`dwlsmv_admissible.mata:166` (smallest eigenvalue of $\Phi_\eta$ over **all** factors, $G$ included) therefore fires exactly when $\Psi$ is not positive definite: a $\psi_G\le0$ or any $\psi_k\le0$
+(diagonal $\Psi$), or a non-PD $\Psi_{GG}$ block. *Verified:* 2000 random one-$G$ points with $\psi$'s of either sign (inertia equal, and row 3 $\iff$ some $\psi\le0$) and 500 two-$G$ points with a $2\times2$ block.
+
+**When row 2 (a factor correlation above 1 in modulus) follows.** $r_{F_kG}=b_k\sqrt{\psi_G}/\sqrt{\phi_{kk}}=b^*_k$, so when $\psi_G>0$ and $\phi_{kk}>0$, $|r_{F_kG}|>1\iff\psi_k<0$
+(from $\phi_{kk}=b_k^2\psi_G+\psi_k$), and a pair $(F_k,F_l)$ has $|r_{kl}|=|b^*_kb^*_l|$, which exceeds 1 only if a factor has $|b^*|>1$. So **for every accepted model with $\psi_G>0$ and every $\phi_{kk}>0$, row 2 fires iff some $\psi_k<0$** (verified over 2000 points).
+Row 2 **does not** follow in two cases, both caught by row 3: $\psi_G<0$ ($\Phi_{GG}<0$, every pair with $G$ is skipped, and the $F$-$F$ pairs can stay inside $[-1,1]$) and $\phi_{kk}\le0$ with $\psi_k<0$ (the factor is skipped); the two printed rows show row 2 = 0 and row 3 = 1 on one example of each.
+Row 2 names **one** pair, the largest $|r|$ (`dwlsmv_admissible.mata:146-162`), which is an $F$-$F$ pair as soon as two factors have $|b^*|>1$ (the product of two numbers above 1 exceeds each): with $b^*=(1.2,1.1,.4)$ it is $(F_1,F_2)$ at 1.32. That answers
+B1's open question (finding 1.2: "whether row 2 lists every offending pair or one"): one, the largest, and not the $F$-$G$ pair the notes expected.
+Rows 1 and 4 (a derived $\Theta_{jj}<0$; $R_{y^*}$ not PD) are not implied by $\Psi\succ0$ and stay separate checks.
+
+**The first-order block can be PD with $\psi_k<0$.** With $\Psi_F$ having exactly one negative element $\psi_1$ and $\psi_G>0$, $\Phi_{FF}=\Psi_F+\psi_G\gamma\gamma^\top$ is a rank-one positive update of a matrix with exactly one negative eigenvalue, so it has at most one negative eigenvalue (interlacing), and
+$$\Phi_{FF}\succ0\iff\det\Phi_{FF}=\det\Psi_F\Bigl(1+\psi_G\sum_k\gamma_k^2/\psi_k\Bigr)>0\iff1+\psi_G\sum_k\gamma_k^2/\psi_k<0$$
+(matrix determinant lemma; $\det\Psi_F<0$). The owner's example $\gamma=(1.2,.4,.4)$, $\Psi_F=\operatorname{diag}(-.44,.84,.84)$, $\psi_G=1$ gives $1+1.44/(-.44)+2(.16/.84)=-1.89<0$: eigenvalues of $\Phi_{FF}$ `r paste(round(so_6_owner$eig_first_order_block, 3), collapse = ", ")`
+(all positive, unit diagonal), of the full $\Phi_\eta$ `r paste(round(so_6_owner$eig_Phi_eta, 3), collapse = ", ")` (one negative, $-0.206$); rows 2 (value 1.2, pair $G,F_1$) and 3 fire, rows 1 and 4 do not (the chunk asserts it).
+5000 random draws with exactly one negative $\psi_k$ confirm the equivalence, both outcomes occurring. So a check on the first-order block alone would miss $\psi_1<0$, and the explicit check on $\Psi$ is the only
+statement that reads the quantity itself. **Status: ESTABLISHED** (proofs; each verified).
+
+#### SO6.4 Exactly zero
+
+At $\psi_k=0$ exactly ($b^*_k=1$) $\Phi_\eta$ is singular and $|r_{F_kG}|=1$ in exact arithmetic, so row 3 (flag: smallest eigenvalue $\le0$) and row 2 (flag: $|r|>1$) are decided by rounding. Over 400 seeded points with $\psi_1=0$:
+row 2 fired in `r round(100 * so_6_zero["row2_flag_fraction"])`% (the computed $|r|$ was exactly 1), row 3 in `r round(100 * so_6_zero["row3_flag_fraction"])`% (the computed smallest eigenvalue was at most
+`r format(so_6_zero["max_abs_row3_value"], digits = 2)` in modulus, of either sign). So the existing rows' verdict at a proper boundary point is not defined by the data; whether it is reported, and as what, is B3's (roadmap B3, "Exactly zero").
+**VERIFIED ONLY** (a measurement over random points; the exact statement, singular $\Phi_\eta$ and $|r|=1$, is ESTABLISHED).
+
+#### SO6.5 What a numerical error in a $\hat\psi$ consists of
+
+*READ.* Production minimizes $F=r^\top Wr$, $r=s-\sigma(\theta)$, with `optimize()` (`dwlsmv_minimize.mata:120-122`: `ptol` $10^{-10}$, `vtol` $10^{-12}$, `nrtol` $10^{-12}$ on the Newton decrement
+$gH^{-1}g^\top$, with $H=2\Delta^\top W\Delta$ the Gauss-Newton Hessian), using $g=-2r^\top W\Delta$ with $\Delta$ the **central-difference** matrix (`dwlsmv_fdwls.mata`, `dwlsmv_delta_cols.mata:28-36,122`), then, after a converged run, up to 20 pure
+Gauss-Newton steps $\theta+(\Delta^\top W\Delta)^{-1}\Delta^\top Wr$ until the relative step $\max_j|d_j|/(1+|\theta_j|)\le10^{-11}$ (`dwls_fit.mata:186-250`). The error of a $\hat\psi$ is therefore the sum, to first order, of three terms, each a formula in
+quantities the fit has:
+
+1. **Stopping.** At a stopping point $\theta_s$ with gradient $g_s$, $\ \theta_s-\hat\theta\approx H^{-1}g_s^\top$ with $H=\nabla g$ (the exact Hessian, $=2\Delta^\top W\Delta-2\sum_dw_dr_d\nabla^2\sigma_d$), hence for any component,
+$$|e_j|\ \le\ \sqrt{[H^{-1}]_{jj}\;g_sH^{-1}g_s^\top}\qquad(\text{Cauchy--Schwarz}),$$
+and $g_sH^{-1}g_s^\top$ **is** the Newton decrement the optimizer tests against `nrtol` when $H$ is the Gauss-Newton matrix. The Gauss-Newton $H$ differs from the exact one by $O(\|r\|)$, which is why the first-order statement uses the exact one and the relative error of using the Gauss-Newton one is a constant proportional to the residual.
+2. **The difference quotient.** Production's $\Delta+E$, $E=\Delta_{\rm fd}-\Delta$, is exact up to rounding (SO1.4: no truncation, any step), so $E$ is rounding only, of order $10^{-11}$ at $h=10^{-5}\max(1,|v|)$ in the design below (@sec-delta's budget (B) bounds it). A root of $g_{\rm fd}=-2r^\top W(\Delta+E)$ is displaced by $e\approx2H^{-1}E^\top Wr$: proportional to the **residual** $r$, so it vanishes with it.
+3. **The polish.** Gauss-Newton steps contract the error by $M=I-H_{\rm GN}^{-1}H$ per step, asymptotically at $\rho=\rho(M)$; after a step of size $d$ the error left is about $\rho/(1-\rho)\|d\|$.
+
+*Verified* (`so-6`, $K=4$ in M, data replaced by a seeded weighted least squares problem, $W=\operatorname{diag}(w)$, $w\sim U(.5,2)$, $s=\sigma(\theta_0)+N(0,.01^2)$, residual norm $\|r\|_W=$ `r format(so_6_polish["residual_norm_W"], digits = 2)`): (1) $e=H^{-1}g$ with the exact $H$, relative error `r paste(format(so_6_stop[, "rel_err_exactH"], digits = 2), collapse = ", ")` at $t=10^{-2},10^{-3},10^{-4}$ (falls in proportion to $t$), the bound holds in all three, and
+with the Gauss-Newton $H$ the relative error stays at about `r format(so_6_stop[3, "rel_err_GN_H"], digits = 2)` (the $O(\|r\|)$ term); (2) $e=2H^{-1}E^\top Wr$ on a deliberately large perturbation $E=\eta E_0$, relative error `r paste(format(so_6_fd[, "rel_err"], digits = 2), collapse = ", ")` for $\eta=10^{-4},10^{-5},10^{-6}$ (in proportion to $\eta$);
+(3) one Gauss-Newton step maps the error by $M$ to relative gap `r format(so_6_polish["one_step_linearization_gap"], digits = 2)`, $\rho=$ `r format(so_6_polish["rho"], digits = 2)`. For production's own $E$ at $\hat\theta$ in this design $\|E\|_{\max}=$ `r format(so_6_prod["max_abs_E"], digits = 2)` and the predicted shift of the largest $\hat\psi$ is
+`r format(so_6_prod["max_psi_shift_predicted"], digits = 2)`: **a measurement of one design, not a policy**. **No tolerance or cut is proposed**; the measurement of these quantities on fitted second-order models, which the roadmap's ordering problem puts after B3, is what a boundary policy needs, and where the stopping term (1) dominates is a
+property of the stopping rule, not of the model. **Status: ESTABLISHED** (first-order derivation, each verified numerically in one design); the sizes are measurements.
+
+
+The sign-group table, the invariants, the owner's example and every row-by-row statement above are asserted in the chunk.
+**Status of SO6: ESTABLISHED** (sign groups, the invariants of SO6.2 with the anchor *not chosen*, SO6.3 and the owner example, SO6.5's formulas), **VERIFIED ONLY** (SO6.4's rounding behaviour at $\psi=0$ and the sizes in SO6.5).
+
+### Result SO7: the item-anchored higher-order factor and its ridge {#sec-so-hof}
+
+Added 2026-11-20 (unit B5), for the start rule the owner chose that day (option A-R, E-114, the start package; spec Module 7). Drafted by an agent and run by the main session. It derives where the ridge is. It says nothing about the disturbance-variance band (gate B3b), and the band is not evidence for it.
+
+**Setting.** $G$ has exactly one item $y_0$ (loading fixed at 1, $\psi_G$ free; `sem`'s anchoring; MD) over $K\ge2$ first-order factors with item markers; the $b_k$ and $\psi_k$ are free. Put $c_k:=b_k\psi_G$, the covariance of $G$ with $F_k$. With $y_0$'s loading 1, $\operatorname{corr}(y_0,y_{ik})=\lambda_{ik}c_k$. Only off-diagonal implied correlations are fitted moments ($\Theta$ is derived), so nothing ties $\psi_G$ to $y_0$'s own variance.
+
+**SO7.1 The ray.** Hold the $c_k$, every $\lambda$ and every $\psi_k$ fixed, and set $\psi_G=t$, $b_k=c_k/t$ ($t$ of either sign). The implied correlations are exactly
+$$\operatorname{corr}(y_0,y_{ik})=\lambda_{ik}c_k,\qquad
+\operatorname{corr}(y_{ik},y_{jl})=\lambda_{ik}\lambda_{jl}\,\frac{c_kc_l}{t}\ (k\ne l),\qquad
+\operatorname{corr}(y_{ik},y_{jk})=\lambda_{ik}\lambda_{jk}\Bigl(\psi_k+\frac{c_k^2}{t}\Bigr).$$
+So $\sigma(t)=\sigma_\infty+D/t$ exactly. $D$ is 0 on the pairs with $y_0$, $\lambda\lambda c_kc_l$ between factors and $\lambda\lambda c_k^2$ within factor $k$. The limit $\sigma_\infty$ keeps the $y_0$ pairs at $\lambda c_k$, sets the between-factor pairs to 0 and the within-$F_k$ pairs to $\lambda\lambda\psi_k$. The approach is at rate $1/|t|$: $\|\sigma(t)-\sigma_\infty\|_\infty=\|D\|_\infty/|t|$.
+*Verified* ($K=4$, three items per factor, Case H's values $b^*=(.8,.7,.6,.75)$, items $(.7,.7,.6)$, $y_0$ at .6 on $G$, taken to the item-anchored metric; $\psi_G^*=$ `r format(so7_psiG, digits = 3)`): the closed form against `so_sigma` at $t=\pm10,\dots,\pm10^5$ (relative $10^{-12}$); $|t|\,\|\sigma(t)-\sigma_\infty\|_\infty/\|D\|_\infty=1$ to $10^{-8}$, three decades above the rounding $10^{-16}t_{\max}=10^{-11}$; the ray at $t=\psi_G^*$ is $\theta^*$. **Status: ESTABLISHED** (algebra; asserted).
+
+**SO7.2 $F$ along the ray.** With $r_\infty=s-\sigma_\infty$, $a=r_\infty^\top WD$ and $\beta=D^\top WD$,
+$$F(t)=F_\infty-\frac{2a}{t}+\frac{\beta}{t^2},\qquad F_\infty=r_\infty^\top Wr_\infty<\infty.$$
+So $F$ is bounded on $|t|\ge10$ by $F_\infty+2|a|/|t|+\beta/t^2$ and tends to $F_\infty$ at rate $1/|t|$: nothing penalizes going out along the ray. This is a statement about the limit, not about where an optimizer stops.
+*Verified* with $s=\sigma(\theta^*)+N(0,.01^2)$ (seed 20261120) and $W=\operatorname{diag}(w)$, $w\sim U(.5,2)$: the identity holds to $10^{-10}$ at ten values of $t$; $F(\theta^*)=$ `r format(so7_Fstar, digits = 3)`, $F_\infty=$ `r format(so7_Finf, digits = 4)`, and $F(t)=$ `r paste(format(so7_Ft[1:5], digits = 4), collapse = ", ")` at $t=10,\dots,10^5$. Here $F_\infty$ exceeds $F(\theta^*)$ more than a hundredfold. That is **a property of this $s$, not a theorem**. **Status: ESTABLISHED** (identity); the sizes VERIFIED ONLY.
+
+**SO7.3 Which shapes have the ridge.**
+
+(a) *Two or more items on $G$* (loadings 1 and a free $\lambda_b$): $\operatorname{corr}(y_0,y_{00})=\lambda_b\psi_G=\lambda_bt$ diverges, so $F\ge w(\lambda_bt-s)^2\to\infty$ for either sign of $t$, and there is no ridge of this kind. *Verified* (second item at standardized .5): the correlation equals $\lambda_bt$ to $10^{-9}$ relative; $F(t)=$ `r paste(format(so7_F2v, digits = 3), collapse = ", ")` at $t=10^2,\dots,10^5$, quadratic ($F/(w\lambda_b^2t^2)=1$ within $10^{-3}$, where the neglected terms are about $2|s|/(\lambda_bt)\approx10^{-5}$), and likewise as $t\to-\infty$.
+
+(b) *The scale carried by the item's loading instead.* With $\psi_G=1$ and $y_0$'s loading $\lambda_0$ free (MD with $G$ at unit variance), $\lambda_0=u$, $b_k=c_k/u$ gives the same $\sigma$ as the ray at $t=u^2$, with the same $c_k=b_k\lambda_0$. **So the ridge exists there too**, for $\psi_G\ge0$ only. *Verified*: relative $10^{-12}$ at $u=10,10^2,10^3$; $F(u=10^4)$ within $10^{-6}$ of $F_\infty$. This corrects E-114 (MD convergence, item 4) ("with ψ_G fixed there is no ridge"). That holds for a factor with no item, but not for an item-measured $G$ at unit variance. There, MD's measured fit converged quickly (ULS in 11 iterations): the ridge is present and the optimizer did not take it.
+
+(c) *A factor with no item* (release B's V and U: $\psi_G=1$, no row for $y_0$): there is no $\lambda_0$ or $\psi_G$ to send to infinity, and $b_k\to0$ is a finite point (the rank loss there at $K=3$ is SO2.5, a different matter). In M with no item, $b_1=1$ is fixed, and $\psi_G\to\infty$ sends the $F_1$ items' correlations to infinity, linearly (*verified* at $10^2,10^4,10^6$).
+
+(d) *One child ($K=1$).* The model is not identified (SO2): $\Delta$ has rank 12 of 13 at $\theta^*$, both rank-check points fail, and $(\psi_G,b,\psi_1)\mapsto(t,c/t,\phi-c^2/t)$ leaves $\sigma$ exactly constant. That is a null curve, not a ridge, and the rank check refuses the model.
+
+**Statement.** The ridge of SO7.1-7.2 exists for a factor $G$ with exactly one item and $K\ge2$ free outgoing paths, whose scale is carried by that item alone: the loading fixed with $\psi_G$ free, or $\psi_G$ fixed with the loading free (then for $\psi_G\ge0$ only). It is absent in (a), (c) and (d). **Status: ESTABLISHED** (the closed forms, and the absence in (a), (c), (d)); the numerical values VERIFIED ONLY.
+
+**SO7.4 The start (descriptive, not a theorem).** On the ray $b_k=c_k/t\to0$. Module 3's starts put $b=0$, and the rank check's second point puts every $b$ within $\pm.05$ of 0. A start with $|b|<.05$ lies on the ray at $|t|>\max_k|c_k|/.05$, here $|t|>$ `r format(max(abs(so7_c)) / .05, digits = 3)`. A start at $b=.7$ lies on a ray with $c_k$ near its population value only if $\psi_G\approx c_k/.7$. This says where the start lies, not what an optimizer does from it. **VERIFIED ONLY** (descriptive).
+
+**What is not claimed.**
+- That an optimizer must enter the ridge: $F_\infty>F(\theta^*)$ is shown for one $s$ only.
+- That 0.7 is a good start, let alone an optimal one. The decision rests on the measured fits (E-114, the start package), and this section only says where the ridge is.
+- Anything about several groups. Per group the algebra applies to that group's $\sigma$; this is inferred, not checked.
+- That the start rule must cover case (b). The rule the owner chose fires only on a free $\psi_G$ with one item (the form B1's MD fit failed in). Whether (b), which converged in every measured fit, should also be covered is not decided here.
+
+```{r so-7}
+so7_K <- 4; so7_nk <- rep(3, so7_K)
+so7_lam <- c(.7, .7, .6); so7_bstar <- c(.8, .7, .6, .75); so7_l0 <- .6   # Case H's values; y_0 loads .6 on G
+so7_std <- function(md0, l0) {                         # standardized point of an MD model with item loadings so7_lam
+  x <- so_std_point(md0, so7_bstar)
+  x$L[] <- 0
+  for (k in seq_len(so7_K)) x$L[(k - 1) * 3 + 1:3, 1 + k] <- so7_lam
+  x$L[nrow(x$L), 1] <- l0
+  x
+}
+# the M metric (item-anchored): y_0's loading on G fixed at 1, psi_G free
+so7_mdM <- so_build(so7_nk, gm = "marker", fm = "item", mdi = TRUE, label = "MD in M")
+so7_xM  <- so_to_metric(so7_std(so7_mdM, so7_l0), so7_mdM)
+so7_thM <- so_theta_of(so7_mdM, so7_xM)
+so_check("SO7 setup: the item-anchored point has y_0's loading 1 and the same sigma as the standardized point",
+         so_fixed_ok(so7_xM, so7_mdM) &&
+         so_rel(so_msigma(so7_mdM, so7_thM), so_sigma(so7_std(so7_mdM, so7_l0)$L, so7_std(so7_mdM, so7_l0)$B, so7_std(so7_mdM, so7_l0)$P)) < 1e-12)
+so7_psiG <- so7_xM$P[1, 1]; so7_c <- so7_xM$B[1 + seq_len(so7_K), 1] * so7_psiG       # c_k = b_k psi_G (invariant)
+so7_psik <- diag(so7_xM$P)[1 + seq_len(so7_K)]
+so7_lamM <- so7_xM$L                                                                    # loadings in M
+
+# the ray: psi_G = t, b_k = c_k / t, everything else at theta*; x is the (L, B, P) of the point
+so7_ray <- function(x, t, cc) { x$P[1, 1] <- t; x$B[1 + seq_along(cc), 1] <- cc / t; x }
+so7_sig_ray <- function(x, t, cc) { y <- so7_ray(x, t, cc); so_sigma(y$L, y$B, y$P) }
+
+# closed form, written from the pair formulas and not from so_sigma: item i has factor f(i) in 0 (y_0), 1..K
+so7_fac <- c(rep(seq_len(so7_K), each = 3), 0); so7_p <- length(so7_fac)
+so7_li <- so7_lamM[cbind(seq_len(so7_p), ifelse(so7_fac == 0, 1, 1 + so7_fac))]         # each item's loading on its own factor
+so7_pairs <- which(lower.tri(diag(so7_p)), arr.ind = TRUE)                               # same order as S[lower.tri(S)]
+so7_cf <- function(t, cc, psik) {                        # returns list(sigma, D): sigma(t) = sigma_inf + D / t
+  n <- nrow(so7_pairs); sg <- numeric(n); D <- numeric(n); sinf <- numeric(n)
+  for (j in seq_len(n)) {
+    a <- so7_pairs[j, 1]; b <- so7_pairs[j, 2]; fa <- so7_fac[a]; fb <- so7_fac[b]; la <- so7_li[a]; lb <- so7_li[b]
+    if (fa == 0 || fb == 0) { k <- max(fa, fb); sinf[j] <- (if (fa == 0) lb else la) * cc[k]; D[j] <- 0 }
+    else if (fa == fb)      { sinf[j] <- la * lb * psik[fa];                 D[j] <- la * lb * cc[fa]^2 }
+    else                    { sinf[j] <- 0;                                    D[j] <- la * lb * cc[fa] * cc[fb] }
+  }
+  list(sinf = sinf, D = D, sigma = function(t) sinf + D / t)
+}
+so7_f <- so7_cf(NA, so7_c, so7_psik)
+
+so7_t <- c(10, 100, 1e3, 1e4, 1e5, -10, -100, -1e3, -1e4, -1e5)
+so7_ok_cf <- sapply(so7_t, function(t) so_rel(so7_sig_ray(so7_xM, t, so7_c), so7_f$sigma(t)))
+so_check("SO7.1 closed form: sigma along the ray equals sinf + D/t at every t, both signs (relative error 1e-12)", all(so7_ok_cf < 1e-12))
+so_check("SO7.1 the ray at t = psi_G* is theta* itself", so_rel(so7_sig_ray(so7_xM, so7_psiG, so7_c), so_msigma(so7_mdM, so7_thM)) < 1e-12)
+# the rate: t * ||sigma(t) - sigma_inf||_inf is constant (= ||D||_inf) up to rounding; rounding of a difference of O(1) entries is 1e-16, times t <= 1e5: 1e-11
+so7_rate <- sapply(so7_t, function(t) abs(t) * max(abs(so_sigma(so7_ray(so7_xM, t, so7_c)$L, so7_ray(so7_xM, t, so7_c)$B, so7_ray(so7_xM, t, so7_c)$P) - so7_f$sinf)))
+so_check("SO7.1 rate 1/psi_G: |t| * max|sigma(t) - sigma_inf| = max|D| at every t (relative 1e-8, three decades above the rounding 1e-11)",
+         all(abs(so7_rate / max(abs(so7_f$D)) - 1) < 1e-8))
+# the three blocks of the limit
+so7_blk_y0 <- so7_fac[so7_pairs[, 1]] == 0 | so7_fac[so7_pairs[, 2]] == 0
+so7_blk_x  <- !so7_blk_y0 & so7_fac[so7_pairs[, 1]] != so7_fac[so7_pairs[, 2]]
+so_check("SO7.1 limit: the y_0 pairs do not move along the ray (D = 0 there, and sigma(theta*) equals the limit on them to 1e-14); the between-factor limit is 0",
+         all(so7_f$D[so7_blk_y0] == 0) && all(so7_f$sinf[so7_blk_x] == 0) &&
+         all(abs(so_msigma(so7_mdM, so7_thM)[so7_blk_y0] - so7_f$sinf[so7_blk_y0]) < 1e-14))
+
+# data: s = sigma(theta*) + seeded perturbation, W positive diagonal (fixed)
+set.seed(20261120)
+so7_np <- length(so7_f$sinf); so7_s <- so_msigma(so7_mdM, so7_thM) + rnorm(so7_np, 0, .01); so7_w <- runif(so7_np, .5, 2)
+so7_F <- function(sig) { r <- so7_s - sig; sum(so7_w * r * r) }
+so7_Fstar <- so7_F(so_msigma(so7_mdM, so7_thM)); so7_rinf <- so7_s - so7_f$sinf
+so7_Finf <- sum(so7_w * so7_rinf^2); so7_a <- sum(so7_w * so7_rinf * so7_f$D); so7_bq <- sum(so7_w * so7_f$D^2)
+so7_Ft <- sapply(so7_t, function(t) so7_F(so7_sig_ray(so7_xM, t, so7_c)))
+so7_Ftc <- so7_Finf - 2 * so7_a / so7_t + so7_bq / so7_t^2                      # F(t) = Finf - 2 a / t + b / t^2, exact
+so_check("SO7.2 F along the ray is exactly Finf - 2a/t + b/t^2, a = r_inf'WD, b = D'WD (relative 1e-10)", all(abs(so7_Ft - so7_Ftc) / so7_Ftc < 1e-10))
+so_check("SO7.2 F stays bounded: F(t) <= Finf + 2|a|/|t| + b/t^2 for every |t| >= 10, and the gap to Finf shrinks like 1/|t|",
+         all(so7_Ft <= so7_Finf + 2 * abs(so7_a) / abs(so7_t) + so7_bq / so7_t^2 + 1e-12) &&
+         abs(so7_Ft[5] - so7_Finf) < abs(so7_Ft[4] - so7_Finf) / 5 && abs(so7_Ft[10] - so7_Finf) < abs(so7_Ft[9] - so7_Finf) / 5)
+so_check("SO7.2 Finf > F(theta*) in this design (the ridge's limit is worse than the population point, since the F-F correlations are lost)",
+         so7_Finf > so7_Fstar && so7_Finf - so7_Fstar > 100 * so7_Fstar)
+
+# ---- SO7.3(a): two items on G. y_0 loading 1 (fixed) and y_00 loading l_b free; use the same point plus a row
+so7_lb <- .5 / so7_l0                                                    # standardized .5 on G, in the M metric (d_G = .6)
+so7_x2 <- so7_xM; so7_x2$L <- rbind(so7_xM$L, c(so7_lb, rep(0, so7_K)))
+so7_s2fun <- function(x) so_sigma(x$L, x$B, x$P)
+so7_sig2 <- function(t) { y <- so7_ray(so7_x2, t, so7_c); so7_s2fun(y) }
+so7_p2 <- so7_p + 1; so7_pairs2 <- which(lower.tri(diag(so7_p2)), arr.ind = TRUE)
+so7_isg <- (so7_pairs2[, 1] == so7_p2 & so7_pairs2[, 2] == so7_p)          # the pair (y_0, y_00): both on G only
+so_check("SO7.3(a) two items on G: their correlation is lambda_a lambda_b psi_G = l_b t, so it diverges along the ray",
+         all(abs(sapply(so7_t, function(t) so7_sig2(t)[so7_isg]) - so7_lb * so7_t) < 1e-9 * abs(so7_t)))
+set.seed(20261121)
+so7_s2 <- so7_s2fun(so7_x2) + rnorm(nrow(so7_pairs2), 0, .01); so7_w2 <- runif(nrow(so7_pairs2), .5, 2)
+so7_F2 <- function(t) { r <- so7_s2 - so7_sig2(t); sum(so7_w2 * r * r) }
+so7_tp <- c(1e2, 1e3, 1e4, 1e5); so7_F2v <- sapply(so7_tp, so7_F2)
+so7_lower2 <- so7_w2[so7_isg] * (so7_lb * so7_tp - so7_s2[so7_isg])^2     # the one divergent term alone
+so_check("SO7.3(a) two items on G: F is increasing in t >= 100, at least the divergent term, and F/t^2 -> w l_b^2 (within 1e-3 at t = 1e5; the neglected relative terms are about 2|s|/(l_b t) = 1e-5)",
+         all(diff(so7_F2v) > 0) && all(so7_F2v >= so7_lower2 - 1e-9) && abs(so7_F2v[4] / (so7_w2[so7_isg] * so7_lb^2 * 1e10) - 1) < 1e-3)
+so7_F2n <- sapply(-so7_tp, so7_F2)
+so_check("SO7.3(a) two items on G, psi_G -> -inf: F also grows without bound (t^2 growth, F(-1e5) >= 1e8 * w l_b^2 * 0.99)",
+         all(diff(so7_F2n) > 0) && so7_F2n[4] >= .99 * so7_w2[so7_isg] * so7_lb^2 * 1e10)
+
+# ---- SO7.3(b): ridge when psi_G is fixed and the item's loading carries the scale: lambda_0 -> inf, b_k = c_k / lambda_0
+so7_mdU <- so_build(so7_nk, gm = "var", fm = "item", mdi = TRUE, label = "MD in U-with-item")
+so7_xU  <- so_to_metric(so7_std(so7_mdU, so7_l0), so7_mdU)
+so7_thU <- so_theta_of(so7_mdU, so7_xU)
+so_check("SO7.3(b) setup: U-with-item point has psi_G = 1 fixed, same sigma as the M point",
+         so_fixed_ok(so7_xU, so7_mdU) && so_rel(so_msigma(so7_mdU, so7_thU), so_msigma(so7_mdM, so7_thM)) < 1e-12)
+so7_cU <- so7_xU$B[1 + seq_len(so7_K), 1] * so7_xU$L[so7_p, 1]                 # c_k = b_k lambda_0
+so7_sigU <- function(u) { y <- so7_xU; y$L[so7_p, 1] <- u; y$B[1 + seq_len(so7_K), 1] <- so7_cU / u; so_sigma(y$L, y$B, y$P) }
+so7_uu <- c(10, 100, 1e3)
+so_check("SO7.3(b) with psi_G = 1 and y_0's loading free, lambda_0 = u, b_k = c_k/u gives the same sigma as the ray with t = u^2, and c_k = b_k lambda_0 equals c_k of M (error 1e-12)",
+         max(abs(so7_cU - so7_c)) < 1e-12 && all(sapply(so7_uu, function(u) so_rel(so7_sigU(u), so7_f$sigma(u^2))) < 1e-12))
+so7_FU <- sapply(c(10, 100, 1e3, 1e4), function(u) so7_F(so7_sigU(u)))
+so_check("SO7.3(b) the ridge exists in U-with-item as well (only for psi_G >= 0): F bounded by Finf-type limit, F(u=1e4) within 1e-6 of Finf",
+         all(so7_FU < so7_Finf + 1) && abs(so7_FU[4] - so7_Finf) < 1e-6 * so7_Finf)
+
+# ---- SO7.3(c): a factor with no item. Release B's V and U: psi_G fixed = 1, no row for y_0. No direction to infinity in psi_G exists;
+#      b_k -> 0 is a finite point. In M with no item, b_1 = 1 is fixed and psi_G -> inf makes the F_1 items' correlations diverge.
+so7_mdN <- so_build(so7_nk, gm = "marker", fm = "item", mdi = FALSE, label = "M without item")
+so7_xN <- so_to_metric(so_std_point(so7_mdN, so7_bstar), so7_mdN)
+so7_rayN <- function(t) { y <- so7_xN; cN <- so7_xN$B[1 + (2:so7_K), 1] * so7_xN$P[1, 1]; y$P[1, 1] <- t; y$B[1 + (2:so7_K), 1] <- cN / t; so_sigma(y$L, y$B, y$P) }
+so7_N <- sapply(c(1e2, 1e4, 1e6), function(t) max(abs(so7_rayN(t))))
+so_check("SO7.3(c) a factor with no item (M, b_1 = 1 fixed): the same ray sends the F_1 correlations to lambda lambda (psi_G + psi_1) -> infinity, linearly in psi_G (ratio per factor 100 in t within 5% and 1%)",
+         so_fixed_ok(so7_xN, so7_mdN) && abs(so7_N[3] / so7_N[2] / 100 - 1) < .01 && abs(so7_N[2] / so7_N[1] / 100 - 1) < .05)
+
+# ---- SO7.3(d): K = 1. The model is not identified: the rank check refuses it.
+so7_md1 <- so_build(3, gm = "marker", fm = "item", mdi = TRUE, label = "MD with K = 1")
+so7_x1  <- so_to_metric(so_std_point(so7_md1, .8), so7_md1)
+so7_x1$L[] <- 0; so7_x1$L[1:3, 2] <- c(1, .7, .6); so7_x1$L[4, 1] <- 1
+so7_th1 <- so_theta_of(so7_md1, so7_x1)
+so7_rk1 <- so_numrank(so_delta_fd(so7_md1, so7_th1), so7_md1$T); so7_rc1 <- so_rankcheck(so7_md1)
+so_check("SO7.3(d) K = 1: Delta is rank deficient by exactly 1 at theta* and at the production rank-check points (the check refuses it)",
+         so7_rk1$rank == so7_rk1$n - 1 && !so7_rc1$pass0 && !so7_rc1$pass2)
+# the null curve: (psi_G, b, psi_1) -> (t, c/t, phi - c^2/t) leaves sigma unchanged exactly
+so7_c1 <- so7_x1$B[2, 1] * so7_x1$P[1, 1]; so7_phi1 <- so7_x1$B[2, 1]^2 * so7_x1$P[1, 1] + so7_x1$P[2, 2]
+so7_sig1 <- function(t) { y <- so7_x1; y$P[1, 1] <- t; y$B[2, 1] <- so7_c1 / t; y$P[2, 2] <- so7_phi1 - so7_c1^2 / t; so_sigma(y$L, y$B, y$P) }
+so_check("SO7.3(d) K = 1: along the ray with psi_1 adjusted, sigma is constant: a null curve, not a ridge (relative 1e-12)",
+         all(sapply(c(10, 1e3, 1e5, -1e3), function(t) so_rel(so7_sig1(t), so7_sig1(so7_x1$P[1, 1]))) < 1e-12))
+
+# ---- SO7.4: the start. Default b = 0 is the ray's direction (b_k -> 0 with c_k fixed means t -> inf); a start at b = .7 is not on it
+so7_b_at_c <- function(t) so7_c / t
+so_check("SO7.4 descriptive: on the ray b_k = c_k / t, so b -> 0 as |t| -> inf; |b| < .05 needs |t| > max c_k/.05 (the second rank-check point puts b within .05 of 0)",
+         all(abs(so7_b_at_c(1e5)) < 1e-4) && all(abs(so7_b_at_c(max(abs(so7_c)) / .05 + 1)) < .05) )
+cat("SO7 values: psi_G* =", format(so7_psiG, digits = 4), " c =", format(so7_c, digits = 4), " F(theta*) =", format(so7_Fstar, digits = 4),
+    " Finf =", format(so7_Finf, digits = 4), "\n")
+cat("F(t), t = 10,100,1e3,1e4,1e5 and negatives:\n"); print(rbind(t = so7_t, F = so7_Ft, Fclosed = so7_Ftc), digits = 6)
+cat("rate |t|*max|sigma(t)-sigma_inf|, max|D|:", format(so7_rate[1:5], digits = 8), format(max(abs(so7_f$D)), digits = 8), "\n")
+cat("two items on G, F(t), t = 1e2..1e5:", format(so7_F2v, digits = 5), "; F(-t):", format(so7_F2n, digits = 5), "\n")
+cat("U-with-item F(u), u = 10,100,1e3,1e4:", format(so7_FU, digits = 8), "\n")
+cat("K=1: rank", so7_rk1$rank, "of", so7_rk1$n, " pass0/pass2:", so7_rc1$pass0, so7_rc1$pass2, "\n")
+```
+
+### Summary of the results {#sec-so-summary}
+
+| Result | Statement | Status |
+|---|---|---|
+| SO1.1-1.4 | $\sigma$ and $\Delta$ need no new term; $\Phi_{FF}=\psi_G\gamma\gamma^\top+\Psi_F$; the central difference of $\Delta$ is exact to rounding for every path | ESTABLISHED |
+| SO2.1(i) | M3, M4, M5, MT2, MD, M22, M33, M2c locally identified at almost every point, all four metrics, production order, 8 variants | VERIFIED ONLY (designs tabulated; rank at one point proves generic rank) |
+| SO2.1(ii) | M2, MT1, M22u not identified at any point (closed-form null directions) | ESTABLISHED |
+| SO2.2 | $\theta^{(0)}$ deficient: $K$ in U and V, 1 in M and W, with the null vectors; $\theta^{(2)}$ is the routine path | ESTABLISHED (deficiency); $\theta^{(2)}$ passing: VERIFIED ONLY |
+| SO2.3 | $K=3$: same df and fit as the correlated model, same model only on $r_{12}r_{13}r_{23}>0$ with every $b^{*2}\le1$; closed-form map | ESTABLISHED |
+| SO2.4 | $K\ge4$: $K(K-3)/2$ tetrad restrictions (two $G$'s: $(K^2-3K-2)/2$) | ESTABLISHED |
+| SO2.5 | rank lost at one path $=0$ iff $K=3$; at all paths $=0$ in every model | ESTABLISHED ($K=3$, count); $K\ge5$ by the count |
+| SO3.1-3.2 | the twelve metric maps; order of the two rescalings; what keeps its meaning | ESTABLISHED |
+| SO3.3 | representability: U no $\psi_k\le0$; V yes $\psi_k\le0$, no $\psi_G<0$; W yes $\psi_G<0$, no $\psi_k\le0$; M both | ESTABLISHED |
+| SO3.4 | conditioning: V = U at small paths, V = M at $\psi\to0$ and at $\psi<0$, V = M at a small marker item | rates 1 and boundedness ESTABLISHED; rates 4, 5, 2 VERIFIED ONLY |
+| SO3.5 | $K=2$: a raw-path equality is metric-dependent | ESTABLISHED |
+| SO4.1-4.3 | latent-anchor transform U$\to$M, U$\to$V; $\sigma$ unchanged; reflections; stationarity; thresholds | ESTABLISHED; VERIFIED against lavaan (24 maps) |
+| SO4.4 | a U refit cannot reproduce an improper M solution | ESTABLISHED |
+| SO5.1-5.4 | standardization map and Jacobian; the existing routine covers $\beta$ rows; invariant across metrics; two $G$'s | ESTABLISHED; VERIFIED against lavaan (6 fits) |
+| SO5 (1)-(3) | SE of $b^*$ does not vanish at $\psi_k\to0$ (limit given); $R^2$ SE exactly 0 at $b_k=0$; K=2 tie | ESTABLISHED |
+| SO6.1-6.2 | sign groups $1,2,2^{K+1},2^K$; the $F$-flip invariants; candidate anchors | ESTABLISHED (no anchor chosen) |
+| SO6.3 | $\Phi_\eta\succ0\iff\Psi\succ0$; rows 2, 3 and the owner's example; one negative $\psi_k$ and PD $\Phi_{FF}$ | ESTABLISHED |
+| SO6.4 | at $\psi_k=0$ the rows are decided by rounding | VERIFIED ONLY |
+| SO6.5 | numerical error of a $\hat\psi$: stopping, finite-difference, polish terms to first order | ESTABLISHED (formulas, verified); sizes are one design's measurements |
+| SO7.1-7.3 | a $G$ with one item and $\ge2$ paths, its scale carried by that item alone: along $\psi_G=t$, $b_k=c_k/t$, $\sigma=\sigma_\infty+D/t$ and $F\to F_\infty<\infty$ at rate $1/t$ (with $\psi_G$ fixed and the loading free, the same for $\psi_G\ge0$); absent with $\ge2$ items on $G$, with no item, and with $K=1$ | ESTABLISHED (closed forms); sizes VERIFIED ONLY; the start (SO7.4) descriptive |
+
+### Corrections to the earlier notes {#sec-so-corrections}
+
+Found while deriving; each is a statement in E-108 or E-114 that this section's checks do not support as written.
+
+1. **"Every second-order model is deficient at $\theta^{(0)}$ because $B=0$ there"** (roadmap SO2; E-114, finding: rank 11 of 12 for G over three). True for U and V (deficiency $K$: 9 of 12). In M and W $b_1=1$ is fixed, $B\ne0$,
+   and the deficiency is 1, from $\psi_G$ collinear with $\psi_1$ (M) or with $F_1$'s loadings (W). "Rank 11 of 12" is the M and W figure.
+2. **"Unit variance stays well conditioned when a second-order loading is small"** (roadmap SO3; E-114, recovery 1.3: U keeps full rank with ratio 0.08). Holds for $K\ge4$. At $K=3$ the model loses rank when one path is 0 (E-114, the finding's own entry), and U's condition number grows like $\varepsilon^{-1}$ (as does V's).
+3. **The $\varepsilon^{-4}$ for the marker metric** (roadmap SO3, E-114, recovery 1.3) is the unscaled condition number and mostly parameter scale: on the $b^*_1\to0$ axis, with the columns normalized the rate is $\varepsilon^{-1}$ in every metric at $K=3$ and in M and W at $K=4$ (U and V bounded). Both are reported in SO3.4; the production rank check reads the unscaled one.
+4. **B1 finding 1.2** left open whether row 2 lists every offending pair: it lists one, the largest $|r|$ (`dwlsmv_admissible.mata:146-162`).
+5. **Roadmap SO6, "non-negative disturbance variances and $|b^*|\le1$ are one condition":** it is one condition given $\psi_G>0$ and $\phi_{kk}>0$. A negative $\psi_G$ is invisible to row 2 and a $\phi_{kk}\le0$ factor is skipped by it; row 3 catches both.
+6. **The null directions printed when the check fails** are $\theta^{(0)}$'s (`dwlsmv_id_rank.mata:114-155`). For M2 that names $\psi_G,\psi_1$ only; the redundancy's real form $(b_2,\psi_G,\psi_1,\psi_2)$ is visible at $\theta^{(2)}$ and is not printed. *Resolved 2026-11-20 (B3.13, owner):* $\theta^{(2)}$'s directions are printed, as a diagnostic.
+
+### What this section does not do {#sec-so-not}
+
+- **It decides nothing.** The spelling of the latent marker (extend `metric`, let a fixed nonzero `beta` count, or unit variance only), the metric(s) offered, whether D11 recovery is eligible for these models (SO4 supplies the transform and its limits), the anchor of
+  $G$'s sign (SO6.2 lists five), the boundary policy of the disturbance-variance check (SO6.5 gives the formulas for what an error in $\hat\psi$ consists of, **not a tolerance or a cut**; the measurement on fitted second-order models waits for B5), whether the check reports $\psi_k=0$ and as what (SO6.4), the wording
+  of a failed rank check for $G$ over two or a single-item factor (SO2.2), whether an equality of raw second-order paths is offered (SO3.5), and release scope (SO2 statement 4) are B3's.
+- **It does not run Stata.** The rank check's second point is evaluated in R from the source's formula, order and criterion; `dwls_identify()` rejects these models until B5.
+- **It does not derive the nesting** of a second-order model in its correlated-first-order parent, so it says nothing about `difftest` between them (roadmap B3: needs its own derivation). SO2.3 gives only equal fit and df at $K=3$ and the restrictions at $K\ge4$.
+- **It does not cover** a first-order factor outside the hierarchy (B0's MX) or a covariance with the first-order disturbances (not expressible in `sem`'s grammar, B1 finding 1.4), an item loading on $G$ beyond the checks in SO1, the rank table and SO7 (MD), or $G$ over a mixture of items and factors beyond MD. Two higher-order factors are covered (M22, M33) for identification, the maps and the standardization.
+- **It does not derive** the rates $\varepsilon^{-4}$, $\varepsilon^{-5}$ and $\varepsilon^{-2}$ of SO3.4 (measured), the stopping-error size in a fitted second-order model, or any statement about how often improper solutions occur in data (B0's 30 of 200 is not reproduced here).
+- **It does not show that an optimizer enters the ridge, nor that a start of 0.7 avoids it**, nor anything about several groups (SO7 gives the per-group algebra only).
+- **Tolerances chosen after measuring** are labelled where used: the lavaan comparison windows (SO4), the closure gap $10^{-3}$ (SO4.4), the conditioning-rate windows and the bound 30 (SO3.4), the two-$G$ chi-square agreement $10^{-3}$, and $10^{-6}$ for lavaan's standard errors (SO5).
+
+```{r so-verify}
+so_total <- so_checks$n; so_pass <- so_checks$ok
+cat(sprintf("so-verify: %d of %d\n", so_pass, so_total))
+if (length(so_checks$bad)) print(so_checks$bad)
+stopifnot(so_total > 0, so_pass == so_total)
 ```

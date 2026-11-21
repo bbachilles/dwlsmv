@@ -1,0 +1,13 @@
+{
+    "generated_utc": "2026-11-20 02:29:55 UTC",
+    "r_version": "R version 4.6.0 (2026-04-24 ucrt)",
+    "platform": "x86_64-w64-mingw32",
+    "seeds": "none (deterministic given case_H/I/J.csv)",
+    "files": {
+      "fixtures/expected/lavaan_so_parameters.csv": "fa19e290bf9d61185c2f17290ca77baf",
+      "fixtures/expected/lavaan_so_standardized.csv": "72c831a7d39c5388eec7609331b695e8",
+      "fixtures/expected/lavaan_so_t3.csv": "a9caaf58ecee5dfeb725e4c2a0338b37",
+      "fixtures/expected/lavaan_so_fits.csv": "eb5467afbcc6944eb21d8267eeffb714"
+    },
+    "packages": ["lavaan 0.7.2", "se type: robust.sem", "standardizedSolution(type = 'std.all'); se by lavaan's forward-difference Jacobian", "zero.keep.margins = TRUE (pinned, as 20_)", "R version 4.6.0 (2026-04-24 ucrt)"]
+  }

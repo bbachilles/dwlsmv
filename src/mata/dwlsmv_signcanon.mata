@@ -1,6 +1,7 @@
 *! dwlsmv -- canonicalize factor signs after convergence (Module 7)
 *!
 *! Executed under StataMP 18 on 2026-09-23. tests/unit/test_fit.do check 13. The first run aborted at rc 3301: a '|' in the apply loop subscripted flip[] with a threshold row's variable index, so the loop now branches on ptype first.
+*! Pass 2 (B3.10) executed under StataMP 18 on 2026-11-20: tests/unit/test_signcanon_so.do (checks a-k, eight mutants killed) and test_translate_second_order.do check 8.
 *!
 *!     real colvector dwlsmv_signcanon(real colvector theta,
 *!                                     struct dwlsmv_parmap scalar par)
@@ -59,6 +60,31 @@
 *! the reflection not a symmetry of the table, as a fixed nonzero loading does. kappa (ptype 9)
 *! never moves: K is not scaled by a factor. A table without gamma rows takes no new branch.
 *!
+*! SECOND-ORDER FACTORS (B3.10, 2026-11-20). A higher-order factor G with no free loading of
+*! its own (no anchor: pass 1 leaves it alone) is reflectable, so its sign is arbitrary too.
+*! Spec Module 12, Release B: after the first-order factors are anchored (pass 1, above,
+*! unchanged), G is reflected if sum_k b*_k < 0 over its factor children k, the STANDARDIZED
+*! paths b*_k = b_k sqrt(Phi[G,G] / Phi[k,k]); a tie at exactly 0 leaves G as fitted. Each G
+*! is decided separately. A "G" here is a factor that is reflectable, has no free loading, and
+*! has at least one FREE outgoing beta (ptype 3, col = G); its children are the rows of those
+*! betas. b_k is the path as fitted and s_k = 1 - 2 flip[k] turns it into the path the child's
+*! own reflection leaves: the score uses the first-order factors AS ANCHORED, which is why pass
+*! 2 follows pass 1. Phi = (I-B)^-1 Psi (I-B)^-T is built here from the table (value =
+*! theta where free, the fixed value otherwise; ptype 2 and 3 only); its diagonal is invariant
+*! under any reflection (Phi -> D Phi D), so the theta passed in serves. THE PHI GUARD: a
+*! child with Phi[k,k] not > 0 (an improper fit, or a missing value) contributes nothing, and
+*! a G with Phi[G,G] not > 0 is left as fitted; tested as !(x > 0), true for missing. Without
+*! it sqrt of a negative is missing, the score is missing, and "missing < 0" is false: G
+*! would stay unflipped, silently, because a missing value is not an error. The score is
+*! accumulated in an explicit loop so no missing value is dropped by sum(). ORDER: a G whose
+*! child is itself a G (a third level) waits for that child; G's are decided in sweeps, each
+*! deciding every unresolved G whose G-children are all decided, until none is unresolved.
+*! B is acyclic (Module 3), so this ends; a sweep that decides none leaves the rest unflipped.
+*! ONE GROUP ONLY: pass 2 runs when max(par.grp) == 1. Several groups cannot reach it, since
+*! B3.5 refuses group() with a second-order factor (a G with no loading has no later-group
+*! metric), and a standardization that mixed groups would be a decision nobody has taken.
+*! MD (a G with a free item loading, anchor > 0) is covered by pass 1 and skipped by pass 2.
+*!
 *! Load order: dwlsmv_types, dwlsmv_nfac.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
@@ -71,17 +97,23 @@ mata:
 real colvector dwlsmv_signcanon(real colvector theta,
                                 struct dwlsmv_parmap scalar par)
 {
-    real colvector th, flip, neg
-    real scalar nf, f, i, r, c, t, can, anchor, afid
+    real colvector th, flip, neg, canv, anchv, nout, pending
+    real matrix B, Psi, Ai, Phi
+    real scalar nf, f, i, r, c, t, can, anchor, afid, v
+    real scalar progress, ready, score, k
 
     if (rows(theta) != par.npar) {
         _error("dwlsmv_signcanon: theta is not npar rows long")
     }
 
-    th   = theta
-    nf   = dwlsmv_nfac(par)
-    flip = J(nf, 1, 0)
+    th    = theta
+    nf    = dwlsmv_nfac(par)
+    flip  = J(nf, 1, 0)
+    canv  = J(nf, 1, 0)
+    anchv = J(nf, 1, 0)
+    nout  = J(nf, 1, 0)
 
+    // Pass 1: every reflectable factor with a free loading anchor.
     for (f = 1; f <= nf; f++) {
         can    = 1
         anchor = 0
@@ -107,8 +139,90 @@ real colvector dwlsmv_signcanon(real colvector theta,
                 }
             }
         }
+        canv[f]  = can
+        anchv[f] = anchor
         if (can & anchor > 0) {
             flip[f] = (th[anchor] < 0)
+        }
+    }
+
+    // Pass 2 (B3.10): a reflectable factor with no free loading and a free
+    // outgoing path. One group only; see the header.
+    if (max(par.grp) == 1) {
+        pending = J(nf, 1, 0)
+        for (i = 1; i <= par.nall; i++) {
+            if (par.ptype[i] == 3 & par.free[i]) {
+                nout[par.col[i]] = nout[par.col[i]] + 1
+            }
+        }
+        for (f = 1; f <= nf; f++) {
+            if (canv[f] & anchv[f] == 0 & nout[f] > 0) {
+                pending[f] = 1
+            }
+        }
+
+        if (sum(pending) > 0) {
+            B   = J(nf, nf, 0)
+            Psi = J(nf, nf, 0)
+            for (i = 1; i <= par.nall; i++) {
+                t = par.ptype[i]
+                if (t != 2 & t != 3) {
+                    continue
+                }
+                if (par.free[i]) {
+                    v = th[par.fidx[i]]
+                }
+                else {
+                    v = par.value[i]
+                }
+                if (t == 3) {
+                    B[par.row[i], par.col[i]] = v
+                }
+                else {
+                    Psi[par.row[i], par.col[i]] = v
+                    Psi[par.col[i], par.row[i]] = v
+                }
+            }
+            Ai = luinv(I(nf) - B)
+
+            if (!missing(Ai)) {
+                Phi      = Ai * Psi * Ai'
+                progress = 1
+                while (progress & sum(pending) > 0) {
+                    progress = 0
+                    for (f = 1; f <= nf; f++) {
+                        if (!pending[f]) {
+                            continue
+                        }
+                        // Wait while a child is itself a G not yet decided.
+                        ready = 1
+                        for (i = 1; i <= par.nall; i++) {
+                            if (par.ptype[i] == 3 & par.free[i] & par.col[i] == f) {
+                                if (pending[par.row[i]]) {
+                                    ready = 0
+                                }
+                            }
+                        }
+                        if (!ready) {
+                            continue
+                        }
+                        if (Phi[f, f] > 0) {
+                            score = 0
+                            for (i = 1; i <= par.nall; i++) {
+                                if (par.ptype[i] == 3 & par.free[i] & par.col[i] == f) {
+                                    k = par.row[i]
+                                    if (Phi[k, k] > 0) {
+                                        score = score + (1 - 2 * flip[k]) * th[par.fidx[i]] * sqrt(Phi[f, f] / Phi[k, k])
+                                    }
+                                }
+                            }
+                            flip[f] = (score < 0)
+                        }
+                        pending[f] = 0
+                        progress   = 1
+                    }
+                }
+            }
         }
     }
 

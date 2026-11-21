@@ -109,6 +109,12 @@ void dwlsmv_m11_gnotes(string scalar canon, string scalar indlist, string scalar
         anyr = anyr | rpt
         anyl = anyl | (line != "")
     }
+    // the disturbance-variance check (B3.6, gate B3b): the pooled objective's band, so once
+    txt = dwlsmv_psi_note(fit, fac', "")
+    if (txt != "") {
+        printf("{txt}All groups:" + nl)
+        dwlsmv_m11_gnotes_print(txt)
+    }
     // the explanations once, after every group, in dwlsmv_m11_fit()'s G = 1 words
     if (anyr) {
         dwlsmv_m11_gnotes_print(

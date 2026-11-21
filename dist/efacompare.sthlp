@@ -1,6 +1,6 @@
 {smcl}
-{* every example run 2026-11-18 on the re-cut 0.5.0 release tree (R, after the rename from dwlsmv_nf), StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout}{...}
-{* *! version 0.5.0  18nov2026}{...}
+{* every example run 2026-11-21 on the 0.6.0 release tree (cdaaa78 plus the 0.6.0 help text), StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout}
+{* *! version 0.6.0  21nov2026}{...}
 {vieweralsosee "dwlsmv" "help dwlsmv"}{...}
 {vieweralsosee "[MV] screeplot" "help screeplot"}{...}
 {viewerjumpto "Syntax" "efacompare##syntax"}{...}

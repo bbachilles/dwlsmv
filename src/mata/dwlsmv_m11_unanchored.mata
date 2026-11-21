@@ -8,8 +8,9 @@
 *! unchanged (D8a), to add the remedy in the command's own terms: fix a
 *! loading at 1 or use metric(unitvariance) (decided 2026-10-04). Empty when
 *! every factor has a metric line, so other Module 3 aborts get no such line.
-*! A factor with no lambda line never reaches here: Module 11 refuses it
-*! (D3, second-order factors).
+*! A factor with no lambda line (second-order, release B) is returned with an
+*! empty indicator; dwlsmv.ado then names var(F@1). Module 11 gives every such
+*! factor a metric line or refuses it (B3.1), so none is expected here.
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek

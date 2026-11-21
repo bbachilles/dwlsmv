@@ -153,7 +153,7 @@ quietly log using "`lg'", text replace name(tlp)
 capture noisily mata: tlp_two()
 local rc = _rc
 quietly log close tlp
-mata: st_local("hit", strofreal(strpos(invtokens(cat(st_local("lg"))'), "6 parameter(s) are redundant here and 2 at a second point") > 0))
+mata: st_local("hit", strofreal(strpos(invtokens(cat(st_local("lg"))'), "rank(Delta) is 22 at the starting values and 26 at a second") > 0))
 if `rc' != 3498 | !`hit' {
     display as error "  redundant count FAILED (rc `rc', message `hit')"
     local ++nfail

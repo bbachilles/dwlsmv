@@ -1,6 +1,8 @@
 *! dwlsmv -- Module 3: one section of a canonical specification (passes 1-3)
 *!
 *! Executed under StataMP 18 on 2026-10-10. tests/unit/test_identify.do (unedited), tests/unit/test_identify_groups.do.
+*! Release B's lift of the "no indicators" abort executed 2026-11-20 (StataMP 18):
+*! tests/unit/test_identify_second_order.do and the full suite.
 *!
 *! Moved out of dwls_identify() on 2026-10-10 so that a single-group text and
 *! each group section of a 'groups' text are parsed by the same code (spec 4.8
@@ -487,9 +489,27 @@ void dwlsmv_id_parse(string colvector lines,
                 hit = 1
             }
         }
+        // Release B (spec Module 12, B3.1, decided 2026-11-19): a factor
+        // measured only by other factors is accepted when it has an outgoing
+        // beta (free, or fixed nonzero: a fixed zero is no path, as in the
+        // cycle check below) and a 'metric unitvariance' line. Nothing else is
+        // lifted: a later group's factor (mkind 0) still aborts here, and the
+        // rank check decides identification (G over two, a one-item child).
+        if (hit == 0 & mkind[a] == 2) {
+            for (i = 1; i <= rows(eptype); i++) {
+                if (eptype[i] == 3 & ecol[i] == a & (efree[i] | eval[i] != 0)) {
+                    hit = 1
+                }
+            }
+        }
         if (hit == 0) {
             errprintf("dwls_identify: factor '%s' has no loadings, so nothing observed measures it.\n",
                       fac[a])
+            if (!(grpmode & g > 1)) {
+                errprintf("A factor measured only by other factors needs a 'beta <child> %s' path and\n",
+                          fac[a])
+                errprintf("'metric unitvariance %s'.\n", fac[a])
+            }
             _error("dwls_identify: a factor has no indicators")
         }
     }

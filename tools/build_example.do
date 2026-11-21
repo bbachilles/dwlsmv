@@ -1,5 +1,6 @@
 *! dwlsmv -- build the help file's example datasets, build/dwlsmv_example.dta and
-*! build/dwlsmv_example_mg.dta (the invariance example, 2026-10-12)
+*! build/dwlsmv_example_mg.dta (the invariance example, 2026-10-12) and
+*! build/dwlsmv_example_so.dta (the second-order example, 0.6.0)
 *!
 *! Decided 2026-10-05 (the user's): the help file's examples use a
 *! distributed dataset, dwlsmv_example.dta, not a test fixture. It is the
@@ -60,3 +61,23 @@ compress
 quietly save "build/dwlsmv_example_mg.dta", replace
 restore
 display "build_example: build/dwlsmv_example_mg.dta"
+
+* the second-order example (release B, 0.6.0; owner 2026-11-21, option (a)): the
+* data of the fixture case_H.csv (fixtures/generate/93_so_data.R, tier 1),
+* unchanged, with labels. fixtures/ is only read.
+preserve
+import delimited using "fixtures/data/case_H.csv", ///
+    clear varnames(1) delimiters(",") stringcols(_all)
+quietly destring y*, replace
+confirm numeric variable y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13
+assert _N == 1000
+forvalues j = 1/13 {
+    assert inlist(y`j', 0, 1, 2, 3)
+    label variable y`j' "Item `j' (0-3)"
+}
+label data "dwlsmv second-order example: 13 ordinal items, 4 factors under 1 (simulated)"
+notes _dta: Simulated: y1-y3, y4-y6, y7-y9 and y10-y12 measure four factors (loadings .7 .7 .6), which load .8 .7 .6 .75 (standardized) on one second-order factor; y13 loads .6 on the second-order factor directly; 4 categories; N = 1,000. The data of the dwlsmv test fixture case_H.csv.
+compress
+quietly save "build/dwlsmv_example_so.dta", replace
+restore
+display "build_example: build/dwlsmv_example_so.dta"
