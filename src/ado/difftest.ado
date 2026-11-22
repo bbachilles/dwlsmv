@@ -1,9 +1,9 @@
-*! version 0.6.0  difftest -- scaled-and-shifted difference test between nested dwlsmv models
+*! version 0.6.1  difftest -- scaled-and-shifted difference test between nested dwlsmv models
 *!
 *!   difftest name1 [name2 ...]
 *!
 *! Written 2026-10-23 (spec Module 12, Architecture item 3 and the validation
-*! contract; design docs/notes/level-chain-frontend/design.md, U1-U8; user
+*! contract; design U1-U8 in the development record; user
 *! 2026-10-23: single-group comparisons only). lrtest-style: names are stored
 *! estimation results (estimates store), "." the active results; one name is
 *! compared with the active results; three or more form a chain, ordered by

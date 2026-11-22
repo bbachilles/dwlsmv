@@ -1,6 +1,7 @@
 {smcl}
-{* every example run 2026-11-21 on the 0.6.0 release tree (cdaaa78 plus the 0.6.0 help text), StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout}
-{* *! version 0.6.0  21nov2026}{...}
+{* every example run 2026-11-22 on the 0.6.1 release tree (2d22697 plus the version bump), StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout;}
+{* the screeplot example included (rc 0); the Scree plot remark checked 2026-11-21 on StataMP 18 (r(301) and the stale e(Ev) as stated).}{...}
+{* *! version 0.6.1  22nov2026}{...}
 {vieweralsosee "dwlsmv" "help dwlsmv"}{...}
 {vieweralsosee "[MV] screeplot" "help screeplot"}{...}
 {viewerjumpto "Syntax" "efacompare##syntax"}{...}
@@ -9,6 +10,9 @@
 {viewerjumpto "Remarks" "efacompare##remarks"}{...}
 {viewerjumpto "Examples" "efacompare##examples"}{...}
 {viewerjumpto "Stored results" "efacompare##results"}{...}
+{viewerjumpto "References" "efacompare##references"}{...}
+{viewerjumpto "Author" "efacompare##author"}{...}
+{viewerjumpto "Acknowledgments" "efacompare##acknowledgments"}{...}
 {viewerjumpto "Also see" "efacompare##alsosee"}{...}
 {title:Title}
 
@@ -167,6 +171,12 @@ one dot per m as it goes.
 {bf:Results left behind.} {cmd:efacompare} leaves your estimation results as they were:
 nothing is left in {cmd:e()}.
 
+{p 4 4 2}
+{bf:Scree plot.} Typed without an argument, {helpb screeplot} reads {cmd:e(Ev)}, so after
+{cmd:efacompare} it either stops with r(301) or, if an earlier {cmd:dwlsmv} EFA fit is still in
+{cmd:e()}, plots that fit's eigenvalues, which can come from other items or another sample. Plot
+{cmd:r(Ev)} instead, as in the last example.
+
 
 {marker examples}{...}
 {title:Examples}
@@ -196,6 +206,12 @@ The table as a matrix, and the eigenvalues:
 {phang2}{cmd:. return list}{p_end}
 {phang2}{cmd:. matrix list r(table)}{p_end}
 
+{p 4 4 2}
+A scree plot of the eigenvalues, from {cmd:r(Ev)}:
+
+{phang2}{cmd:. matrix ev = r(Ev)}{p_end}
+{phang2}{cmd:. screeplot ev}{p_end}
+
 
 {marker results}{...}
 {title:Stored results}
@@ -216,6 +232,52 @@ The table as a matrix, and the eigenvalues:
 failed{p_end}
 {synopt:{cmd:r(Ev)}}1 x p eigenvalues of the sample correlation matrix, as {cmd:e(Ev)} of any one
 of the fits{p_end}
+
+
+{marker references}{...}
+{title:References}
+
+{p 4 8 2}
+Asparouhov, T., and B. Muthén. 2010. Simple second order chi-square correction.
+Mplus technical note, May 3, 2010.
+{browse "https://www.statmodel.com/download/WLSMV_new_chi21.pdf"}.
+{p_end}
+
+{p 4 8 2}
+Browne, M. W. 2001. An overview of analytic rotation in exploratory factor analysis.
+{it:Multivariate Behavioral Research} 36: 111{c -}150.
+{p_end}
+
+{p 4 8 2}
+Muthén, B., S. H. C. du Toit, and D. Spisic. 1997. Robust inference using
+weighted least squares and quadratic estimating equations in latent variable
+modeling with categorical and continuous outcomes. Unpublished manuscript.
+{p_end}
+
+{p 4 8 2}
+Yates, A. 1987. {it:Multivariate Exploratory Data Analysis: A Perspective on Exploratory}
+{it:Factor Analysis}. Albany, NY: State University of New York Press.
+{p_end}
+
+
+{marker author}{...}
+{title:Author}
+
+{p 4 4 2}
+Erik Ruzek{break}
+ORCID: {browse "https://orcid.org/0000-0002-0931-1951"}{break}
+Source and issues: {browse "https://github.com/bbachilles/dwlsmv"}
+{p_end}
+
+
+{marker acknowledgments}{...}
+{title:Acknowledgments}
+
+{p 4 4 2}
+Development of {cmd:dwlsmv} was assisted by Claude Code (Anthropic), predominantly
+using Claude Opus models. The author reviewed and tested all code and is responsible
+for any errors.
+{p_end}
 
 
 {marker alsosee}{...}

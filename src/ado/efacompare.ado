@@ -1,15 +1,15 @@
-*! version 0.6.0  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
+*! version 0.6.1  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
 *!
 *!   efacompare varlist [if] [in] [, maxfactors(#) epsilon(#) rstarts(#) keepbound]
 *!
 *! Drafted 2026-11-18 by a read-only agent; run by the main session the same day (StataMP 18,
 *! tests/unit/test_dwlsmv_nf.do, every help example), with no change needed to this file.
-*! Renamed from dwlsmv_nf before publication (owner 2026-11-18; docs/decisions.md): the command,
+*! Renamed from dwlsmv_nf before publication (owner 2026-11-18; the development record): the command,
 *! its private subprograms, its help and its test (now tests/unit/test_efacompare.do). Behaviour
 *! is unchanged.
 *!
-*! Design: docs/notes/dwlsmv-nf/veto_package.md and review.md; owner calls of 2026-11-17 and
-*! 2026-11-18 (docs/decisions.md); spec Module 12, Surface, "efacompare". It loops
+*! Design: the design package and its review in the development record; owner calls of 2026-11-17 and
+*! 2026-11-18 (the development record); spec Module 12, Surface, "efacompare". It loops
 *!     dwlsmv (F1..Fm -> varlist) if touse, efa(F1..Fm) [epsilon() rstarts() keepbound]
 *! for m = 1, 2, ... under quietly and reads one row of results per m. Stage 1 is recomputed at every
 *! m (no reuse), so a row equals the standalone fit by construction. No verdict, no cutoffs, no

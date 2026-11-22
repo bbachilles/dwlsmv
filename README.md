@@ -8,19 +8,19 @@ polychoric correlations, with robust standard errors and the mean- and variance-
 scaled-and-shifted (T3) test statistic, the approach known as WLSMV. Stata's `sem` and `gsem` do
 not offer this estimator.
 
-Current version: **0.6.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
+Current version: **0.6.1**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
 other platforms have not been checked.
 
 ## Install
 
 ```stata
-net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.0/dist/") replace
+net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.1/dist/") replace
 ```
 
 To get the example datasets, change to the folder where you want them and run:
 
 ```stata
-net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.0/dist/")
+net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.1/dist/")
 ```
 
 Then see `help dwlsmv`, `help difftest` and `help efacompare`.
@@ -157,12 +157,8 @@ software, so please check results that matter against another program and
 `CITATION.cff` has the citation details, and GitHub's "Cite this repository" button uses it.
 Releases are archived on Zenodo. The DOI
 [10.5281/zenodo.24118857](https://doi.org/10.5281/zenodo.24118857) always resolves to the latest
-version. To cite a particular version, use its own DOI: 0.6.0 is
-[10.5281/zenodo.24428863](https://doi.org/10.5281/zenodo.24428863), 0.5.0 is
-[10.5281/zenodo.24371579](https://doi.org/10.5281/zenodo.24371579), 0.4.1 is
-[10.5281/zenodo.24283736](https://doi.org/10.5281/zenodo.24283736), 0.4.0 is
-[10.5281/zenodo.24282230](https://doi.org/10.5281/zenodo.24282230), and 0.3.0 is
-[10.5281/zenodo.24118858](https://doi.org/10.5281/zenodo.24118858).
+version. Each version also has its own DOI, for citing that version exactly. These are listed in
+`CITATION.cff` (under `identifiers`) and in the Versions list of the Zenodo record.
 
 The software is licensed under GPL-3.0-or-later (see `LICENSE`). The specification, the prose and
 mathematics of the derivation, and the documentation are licensed under CC BY 4.0; the derivation's

@@ -1,10 +1,10 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-21 on the 0.6.0 release tree (cdaaa78 plus this help text): every example in this file and in}{...}
+{* Executed under StataMP 18 on 2026-11-22 on the 0.6.1 release tree (2d22697 plus the version bump): every example in this file and in}{...}
 {* difftest.sthlp and efacompare.sthlp run on the source build, net get excepted, including esttab, the two covariate examples and the}{...}
 {* second-order example on dwlsmv_example_so.dta (its Note printed, the fit proper); the random-intercept abort at rc 3498 as documented,}{...}
-{* every other command rc 0, every fit posting e(version) 0.6.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* every other command rc 0, every fit posting e(version) 0.6.1, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
 {* The notes quoted under "Second-order factors" are copied from the source strings; the examples do not print all of them.}{...}
-{* *! version 0.6.0  21nov2026}{...}
+{* *! version 0.6.1  22nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
 {vieweralsosee "[SEM] gsem" "help gsem"}{...}
@@ -513,16 +513,16 @@ some disturbance variance of a first-order factor is negative, {cmd:dwlsmv}
 adds this to the admissibility note, after the lines about the variances:
 
 {p 8 8 2}
-{cmd:G has exactly three first-order factors (F1, F2, F3), so this model fits exactly as well as one in which those three factors are simply
-correlated. The negative disturbance variance means their correlations cannot be represented by a proper second-order factor.}
+{cmd:G has exactly three first-order factors (F1, F2, F3), so this model fits exactly as well as one in which those three factors are simply}
+{cmd:correlated. The negative disturbance variance means their correlations cannot be represented by a proper second-order factor.}
 
 {p 4 4 2}
 Under {cmd:metric(unitvariance)}, a fit with a second-order factor that does not
 converge is followed by this note:
 
 {p 8 8 2}
-{cmd:This model has a second-order factor. With metric(unitvariance) its first-order factors cannot have a negative disturbance variance; with
-metric(marker) they can, so a fit that needs one may converge there.}
+{cmd:This model has a second-order factor. With metric(unitvariance) its first-order factors cannot have a negative disturbance variance; with}
+{cmd:metric(marker) they can, so a fit that needs one may converge there.}
 
 {p 4 4 2}
 {bf:The disturbance-variance check.} For every free diagonal element of Psi, in
@@ -559,9 +559,9 @@ under both metrics. When recovery fails and the converged first fit has a
 disturbance variance classed negative, the note says why:
 
 {p 8 8 2}
-{cmd:The marker-metric fit produced an invalid solution: F1 has a negative disturbance variance. A restart from the unit-variance solution,
-transformed to the marker metric, was attempted but failed. The first fit is retained. Its negative disturbance variance cannot be represented
-by the unit-variance parameterization, although the first fit itself converged.}
+{cmd:The marker-metric fit produced an invalid solution: F1 has a negative disturbance variance. A restart from the unit-variance solution,}
+{cmd:transformed to the marker metric, was attempted but failed. The first fit is retained. Its negative disturbance variance cannot be represented}
+{cmd:by the unit-variance parameterization, although the first fit itself converged.}
 
 {p 4 4 2}
 It is followed by a line naming the step that failed. "Variance" replaces
@@ -579,9 +579,9 @@ second-order factor and one without, for example its correlated-factor parent,
 is refused, with rc 3498:
 
 {p 8 8 2}
-{cmd:dwlsmv check 8 (}{it:name0} {cmd:in} {it:name1}{cmd:): one model has a second-order factor and the other does not. DIFFTEST across
-these structures (for example a second-order model against its correlated-factor parent) is not available in this version; it is planned
-once its reference distribution is established (spec Module 12, B3.9).}
+{cmd:dwlsmv check 8 (}{it:name0} {cmd:in} {it:name1}{cmd:): one model has a second-order factor and the other does not. DIFFTEST across}
+{cmd:these structures (for example a second-order model against its correlated-factor parent) is not available in this version; it is planned}
+{cmd:once its reference distribution is established (spec Module 12, B3.9).}
 
 {p 4 4 2}
 This is a limit of this version. Each such comparison needs its nesting, its
