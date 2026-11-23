@@ -1986,7 +1986,8 @@ For a binary $x_k$ it
   `e(T3)`, `e(df_T3)`, `e(p_T3)`, `e(converged)`, `e(iterations)`, `e(rank)`, `e(b)`, `e(V)`,
   `e(Cns)`, the macros of an ordinary fit, and the macro `e(covariates)`. **Omitted, not posted as
   missing:** `e(rmsea_s)`, `e(cfi_s)`, `e(tli_s)`, `e(T3_b)`, `e(df_T3_b)` and `e(bound)` (no
-  `keep_bound` in this mode). **Posted from 2026-11-15 (Module 10 in conditional mode, "Yes, both"):**
+  `keep_bound` in this mode), and (2026-11-22, `@sec-resid-diag` SR5) `e(srmr)`, `e(Resid)`,
+  `e(Nresid)`. **Posted from 2026-11-15 (Module 10 in conditional mode, "Yes, both"):**
   `e(gamma_ratio)`, `e(gamma_ratio_raw)`, `e(gamma_rank)` and `e(bread_ratio)`, as for an ordinary fit (Γ̂ is
   Stage 1's, so these are posted whether or not the fit converged); the header prints an index only when it is posted, so no display code changes
   for the omission. `standardized`, `keepbound`, `efa()` and `difftest` refuse a conditional fit
@@ -3198,6 +3199,19 @@ the name to another program), a sub-option `stage1(keepbound)` (would set a patt
   `e(cfi_s)`, `e(tli_s)` (family S, from $T_3$) and the c1 baseline's `e(T3_b)`, `e(df_T3_b)`, at
   every fit; missing by F3/F4's rules. Printed in the header under T3 as "RMSEA (scaled)", "CFI (scaled)", "TLI (scaled)", %9.4f, "." when missing (user, 2026-10-21, display "yes"; layout chosen at the build); shown only when posted. **A conditional fit (one covariate) posts none of these** (2026-11-13 (a)):
   they are omitted, not missing, and the header prints a note instead.
+- **Residual diagnostics** (derivation `@sec-resid-diag`, owner decisions 2026-11-21/22,
+  E-118, E-119): `e(srmr)`, $\sqrt{\sum_{k}e_k^2/(P+p)}$ over all $P$ pairs with
+  $e_k=r_k-\rho_k(\hat\theta)$ (lavaan's categorical `srmr`; thresholds do not enter; CRMR is not
+  stored); `e(Resid)`, $p\times p$, the signed residuals $e_k$, diagonal 0; `e(Nresid)`, $p\times p$,
+  the normalized residuals $e_k/\sqrt{\hat\Gamma_{kk}/N}$, diagonal missing, **missing at a
+  repaired (one-empty-cell) pair and at a pair held at $\pm B$** (SR4, O1/O2), with no special case
+  for small $\lvert e_k\rvert$ (O7). Rows and columns are named by the indicators in `e(indicators)`
+  order. Posted under the fit indices' rule (SR5): a converged single-group fit with no covariate,
+  `efa()` included (rotation-invariant, SR6), an inadmissible converged fit included (O3), and at
+  $df=0$ the computed values (O4). **Not posted** (omitted, not missing) for a fit that did not
+  converge, a conditional fit, or $G>1$. Computed at fit time from Stage 1 (`dwlsmv_m11_resid`);
+  a replay shows what was posted. The normalized residual is descriptive, for ranking pairs within
+  a fit; it is not a test statistic and no cutoff is attached (SR2, decision 4).
 - **For `difftest`'s refit** (single-group fits, 2026-10-23; Module 12 *Architecture*):
   `e(canon)`, `e(keepbound)`, `e(datasignature)`, `e(datasignaturevars)`. No Stata version,
   edition or OS is posted (decided 2026-10-23, user). **At $G>1$ (2026-10-31):** `e(canon)` and
@@ -4014,14 +4028,21 @@ release (decided 2026-09-26):
     2026-11-18, option A over B and C). A status 2 or 3 row is a boundary of inference, not an error;
     it is footnoted.
   - *Stored results.* `r(table)` (rows `m1`, `m2`, ..., columns as above plus `status`, in the order
-    `m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m`), `r(Ev)` (1 x $p$, from
+    `m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m srmr`; `srmr` is
+    `e(srmr)`, missing for a row not fitted, residual diagnostics 2026-11-22), `r(Ev)` (1 x $p$, from
     the first fit that returned rc 0; it depends on Stage 1 only, so it is the same at every $m$),
-    `r(N)`, `r(p)`, `r(maxfactors)` (the largest $m$ shown). Nothing in `e()` but the caller's.
-  - *Display.* Two blocks within 80 columns (fit; rotated diagnostics with `ev_m`), a header with $N$,
-    $p$ and the items, and footnotes only when they apply: rows not converged, rows whose rotation
-    failed, $\mathrm{df}=0$ rows, the $m$-dependent default $\varepsilon$ (unless `epsilon()` is
-    given), and that rotated quantities are conditional on the selected minimum. No stars, no best-$m$
-    mark.
+    `r(N)`, `r(p)`, `r(maxfactors)` (the largest $m$ shown). The largest residuals are shown, not
+    stored in `r()` (owner 2026-11-22). Nothing in `e()` but the caller's.
+  - *Display.* Three blocks within 80 columns: fit, with SRMR; rotated diagnostics with `ev_m`; and
+    (residual diagnostics, 2026-11-22) the largest residuals: for each fitted row, $\mathrm{df}=0$
+    included (owner 2026-11-22), the 3 pairs with the largest $\lvert z\rvert$ by `dwlsmv_resid_rank()`,
+    ties by item order, with the signed residual. A header with $N$, $p$ and the items, and
+    footnotes only when they apply: rows not converged, rows whose rotation failed, $\mathrm{df}=0$
+    rows, the $m$-dependent default $\varepsilon$ (unless `epsilon()` is given), that rotated
+    quantities are conditional on the selected minimum, rows left out of the residual block, pairs
+    not ranked (repaired or held at the bound; their residuals count in SRMR), what residuals mean at
+    $\mathrm{df}=0$, and that SRMR summarizes all pairs while normalized residuals rank pairs within
+    a row and are not tests. No stars, no best-$m$ mark.
   - *Validation and what is not certified.* The deciding check is equality with the standalone fit
     for each case and $m$, exact (`tests/unit/test_efacompare.do`). It includes the real non-converged
     fit of Case F at $N=5000$, $m=4$, the rotation failure of Case E at $m=3$, and the sequence
@@ -5014,6 +5035,9 @@ signature three lines above its function cannot.
 | `dwlsmv_geomin` | 12 | Oblique geomin of an unrotated EFA $A$ (`@sec-geomin`): GM4 grid starts, stall-exit GPA, converged iff $\|G_p\|_F<10^{-5}$; returns rotated Λ, sets Φ and the 8 `e()` diagnostics; lavaan's sign and index order; invalid $A$, ε, start count, or no converged start, rc 3498 |
 | `dwlsmv_fitidx_delta` | 12 | ΔCFI/ΔRMSEA across a chain (FI3, F6): $X$ (CFI, RMSEA per level), skip flags → differences against the last non-skipped earlier level, skipped rows missing; called by `dwlsmv_dtfront`; malformed input or a skipped first level, rc 3498 |
 | `dwlsmv_m11_fitidx` | 11 | Sets the locals posted as `e(rmsea_s)`, `e(cfi_s)`, `e(tli_s)`, `e(T3_b)`, `e(df_T3_b)`, with $n=N-G$ |
+| `dwlsmv_resid` | 12 | Residual diagnostics (`@sec-resid-diag` SR1–SR4, 2026-11-22): `(st, rho, repaired)` → SRMR, and fills $E$ ($p\times p$, $r-\rho$, diagonal 0) and $Z$ ($p\times p$, $e/\sqrt{\hat\Gamma_{kk}/N}$, diagonal missing, missing where `repaired` or `st.bound` is 1); model-free (`rho`, $P\times1$ in pair order, from the caller). A conditional Stage 1, $p<2$, a length mismatch, a non-polychoric row at $T+k$, a missing $r$, $\rho$ or $\hat\Gamma_{kk}$, $\hat\Gamma_{kk}\le0$, flags not 0/1, or $N$ missing or not positive: rc 3498 |
+| `dwlsmv_resid_rank` | 12 | `(Z, k)` → up to $k$ rows $(i,j)$, $i<j$, of the pairs with a non-missing $Z$, by $\lvert z\rvert$ descending, ties by smaller $i$ then smaller $j$; none gives $0\times2$. A non-square $Z$, an asymmetric missing pattern, or $k$ missing or below 1: rc 3498 |
+| `dwlsmv_m11_resid` | 11 | `(st, fit, par, ind)`, called by `dwlsmv_m11_fit` on the unconditional path: for a converged fit, ρ from `dwls_model(θ̂)`, the repaired pairs from the recoded Y, then `dwlsmv_resid`; sets the locals `srmr`, `resid_m`, `nresid_m` (temporary matrix names, rows and columns the indicators) that `dwlsmv.ado` posts as `e(srmr)`, `e(Resid)`, `e(Nresid)`; empty for a fit that did not converge |
 | `dwlsmv_dtrefit` | 12 | DIFFTEST check 6's comparison of a refit's (`e(b)`, `e(T3)`, `e(bound)`, `e(df_T3)`) with the stored values: $\max_i |x_i-y_i|/(1+|y_i|) \le$ tol for `e(b)` and `e(T3)`, `e(bound)` identical, `e(df_T3)` equal, a missing `e(T3)` refused; rc 3498. tol is an argument; a missing or non-positive tol is refused |
 | `dwlsmv_sens` | 12 | **Diagnostic only** for the check 6 G > 1 investigation (built 2026-10-14, `test_sens.do`). No production path calls it, and it changes no tolerance. `(f, step, epsV, A, c, nu \| ds, eps)` → npar × 6 in check 6's units: κˢ and κʷ (S1 per unit perturbation); $S^{(C)}$ (S3(4), needs the measured last step); the S4(b) stopping envelope; $S^{(A)}$ from measured $(ds, \varepsilon)$, else missing; and the $S^{(D)}$ envelope (S5(c), with epsV the evaluation accuracy of $V$, an argument with no default). Fills $A=J^{-1}\Delta'W$, $c$ and $\nu$. $J=P-R$, with $R$ a central difference of $\Delta'(w\circ r)$. rc 3498 on an unconverged fit, bad step/ds/eps/epsV, iterations < 1, or $c\ge1$. `@sec-mg-sensitivity` |
 | `dwlsmv_sens_t3` | 12 | **Diagnostic only**, the `e(T3)` side of the check 6 G > 1 investigation (built 2026-10-16 for E-029, approved item ⚑5; `test_sens_t3.do`). No production path calls it, and it changes no tolerance. `(f, step, epsV, rhoT \| ds, eps, dOm)` → 1 × 8: $T_3$; then, in check 6's units, $2\beta_1$, $\beta_2$ (with $\Theta$ the a-priori S1–S5 envelope from `dwlsmv_sens`), $\beta_3$, $\beta_{\rm eval}$ (TS6, with the **assumed** constant $c_{\rm ch}=6(q+1)$ for `cholinv()`, and since 2026-10-20 SE6's Q4 form $2\gamma_{n-1}\sum\lvert\text{terms}\rvert$ per `quadcross()`, $n=D$, or $q$ for the $E^{-1}$ products; Q1's $2u\sum\lvert\text{terms}\rvert$ was refuted per run by the exact-reference reading, E-030, user's decision), $\beta_{\rm elem}$, $B_{T3}$ (TS7) and $B_{\rm eval}=\beta_{\rm eval}/(1+\lvert T_3\rvert)+r_T$. (ds, eps, dOm) are all three or none; none is the Stage-1-fixed case. Needs `dwls_inference()` to have run. rc 3498 on an unconverged fit, inference not run, $D=0$, $\lvert T_3\rvert<10^{-2}$, negative or missing epsV or rhoT, a partial or malformed (ds, eps, dOm); `dwlsmv_sens`'s own refusals apply. Helpers, each diagnostic only and pinned by the test: `dwlsmv_sens_ebar` (S5's $\bar E$, `dwlsmv_sens`'s loop copied), `dwlsmv_sens_jmat` ($J=P-R$, copied), `dwlsmv_sens_ddelta` ($\partial\Delta/\partial\theta_l$ by central differences of production $\Delta$, $h=10^{-4}\max(1,\lvert\theta_l\rvert)$). `@sec-mg-sensitivity-t3`. Since 2026-10-19 the routine is `dwlsmv_sens_t3_core` with `exact` = 0; its arithmetic is unchanged |

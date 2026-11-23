@@ -1,4 +1,4 @@
-*! version 0.6.1  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
+*! version 0.7.0  dwlsmv -- SEM/CFA for ordinal indicators by DWLS with the WLSMV test
 *!
 *! Executed under StataMP 18 on 2026-10-04: tests/unit/test_dwlsmv.do;
 *! standardized on 2026-10-05: tests/unit/test_standardized.do.
@@ -394,7 +394,7 @@ program dwlsmv, eclass
         ereturn local recovery   "none"
         ereturn local indicators "`ind'"
         ereturn local cmdline    `"dwlsmv `0'"'
-        ereturn local version    "0.6.1"
+        ereturn local version    "0.7.0"
         // what difftest refits from at G > 1 (spec Module 12, 2026-10-31):
         // e(canon) and e(canon_configural) (dwlsmv_m11_post_g_e), the group
         // variable, keepbound, and the data signature over the indicators
@@ -571,6 +571,11 @@ program dwlsmv, eclass
         ereturn scalar tli_s      = `tli_s'
         ereturn scalar T3_b       = `T3_b'
         ereturn scalar df_T3_b    = `df_T3_b'
+        // residual diagnostics, under the same rule (@sec-resid-diag SR5, 2026-11-22): SRMR and the
+        // signed and normalized residual matrices; set by dwlsmv_m11_fit for a converged fit
+        ereturn scalar srmr       = `srmr'
+        ereturn matrix Resid      = `resid_m'
+        ereturn matrix Nresid     = `nresid_m'
     }
     ereturn scalar converged  = `converged'
     ereturn scalar iterations = `iterations'
@@ -587,7 +592,7 @@ program dwlsmv, eclass
     if "`cov'" != "" ereturn local covariates "`cov'"
     ereturn local cmdline  `"dwlsmv `0'"'
     // the release; must equal line 1 (test_dwlsmv_gaps.do G14, stage_release.ps1)
-    ereturn local version  "0.6.1"
+    ereturn local version  "0.7.0"
     // what difftest refits from (spec Module 12, D8d addition, 2026-10-23):
     // the canonical text as dwlsmv_m11_fit received it, keepbound, and the
     // data signature that check 2 tests with checkestimationsample
@@ -1033,6 +1038,10 @@ program _dwlsmv_header
         display as text _col(51) "RMSEA (scaled)" _col(67) "= " as result %9.4f e(rmsea_s)
         display as text _col(51) "CFI (scaled)"   _col(67) "= " as result %9.4f e(cfi_s)
         display as text _col(51) "TLI (scaled)"   _col(67) "= " as result %9.4f e(tli_s)
+    }
+    * SRMR (@sec-resid-diag, owner decision 2 of 2026-11-21): under the indices, only when posted
+    if "`e(srmr)'" != "" & e(converged) != 0 {
+        display as text _col(51) "SRMR"           _col(67) "= " as result %9.4f e(srmr)
     }
     if "`e(covariates)'" != "" {
         display as text "Note: no CFI or TLI is defined for a model with a covariate, and RMSEA is not reported in this version."

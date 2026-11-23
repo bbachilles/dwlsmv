@@ -250,3 +250,4 @@ mean                         | Not among the six post-16 Mata functions (checked
 order                        | Not among the six post-16 Mata functions (checked 2026-10-29). dwlsmv_geomin() sorts columns by mean index, ties by position.
 cvpermutesetup               | Not among the six post-16 Mata functions (checked 2026-11-18). dwlsmv_geomin_colorder() key 4: arrangements of identical loading columns.
 cvpermute                    | Not among the six post-16 Mata functions (checked 2026-11-18). As cvpermutesetup.
+st_tempname                  | Not among the six post-16 Mata functions (checked 2026-11-22). dwlsmv_m11_resid() names the e(Resid), e(Nresid) matrices it hands to dwlsmv.ado.

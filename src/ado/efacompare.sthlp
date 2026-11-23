@@ -1,7 +1,7 @@
 {smcl}
-{* every example run 2026-11-22 on the 0.6.1 release tree (2d22697 plus the version bump), StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout;}
+{* every example run 2026-11-22 on the 0.7.0 release tree (fb6386e plus the version bump), residual diagnostics included, StataMP 18, linesize 80, on build/dwlsmv_example.dta: rc 0 throughout;}
 {* the screeplot example included (rc 0); the Scree plot remark checked 2026-11-21 on StataMP 18 (r(301) and the stale e(Ev) as stated).}{...}
-{* *! version 0.6.1  22nov2026}{...}
+{* *! version 0.7.0  22nov2026}{...}
 {vieweralsosee "dwlsmv" "help dwlsmv"}{...}
 {vieweralsosee "[MV] screeplot" "help screeplot"}{...}
 {viewerjumpto "Syntax" "efacompare##syntax"}{...}
@@ -56,7 +56,8 @@ the result of the standalone command
 
 {p 4 4 2}
 for that m, on the same sample, and reads its stored results. The command reports the fit,
-and diagnostics from the rotated solution that bear on whether m is too large. It gives no
+diagnostics from the rotated solution that bear on whether m is too large, and the largest
+residuals of each fit. It gives no
 verdict and applies no cutoff: it does not name a number of factors, and it marks no row as best.
 
 {p 4 4 2}
@@ -72,6 +73,8 @@ converge. {cmd:rot fail}: the geomin rotation did not converge from any start{p_
 {cmd:e(p_T3)}{p_end}
 {p2col:{cmd:RMSEA}, {cmd:CFI}, {cmd:TLI}}the scaled fit indices, {cmd:e(rmsea_s)}, {cmd:e(cfi_s)},
 {cmd:e(tli_s)}{p_end}
+{p2col:{cmd:SRMR}}the standardized root mean square residual, {cmd:e(srmr)}; see
+{help efacompare##residuals:Residuals}{p_end}
 {p2colreset}{...}
 
 {p 4 4 2}
@@ -92,6 +95,20 @@ a small value{p_end}
 exceeds 1 ({cmd:e(rot_nose)} is {cmd:inadmissible}), 0 otherwise{p_end}
 {p2col:{cmd:ev_m}}the m-th eigenvalue of the sample polychoric (tetrachoric) correlation matrix,
 from {cmd:e(Ev)}; the same eigenvalues {helpb screeplot} plots{p_end}
+{p2colreset}{...}
+
+{p 4 4 2}
+{bf:Third block: largest residuals.} For each fitted m, the three pairs of items with the
+largest absolute normalized residual, largest first; ties keep the order of the items.
+
+{p2colset 8 20 22 2}{...}
+{p2col:{cmd:m}, {cmd:rank}}the number of factors, and the pair's rank within that m{p_end}
+{p2col:{cmd:pair}}the two items, each name abbreviated to 10 characters{p_end}
+{p2col:{cmd:residual}}the sample polychoric (tetrachoric) correlation minus the correlation the
+model implies, signed: positive when the sample correlation is larger than the implied one; from
+{cmd:e(Resid)}{p_end}
+{p2col:{cmd:norm.res.}}the residual divided by the estimated standard error of the sample
+correlation; from {cmd:e(Nresid)}{p_end}
 {p2colreset}{...}
 
 {p 4 4 2}
@@ -152,6 +169,43 @@ of factors, and none comes with a cutoff.
 {bf:Conventional cutoffs were not calibrated for WLSMV EFA.} The usual RMSEA and CFI thresholds
 have not been established for this estimator and these models, and {cmd:dwlsmv} has not checked
 them. Do not read them as validated for these columns.
+
+{marker residuals}{...}
+{p 4 4 2}
+{bf:Residuals: SRMR and the largest residuals answer different questions.} A residual is the
+sample polychoric (tetrachoric) correlation of a pair minus the correlation the model implies.
+SRMR summarizes all of them in one number, in correlation units: the square root of (the sum of
+the squared residuals over the {it:p}({it:p} - 1)/2 pairs, divided by {it:p}({it:p} + 1)/2),
+as lavaan computes {cmd:srmr} for categorical indicators. The thresholds do not enter. The
+largest-residuals block shows where the most conspicuous discrepancies are, each relative to its
+own sampling precision. The two can disagree: a small SRMR can come with one pair the model
+reproduces badly, and a pair whose correlation is estimated precisely can have a large normalized
+residual and a small residual. SRMR need not fall as m rises, because the fit minimizes a weighted
+discrepancy, not the sum of squares SRMR uses.
+
+{p 4 4 2}
+{bf:The normalized residual is descriptive, not a test.} It is the residual divided by
+sqrt(gamma_kk/N), where gamma_kk is the estimated asymptotic variance of the pair's sample
+correlation: the asymptotic standard error of the sample correlation, not of the residual. So
+even in large samples it is not standard normal when the model is correct. It serves to rank the
+eligible pairs within one row. It is not a formal z-test: no critical value applies to it, 1.96
+included, and the table marks none. In sparse data and small samples that standard error can
+itself be poorly estimated, for ordinary pairs as well as the ones footnoted.
+
+{p 4 4 2}
+{bf:Pairs not ranked.} A pair whose two-way table had one empty cell repaired, or whose
+correlation is held at the bound under {opt keepbound}, has no normalized residual (it is
+missing in {cmd:e(Nresid)}). It is left out of the ranking and named in a footnote. Its residual
+still counts in SRMR and is in {cmd:e(Resid)}. Which pairs these are depends on the data only,
+so they are the same in every row.
+
+{p 4 4 2}
+{bf:Rows left out, and rows with df = 0.} A row that did not converge, or whose rotation failed,
+has no residuals and is left out of the block, with a footnote. A fitted row with df = 0 is kept.
+There the model has as many parameters as there are correlations, and T3 and the fit indices are
+not available. Residuals near zero mean the model reproduces the correlations exactly; larger
+ones mean the model does not reproduce them, as happens when no exact solution exists, which T3
+and the fit indices cannot show. No cutoff separates the two, and a footnote says so.
 
 {p 4 4 2}
 {bf:Rows that did not converge.} If the unrotated fit at an m does not converge, the row shows
@@ -227,9 +281,10 @@ A scree plot of the eigenvalues, from {cmd:r(Ev)}:
 
 {p2col 5 18 22 2: Matrices}{p_end}
 {synopt:{cmd:r(table)}}one row per m (row names {cmd:m1}, {cmd:m2}, ...), columns
-{cmd:m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m}; {cmd:status} is 1 (fitted),
+{cmd:m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m srmr}; {cmd:status} is 1 (fitted),
 2 (not converged) or 3 (rotation failed); {cmd:conv} is 1 or 0, and missing when the rotation
-failed{p_end}
+failed. The largest residuals are shown, not stored; they are in the standalone fit's
+{cmd:e(Resid)} and {cmd:e(Nresid)}{p_end}
 {synopt:{cmd:r(Ev)}}1 x p eigenvalues of the sample correlation matrix, as {cmd:e(Ev)} of any one
 of the fits{p_end}
 

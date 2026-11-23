@@ -245,6 +245,9 @@ void dwlsmv_m11_fit(string scalar canon, string scalar indlist, string scalar se
     st_local("T3",         strofreal(fit.T3, "%21.0g"))
     st_local("df",         strofreal(fit.T3_df, "%21.0g"))
     dwlsmv_m11_fitidx(st, fit.T3, fit.T3_df)
+    // residual diagnostics (@sec-resid-diag SR5, 2026-11-22): locals srmr, resid_m, nresid_m,
+    // empty for a fit that did not converge; not reached by a conditional fit (returned above)
+    dwlsmv_m11_resid(st, fit, par, ind)
     st_local("converged",  strofreal(fit.converged))
     st_local("iterations", strofreal(fit.iterations))
     st_local("rank",       strofreal(par.npar))

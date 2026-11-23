@@ -8,19 +8,19 @@ polychoric correlations, with robust standard errors and the mean- and variance-
 scaled-and-shifted (T3) test statistic, the approach known as WLSMV. Stata's `sem` and `gsem` do
 not offer this estimator.
 
-Current version: **0.6.1**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
+Current version: **0.7.0**. Requires Stata 16 or later. Tested on Stata 16.1 and 18 on Windows;
 other platforms have not been checked.
 
 ## Install
 
 ```stata
-net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.1/dist/") replace
+net install dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.7.0/dist/") replace
 ```
 
 To get the example datasets, change to the folder where you want them and run:
 
 ```stata
-net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.6.1/dist/")
+net get dwlsmv, from("https://raw.githubusercontent.com/bbachilles/dwlsmv/v0.7.0/dist/")
 ```
 
 Then see `help dwlsmv`, `help difftest` and `help efacompare`.
@@ -100,6 +100,9 @@ dwlsmv (F1 F2 -> y1-y6), efa(F1 F2)
 - **Second-order factors:** a factor measured by other factors, scaled by its variance, with a check
   of the first-order factors' disturbance variances. Single-group models only.
 - **Fit statistics:** T3 with its degrees of freedom and p-value, plus scaled RMSEA, CFI and TLI.
+- **Residual diagnostics:** SRMR in the header, and the correlation residuals and normalized
+  residuals stored as matrices, for single-group fits without a covariate. `efacompare` adds an SRMR
+  column and lists the largest normalized residuals.
 - **Standardized solutions:** delta-method standard errors, and residual variances for the
   indicators.
 - **Multiple groups:** configural, thresholds, metric and scalar invariance levels, for models with

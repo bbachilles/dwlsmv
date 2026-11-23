@@ -1,4 +1,4 @@
-*! version 0.6.1  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
+*! version 0.7.0  efacompare -- fit and over-extraction diagnostics by number of factors, one row per m
 *!
 *!   efacompare varlist [if] [in] [, maxfactors(#) epsilon(#) rstarts(#) keepbound]
 *!
@@ -25,6 +25,14 @@
 *!                                 m, df, all else missing (status 3)
 *!   any other rc                  the command stops with that rc (one line names m and the
 *!                                 standalone command that shows dwlsmv's own message)
+*!
+*! Residual diagnostics (2026-11-22, main session; owner decision 5 of 2026-11-21, derivation
+*! @sec-resid-diag): the Fit block gains SRMR (e(srmr)), widened to 77 columns so TLI stays, and
+*! r(table) gains srmr as its last column. A "Largest residuals" block lists, for each fitted row
+*! (df = 0 included, owner 2026-11-22), the 3 pairs with the largest |normalized residual| (dwlsmv_resid_rank() on
+*! e(Nresid): ties by item order), the signed residual from e(Resid). Rows not converged or whose rotation
+*! failed are left out with a footnote, and a df = 0 row gets one of its own; pairs with no normalized residual (one-empty-cell
+*! repair or held at the bound, O1/O2) are named in a footnote. The top 3 is not returned in r().
 *!
 *! SPDX-License-Identifier: GPL-3.0-or-later
 *! SPDX-FileCopyrightText: 2026 Erik Ruzek
@@ -109,16 +117,23 @@ program efacompare, rclass
     if "`keepbound'" != "" local opts `opts' keepbound
 
     * the caller's e() is held and restored when this program ends, on every exit path
-    tempname eh tab row evm ev
+    tempname eh tab row evm ev top res
     _estimates hold `eh', restore nullok
 
     local evset 0
     local rn ""
+    local excl ""
     display as text "Fitting m = 1, ..., `mmax' (one dot per m): " _continue
     forvalues m = 1/`mmax' {
         capture matrix drop `evm'
-        _efacompare_row `items' if `touse', m(`m') matname(`row') evname(`evm') `opts'
+        capture matrix drop `top'
+        local efc_excl ""
+        _efacompare_row `items' if `touse', m(`m') matname(`row') evname(`evm') topname(`top') `opts'
         matrix `tab' = nullmat(`tab') \ `row'
+        capture confirm matrix `top'
+        if !_rc matrix `res' = nullmat(`res') \ `top'
+        * the pairs with no normalized residual depend on the data only (Stage 1), not on m
+        if "`excl'" == "" local excl `efc_excl'
         local rn `rn' m`m'
         if !`evset' {
             capture confirm matrix `evm'
@@ -133,7 +148,10 @@ program efacompare, rclass
     matrix rownames `tab' = `rn'
 
     local epsg = (`"`epsilon'"' != "")
-    _efacompare_show, matname(`tab') n(`N') p(`p') items(`items') mmax(`mmax') epsgiven(`epsg')
+    capture confirm matrix `res'
+    local resopt = cond(_rc, "", "resname(`res')")
+    _efacompare_show, matname(`tab') n(`N') p(`p') items(`items') mmax(`mmax') epsgiven(`epsg') ///
+        `resopt' excl(`excl')
 
     return scalar N = `N'
     return scalar p = `p'
@@ -142,13 +160,17 @@ program efacompare, rclass
     return matrix table = `tab'
 end
 
-* one row for one m. Columns: m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m
-* status 1 fitted, 2 not converged, 3 rotation failed. matname() receives the 1 x 15 row; evname(),
-* if given, receives e(Ev) when dwlsmv returned rc 0. eclass because of ereturn clear; tests call it
-* directly, in any order, after `program drop efacompare' and `run src/ado/efacompare.ado'
+* one row for one m. Columns: m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m srmr
+* status 1 fitted, 2 not converged, 3 rotation failed. matname() receives the 1 x 16 row; evname(),
+* if given, receives e(Ev) when dwlsmv returned rc 0. topname(), if given, receives for a fitted row
+* (any df) the largest normalized residuals, up to 3 x 6: (m, rank, i, j, residual, normalized),
+* i < j item positions; for such a row the caller's local efc_excl receives the pairs with no
+* normalized residual, "a-b" each. eclass because of ereturn clear; tests call it directly, in any
+* order, after `program drop efacompare' and `run src/ado/efacompare.ado'
 program _efacompare_row, eclass
     version 16
-    syntax varlist [if], M(integer) MATname(name) [EVname(name) EPSilon(string) RSTARTS(string) KEEPBOUND]
+    syntax varlist [if], M(integer) MATname(name) [EVname(name) TOPname(name) EPSilon(string) ///
+        RSTARTS(string) KEEPBOUND]
     local p : word count `varlist'
     local fl ""
     forvalues k = 1/`m' {
@@ -173,7 +195,7 @@ program _efacompare_row, eclass
         mata: st_local("rot", strofreal(findexternal("dwlsmv_rotfail") != NULL))
     }
 
-    local cn m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m
+    local cn m df status conv T3 p RMSEA CFI TLI minima gap lam3 phimax comm1 ev_m srmr
     if `rc' == 0 {
         if "`evname'" != "" matrix `evname' = e(Ev)
         if e(converged) == 1 {
@@ -191,17 +213,24 @@ program _efacompare_row, eclass
             capture mata: mata drop dnfL dnfx dnfP
             local comm1 = ("`e(rot_nose)'" == "inadmissible")
             matrix `matname' = (`m', e(df_T3), 1, 1, e(T3), e(p_T3), e(rmsea_s), e(cfi_s), e(tli_s), ///
-                e(rot_minima), e(rot_gap), `L3', `PH', `comm1', el(`EvM', 1, `m'))
+                e(rot_minima), e(rot_gap), `L3', `PH', `comm1', el(`EvM', 1, `m'), e(srmr))
+            * the largest normalized residuals of every fitted row, df = 0 included (owner 2026-11-22):
+            * there they are near zero when the model reproduces the correlations, larger when it
+            * does not (as when no exact solution exists); no cutoff tells the two apart
+            if "`topname'" != "" {
+                mata: dwlsmv_efacompare_top(`m', "`topname'")
+                c_local efc_excl `"`efc_excl'"'
+            }
         }
         else {
             * the unrotated fit did not converge: the last iterate is not a solution, so nothing but
             * m and df is read, although e(rot_minima), e(Lambda), e(Phi) are posted
-            matrix `matname' = (`m', e(df_T3), 2, 0, ., ., ., ., ., ., ., ., ., ., .)
+            matrix `matname' = (`m', e(df_T3), 2, 0, ., ., ., ., ., ., ., ., ., ., ., .)
         }
     }
     else if `rot' {
         * the geomin "no converged start" exit (the mark): nothing posted, e() is cleared
-        matrix `matname' = (`m', `dfm', 3, ., ., ., ., ., ., ., ., ., ., ., .)
+        matrix `matname' = (`m', `dfm', 3, ., ., ., ., ., ., ., ., ., ., ., ., .)
     }
     else {
         local hint ""
@@ -212,20 +241,26 @@ program _efacompare_row, eclass
     matrix colnames `matname' = `cn'
 end
 
-* the display of the table: two blocks of at most 68 columns, then the footnotes that apply
+* the display of the table: three blocks of at most 77 columns, then the footnotes that apply
 program _efacompare_show
     version 16
-    syntax, MATname(name) N(integer) P(integer) ITEMS(string) MMAX(integer) EPSGiven(integer)
+    syntax, MATname(name) N(integer) P(integer) ITEMS(string) MMAX(integer) EPSGiven(integer) ///
+        [RESname(name) EXCL(string)]
     local nr = rowsof(`matname')
     local l2 ""
     local l3 ""
     local l0 ""
+    local lr ""
+    local r0 ""
     forvalues r = 1/`nr' {
         local mm = el(`matname', `r', 1)
         local st = el(`matname', `r', 3)
         if `st' == 2 local l2 `l2' `mm'
         if `st' == 3 local l3 `l3' `mm'
         if el(`matname', `r', 2) == 0 local l0 `l0' `mm'
+        * rows left out of the residual table: not fitted; fitted rows at df = 0 are in it
+        if `st' != 1 local lr `lr' `mm'
+        if `st' == 1 & el(`matname', `r', 2) == 0 local r0 `r0' `mm'
     }
 
     display as text _n "Exploratory factor analysis by number of factors m (oblique geomin)"
@@ -233,32 +268,52 @@ program _efacompare_show
     display as text "Columns are defined in {help efacompare}."
 
     display as text _n "Fit"
-    display as text "{hline 68}"
+    display as text "{hline 77}"
     display as text _col(2) %3s "m" _col(7) %4s "df" _col(13) %-8s "status" _col(23) %9s "T3" ///
-        _col(34) %7s "p" _col(43) %7s "RMSEA" _col(52) %7s "CFI" _col(61) %7s "TLI"
-    display as text "{hline 68}"
+        _col(34) %7s "p" _col(43) %7s "RMSEA" _col(52) %7s "CFI" _col(61) %7s "TLI" _col(70) %7s "SRMR"
+    display as text "{hline 77}"
     forvalues r = 1/`nr' {
         local st = el(`matname', `r', 3)
         local lab = cond(`st' == 1, "fitted", cond(`st' == 2, "not conv", "rot fail"))
         display as result _col(2) %3.0f el(`matname', `r', 1) _col(7) %4.0f el(`matname', `r', 2) ///
             _col(13) %-8s "`lab'" _col(23) %9.3f el(`matname', `r', 5) _col(34) %7.3f el(`matname', `r', 6) ///
             _col(43) %7.3f el(`matname', `r', 7) _col(52) %7.3f el(`matname', `r', 8) ///
-            _col(61) %7.3f el(`matname', `r', 9)
+            _col(61) %7.3f el(`matname', `r', 9) _col(70) %7.3f el(`matname', `r', 16)
     }
-    display as text "{hline 68}"
+    display as text "{hline 77}"
 
     display as text _n "Rotated diagnostics and eigenvalue"
-    display as text "{hline 68}"
+    display as text "{hline 77}"
     display as text _col(2) %3s "m" _col(7) %6s "minima" _col(15) %10s "gap" _col(27) %8s "lam3" ///
         _col(37) %8s "phimax" _col(47) %6s "comm1" _col(55) %9s "ev_m"
-    display as text "{hline 68}"
+    display as text "{hline 77}"
     forvalues r = 1/`nr' {
         display as result _col(2) %3.0f el(`matname', `r', 1) _col(7) %6.0f el(`matname', `r', 10) ///
             _col(15) %10.4g el(`matname', `r', 11) _col(27) %8.3f el(`matname', `r', 12) ///
             _col(37) %8.3f el(`matname', `r', 13) _col(47) %6.0f el(`matname', `r', 14) ///
             _col(55) %9.3f el(`matname', `r', 15)
     }
-    display as text "{hline 68}"
+    display as text "{hline 77}"
+
+    * largest residuals: top 3 per fitted m, ranked by |normalized residual|
+    if "`resname'" != "" {
+        display as text _n "Largest residuals (ranked by absolute normalized residual)"
+        display as text "{hline 77}"
+        display as text _col(2) %3s "m" _col(7) %4s "rank" _col(14) %-21s "pair" _col(37) %9s "residual" ///
+            _col(49) %9s "norm.res."
+        display as text "{hline 77}"
+        local nq = rowsof(`resname')
+        forvalues q = 1/`nq' {
+            local a : word `=el(`resname', `q', 3)' of `items'
+            local b : word `=el(`resname', `q', 4)' of `items'
+            local pr = abbrev("`a'", 10) + "-" + abbrev("`b'", 10)
+            local ev = el(`resname', `q', 5)
+            local es = cond(`ev' >= 0, "+", "-") + strofreal(abs(`ev'), "%5.3f")
+            display as result _col(2) %3.0f el(`resname', `q', 1) _col(7) %4.0f el(`resname', `q', 2) ///
+                _col(14) %-21s "`pr'" _col(37) %9s "`es'" _col(49) %9.2f el(`resname', `q', 6)
+        }
+        display as text "{hline 77}"
+    }
 
     * footnotes, only the ones that apply
     if "`l2'" != "" {
@@ -275,5 +330,17 @@ program _efacompare_show
     }
     if `mmax' >= 2 {
         display as text "{p 0 6 2}Rotated quantities (minima, gap, lam3, phimax) are conditional on the selected minimum.{p_end}"
+    }
+    if "`lr'" != "" {
+        display as text "{p 0 6 2}Largest residuals: m = `lr' left out because they did not converge or rotation failed.{p_end}"
+    }
+    if "`resname'" != "" & "`r0'" != "" {
+        display as text "{p 0 6 2}Largest residuals at df = 0 (m = `r0'): residuals near zero mean the model reproduces the correlations exactly; larger ones mean the model does not reproduce them, as happens when no exact solution exists, which T3 and the fit indices cannot show.{p_end}"
+    }
+    if "`excl'" != "" {
+        display as text "{p 0 6 2}Not ranked: `excl' (one-empty-cell repair or held at the bound): no normalized residual is computed for these pairs; their residuals count in SRMR.{p_end}"
+    }
+    if "`resname'" != "" {
+        display as text "{p 0 6 2}SRMR summarizes all pairs; normalized residuals are descriptive and rank pairs within each row, not tests (see {help efacompare}).{p_end}"
     }
 end

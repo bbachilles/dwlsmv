@@ -1,10 +1,10 @@
 {smcl}
-{* Executed under StataMP 18 on 2026-11-22 on the 0.6.1 release tree (2d22697 plus the version bump): every example in this file and in}{...}
+{* Executed under StataMP 18 on 2026-11-22 on the 0.7.0 release tree (fb6386e plus the version bump): every example in this file and in}{...}
 {* difftest.sthlp and efacompare.sthlp run on the source build, net get excepted, including esttab, the two covariate examples and the}{...}
 {* second-order example on dwlsmv_example_so.dta (its Note printed, the fit proper); the random-intercept abort at rc 3498 as documented,}{...}
-{* every other command rc 0, every fit posting e(version) 0.6.1, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
+{* every other command rc 0, every fit posting e(version) 0.7.0, no fit triggering recovery; tests/unit/test_dwlsmv_gaps.do G11-G15.}{...}
 {* The notes quoted under "Second-order factors" are copied from the source strings; the examples do not print all of them.}{...}
-{* *! version 0.6.1  22nov2026}{...}
+{* *! version 0.7.0  22nov2026}{...}
 {vieweralsosee "[SEM] sem" "help sem"}{...}
 {vieweralsosee "[R] nlcom" "help nlcom"}{...}
 {vieweralsosee "[SEM] gsem" "help gsem"}{...}
@@ -888,7 +888,8 @@ standardized), and {helpb difftest}.
 {p 4 4 2}
 The header gives the number of observations, the metric line, T3 with its
 degrees of freedom and p-value, the scaled RMSEA, CFI and TLI (see
-{help dwlsmv##fitindices:Fit indices}). When the fit did not converge it says so
+{help dwlsmv##fitindices:Fit indices}), and SRMR (see
+{help dwlsmv##residuals:Residuals}). When the fit did not converge it says so
 first and reports no T3, p-value or fit index (see
 {help dwlsmv##unconverged:A fit that does not converge}). The coefficient table
 follows, in sections: {cmd:Loadings on} {it:F} (one per factor), {cmd:Structural}
@@ -1074,6 +1075,50 @@ test, and ΔCFI can be positive when restrictions are added. To test one level
 against another, use {helpb difftest}. No published ΔCFI or ΔRMSEA cutoff has
 been validated for DWLS estimation with the T3 statistic; cutoffs developed for maximum
 likelihood should not be assumed to carry over.
+
+
+{marker residuals}{...}
+{title:Residuals}
+
+{p 4 4 2}
+A residual is a pair's sample polychoric (tetrachoric) correlation minus the
+correlation the model implies; the thresholds do not enter. For a converged
+single-group fit without a covariate, {opt efa()} and an inadmissible fit
+included, {cmd:dwlsmv} posts {cmd:e(Resid)}, the residuals as a p x p matrix
+with diagonal 0; {cmd:e(Nresid)}, each residual divided by
+sqrt(gamma_kk/N), where gamma_kk is the estimated asymptotic variance of the
+pair's sample correlation, diagonal missing; and {cmd:e(srmr)}, the square
+root of (the sum of the squared residuals over the p(p - 1)/2 pairs, divided
+by p(p + 1)/2), as lavaan computes {cmd:srmr} for categorical indicators.
+The header shows SRMR. A fit that did not converge, a fit with groups and a
+fit conditional on a covariate post none of the three. They are computed when
+the model is fitted; a replay shows what was posted.
+
+{p 4 4 2}
+SRMR is the overall discrepancy, in correlation units. The normalized
+residuals show which pairs are reproduced worst relative to their sampling
+precision, and the two can disagree. {helpb efacompare} shows SRMR and the
+three largest normalized residuals for each number of factors.
+
+{p 4 4 2}
+The normalized residual is descriptive. Its denominator is the asymptotic
+standard error of the sample correlation, not of the residual, so even in
+large samples it is not standard normal when the model is correct. It serves
+to rank the eligible pairs within a fit. It is not a formal z-test: no
+critical value applies to it, 1.96 included. In sparse data and small samples
+that standard error can itself be poorly estimated, for ordinary pairs too.
+
+{p 4 4 2}
+A pair whose two-way table had one empty cell repaired, or whose correlation
+is held at the bound under {opt keepbound}, has no normalized residual: it is
+missing in {cmd:e(Nresid)}. Its residual is in {cmd:e(Resid)} and counts in
+SRMR.
+
+{p 4 4 2}
+With 0 degrees of freedom the residuals are posted as computed. Near zero,
+they mean the model reproduces the correlations exactly; larger, they mean the
+model does not reproduce them, as happens when no exact solution exists, which
+T3 and the fit indices cannot show. No cutoff separates the two.
 
 
 {marker standardized}{...}
@@ -1289,6 +1334,8 @@ the baseline's T3 does not exceed its df){p_end}
 {synopt:{cmd:e(T3_b)}}T3 of the baseline model (thresholds free, correlations
 fixed at 0){p_end}
 {synopt:{cmd:e(df_T3_b)}}degrees of freedom of the baseline model{p_end}
+{synopt:{cmd:e(srmr)}}standardized root mean square residual; see
+{help dwlsmv##residuals:Residuals}{p_end}
 {synopt:{cmd:e(converged)}}1 if the reported fit converged, 0 otherwise{p_end}
 {synopt:{cmd:e(iterations)}}number of iterations of the reported fit{p_end}
 {synopt:{cmd:e(gamma_ratio)}}smallest/largest singular value of the sampling
@@ -1316,8 +1363,8 @@ with {cmd:efa()}, {cmd:b V eigen} or {cmd:b eigen}{p_end}
 {synopt:{cmd:e(datasignature)}}the signature of the indicators in the estimation sample, which {helpb difftest} checks{p_end}
 {synopt:{cmd:e(datasignaturevars)}}the variables the signature covers{p_end}
 {synopt:{cmd:e(covariates)}}the binary covariate, for a model conditional on it; such a fit
-posts no {cmd:e(rmsea_s)}, {cmd:e(cfi_s)}, {cmd:e(tli_s)}, {cmd:e(T3_b)}, {cmd:e(df_T3_b)}
-or {cmd:e(bound)}; it does post {cmd:e(gamma_ratio)}, {cmd:e(gamma_ratio_raw)},
+posts no {cmd:e(rmsea_s)}, {cmd:e(cfi_s)}, {cmd:e(tli_s)}, {cmd:e(T3_b)}, {cmd:e(df_T3_b)},
+{cmd:e(srmr)}, {cmd:e(Resid)}, {cmd:e(Nresid)} or {cmd:e(bound)}; it does post {cmd:e(gamma_ratio)}, {cmd:e(gamma_ratio_raw)},
 {cmd:e(gamma_rank)} and {cmd:e(bread_ratio)}{p_end}
 
 {synoptset 20 tabbed}{...}
@@ -1331,6 +1378,11 @@ in fixed rows and columns; not posted for a fit that did not converge{p_end}
 value (posted only when some parameter is fixed){p_end}
 {synopt:{cmd:e(Cns_b)}}the same rows, posted instead of {cmd:e(Cns)} for a fit
 that did not converge (Stata keeps {cmd:e(Cns)} for results with {cmd:e(V)}){p_end}
+{synopt:{cmd:e(Resid)}}p x p residuals, sample minus model-implied
+correlation, diagonal 0; rows and columns named by the indicators{p_end}
+{synopt:{cmd:e(Nresid)}}p x p normalized residuals, diagonal missing, and
+missing at a repaired or at-bound pair; not a test (see
+{help dwlsmv##residuals:Residuals}){p_end}
 {synopt:{cmd:e(bound)}}1 x P, one column per polychoric pair; 1 for a pair
 included at the bound under {opt keepbound}, else 0{p_end}
 

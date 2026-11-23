@@ -1,0 +1,15 @@
+fit,data,items,model,m,attempted,converged,df,N,npar,admissible,lavaan_version,note
+E_cfa1,case_E,y1-y6,cfa,1,1,1,9,5000,18,1,0.7.2,
+E_cfa2,case_E,y1-y6,cfa,2,1,1,8,5000,19,1,0.7.2,
+E_efa1,case_E,y1-y6,efa,1,1,1,9,5000,18,1,0.7.2,
+E_efa2,case_E,y1-y6,efa,2,1,1,4,5000,23,1,0.7.2,
+F_efa1,case_F,y1-y9,efa,1,1,1,27,5000,36,1,0.7.2,
+F_efa2,case_F,y1-y9,efa,2,1,1,19,5000,44,1,0.7.2,
+F_efa3,case_F,y1-y9,efa,3,1,1,12,5000,51,1,0.7.2,
+G_efa1,case_G,y1-y6,efa,1,1,1,9,5000,12,1,0.7.2,
+G_efa2,case_G,y1-y6,efa,2,1,1,4,5000,17,1,0.7.2,
+R_cfa1,emptycell,y1-y4,cfa,1,1,1,2,400,8,1,0.7.2,
+E3_df0,case_E,y1-y3,cfa,1,1,1,0,5000,9,1,0.7.2,
+G3_df0,case_G,y1-y3,cfa,1,1,1,0,5000,6,1,0.7.2,
+F_efa4,case_F,y1-y9,efa,4,1,0,,,,,0.7.2,attempted only; nothing exported
+F_efa5,case_F,y1-y9,efa,5,1,0,,,,,0.7.2,attempted only; nothing exported

@@ -1,21 +1,21 @@
 dwlsmv release build provenance (written by tools/stage_release.ps1)
 Date:            20261122
 Built under:     StataMP 16.1, serial [milestone] (milestone machine, Windows ARM, x86 build under emulation)
-Checked out at:  fcce0b8af60dc4c2b46df56b2b6c197120b5ee52
-src/mata last changed in: efefd06a8db2d35cb40aab27dc5194af2854fdfd
-ldwlsmv.mlib:    1478412 bytes, MD5 95F33A8978954B7EAF664D59772F1B9C, 301 functions, 157 source files
+Checked out at:  e0ff6eb050c0c540a8e6efe25a651d32b9937d09
+src/mata last changed in: 71478a405c8aa5fa4a01c9368917e4e1d65d98dd
+ldwlsmv.mlib:    1500204 bytes, MD5 0EAA97BB80F222A3F1130FE35F026409, 305 functions, 161 source files
 
 dist/ file MD5s:
-  9666EC88983989E4CD95F4EAEA3B193A  difftest.ado  7162 bytes
+  81DF02EE97128B7A57AC7491B162E1CE  difftest.ado  7162 bytes
   BD00E8582B93EF09AC13383C22B13502  difftest.sthlp  6646 bytes
-  5FF6E7F51E02A4897D4D9A2C9445FBEF  dwlsmv.ado  53146 bytes
-  94DBB9A0685733ECE890733A02CCA919  dwlsmv.pkg  740 bytes
-  8D9EF541DD6B814D906F99FA58E8E39F  dwlsmv.sthlp  79461 bytes
-  548438A0770DF170F8D40ECD35108583  dwlsmv_example.dta  38782 bytes
-  6030A9263D8F0134CC6BA8A23E9C3074  dwlsmv_example_mg.dta  29257 bytes
-  B29FB3C902EB5FDA39DE49078449D16E  dwlsmv_example_so.dta  30414 bytes
-  88F9E03E8041634A965A6732A52E86D2  efacompare.ado  12993 bytes
-  AB98AB7491E139DD4B96D6C47FE300D1  efacompare.sthlp  11626 bytes
-  95F33A8978954B7EAF664D59772F1B9C  ldwlsmv.mlib  1478412 bytes
+  97E1FDFC78F2BF16CABE65A50B4BCB48  dwlsmv.ado  53716 bytes
+  64E4FB362CC13778516279FD8A4FB295  dwlsmv.pkg  740 bytes
+  31B8DE5A07B3029BF478130448C76A4A  dwlsmv.sthlp  82221 bytes
+  EEB9642AA0CE8F28C722B4F3C4E2BBC7  dwlsmv_example.dta  38782 bytes
+  CBEAB6E2E82834FB226BABBE06B454C2  dwlsmv_example_mg.dta  29257 bytes
+  7A3CF9B7C419C1A6BF3D819C8582FB16  dwlsmv_example_so.dta  30414 bytes
+  39D18AE9B05820B026F7978717E996FE  efacompare.ado  17265 bytes
+  25FF7752BC51FAD24FE4D1213BD7C5F4  efacompare.sthlp  15265 bytes
+  0EAA97BB80F222A3F1130FE35F026409  ldwlsmv.mlib  1500204 bytes
   1F4DCE74FE34353CE7A7BA05940ED59C  stata.toc  116 bytes
-  5995FCE5EE287EDF66BF7EF84091B27B  _dwlsmv_translate.ado  7693 bytes
+  DC6A740E27864B1938F236F11CE311F6  _dwlsmv_translate.ado  7693 bytes

@@ -202,6 +202,7 @@ program tnf_full
     local c1 = ("`e(rot_nose)'" == "inadmissible")
     tnf_ok "el(`R',1,14) == `c1'"     "`lab': comm1"
     tnf_ok "el(`R',1,15) == el(`E',1,`m')" "`lab': ev_m"
+    tnf_ok "el(`R',1,16) == e(srmr)"  "`lab': srmr"
 end
 
 * a blank row: status st (2 not converged, 3 rotation failed); only m and df are set
@@ -216,7 +217,7 @@ program tnf_blank
     else {
         tnf_ok "missing(el(`R',1,4))" "`lab': conv is missing"
     }
-    forvalues c = 5/15 {
+    forvalues c = 5/16 {
         tnf_ok "missing(el(`R',1,`c'))" "`lab': column `c' is missing"
     }
 end
@@ -225,7 +226,7 @@ end
 capture program drop tnf_same
 program tnf_same
     args A B lab
-    forvalues c = 1/15 {
+    forvalues c = 1/16 {
         tnf_ok "el(`A',1,`c') == el(`B',1,`c')" "`lab': column `c'"
     }
 end
@@ -244,7 +245,7 @@ program tnf_vs
             local fl `fl' F`k'
         }
         local fl : list retokenize fl
-        matrix `R' = `tab'[`m', 1..15]
+        matrix `R' = `tab'[`m', 1..16]
         ereturn clear
         capture mata: rmexternal("dwlsmv_rotfail")
         capture quietly dwlsmv (`fl' -> `varlist') `if' `in', efa(`fl') `opts'
@@ -296,7 +297,7 @@ local RM = r(maxfactors)
 quietly log close tnflog
 tnf_ok "`rc' == 0" "1: the run is rc 0 (rc `rc')"
 tnf_ok "`RP' == 6 & `RM' == 3" "1: r(p) and r(maxfactors)"
-tnf_ok "rowsof(`TAB') == 3 & colsof(`TAB') == 15" "1: the table is 3 x 15"
+tnf_ok "rowsof(`TAB') == 3 & colsof(`TAB') == 16" "1: the table is 3 x 16"
 tnf_ok "`NR' == 5000" "1: r(N)"
 local same = ("`e(cmd)'" == "dwlsmv" & "`e(efa)'" == "" & `"`e(cmdline)'"' == `"`cmd0'"')
 tnf_ok "`same' & e(N) == `N0'" "1: the caller's e() is back"
@@ -366,6 +367,7 @@ forvalues m = 1/5 {
 local st5 = el(`TAB', 5, 3)
 tnf_ok "`st5' == 2" "6: the premise: the unrotated fit at m = 5 does not converge on N = 500 (status `st5')"
 tnf_chk 1 "Not converged (m = 5)" "6: the not-converged note"
+tnf_chk 1 "Largest residuals: m = 5 left out because" "6: a not-converged row is left out of the residual block, with its footnote"
 tnf_chk 0 "Rotation failed" "6: no rotation-failure note"
 tnf_chk 1 "The default geomin epsilon changes with m" "6: the epsilon note"
 tnf_chk 1 "Rotated quantities (minima" "6: the conditional-minimum note"
@@ -450,7 +452,7 @@ capture quietly dwlsmv (F1 F2 F3 F4 F5 -> y1-y9), efa(F1 F2 F3 F4 F5)
 local rc = _rc
 tnf_mark
 local mk = r(has)
-matrix `RX' = `TAB5'[5, 1..15]
+matrix `RX' = `TAB5'[5, 1..16]
 if `rc' == 0 & e(converged) == 0 {
     tnf_blank `RX' "9a: F m = 5 (standalone not converged)" 2 1
 }
@@ -493,9 +495,9 @@ tnf_blank `R5' "9: the E m = 3 row (nothing carried from F m = 4)" 3 0
 tnf_same `R3a' `R3b' "9: the two F m = 3 rows"
 tnf_ok "el(`R3a',1,3) == 1" "9: the F m = 3 row is a fitted row"
 * each F row equals the full run's row of check 7 (rows 1..3 equal their standalone fits there)
-matrix `RX' = `TAB5'[3, 1..15]
+matrix `RX' = `TAB5'[3, 1..16]
 tnf_same `R3a' `RX' "9: F m = 3 against the full run"
-matrix `RX' = `TAB5'[4, 1..15]
+matrix `RX' = `TAB5'[4, 1..16]
 tnf_same `R4' `RX' "9: F m = 4 against the full run"
 
 * ---- 10  the mark ----
@@ -625,6 +627,130 @@ matrix `EV0' = r(Ev)
 local NR = r(N)
 tnf_ok "el(`TAB',2,13) == abs(`ph21') & el(`TAB',2,13) > 0" "13: phimax is |phi_12|"
 tnf_vs y1-y6, tab(`TAB') mmax(2) lab("E reversed") ev(`EV0') n(`NR')
+
+* ---- 14  residual diagnostics: SRMR column and the largest-residuals block (main session 2026-11-22) ----
+* The top 3 lines of each m are rebuilt from the standalone fit's e(Resid), e(Nresid) with
+* dwlsmv_resid_rank() (tested against lavaan in test_resid_diag.do) and looked for, formatted as
+* the display formats them, in the log.
+import delimited using "fixtures/data/case_E.csv", clear varnames(1) delimiters(",")
+quietly log using "$TNF_LG", text replace name(tnflog)
+capture noisily efacompare y1-y6, maxfactors(3)
+local rc = _rc
+matrix `TAB' = r(table)
+quietly log close tnflog
+tnf_ok "`rc' == 0 & el(`TAB',3,2) == 0 & el(`TAB',3,3) == 3" "14: premise: Case E m = 3 has df = 0 and its rotation fails"
+tnf_chk 1 "SRMR" "14: SRMR column header"
+tnf_chk 1 "Largest residuals (ranked by absolute normalized residual)" "14: block 3 title"
+tnf_chk 1 "norm.res." "14: block 3 header"
+tnf_chk 1 "Largest residuals: m = 3 left out because" "14: the rotation-failed row is left out, with its footnote"
+tnf_chk 0 "Largest residuals at df = 0" "14: no df = 0 residual note when no df = 0 row is fitted"
+tnf_chk 0 "Not ranked:" "14: no excluded-pair footnote on Case E"
+* a fitted df = 0 row is not reachable from data here: at p = 6, m = 3 dwlsmv refuses the fit as
+* not identified (rank(Delta) 32 of 33, measured 2026-11-22 on Case G and simulated data), so the
+* display of one is checked below on a hand-built table (posting at df = 0 is test_resid_post.do
+* part 3)
+tnf_ok "missing(el(`TAB',3,16))" "14: srmr is missing on the rotation-failed row"
+tnf_width
+local W = r(w)
+tnf_ok "`W' <= 80" "14: the output fits in 80 columns (longest line `W')"
+forvalues m = 1/2 {
+    local fl ""
+    forvalues k = 1/`m' {
+        local fl `fl' F`k'
+    }
+    quietly dwlsmv (`fl' -> y1-y6), efa(`fl')
+    tnf_ok "el(`TAB',`m',16) == e(srmr)" "14: m = `m': r(table) srmr is the standalone e(srmr)"
+    tnf_ok "round(el(`TAB',`m',7), .001) != round(el(`TAB',`m',16), .001) & round(el(`TAB',`m',9), .001) != round(el(`TAB',`m',16), .001)" "14: m = `m': premise, RMSEA, TLI and SRMR differ at 3 decimals"
+    local seg : display %7.3f el(`TAB',`m',9) "  " %7.3f el(`TAB',`m',16)
+    tnf_chk 1 "`seg'" "14: m = `m': TLI then SRMR as printed in the Fit block"
+    mata: tnfR = dwlsmv_resid_rank(st_matrix("e(Nresid)"), 3); tnfE = st_matrix("e(Resid)"); tnfZ = st_matrix("e(Nresid)")
+    forvalues q = 1/3 {
+        mata: tnfi = tnfR[`q', 1]; tnfj = tnfR[`q', 2]; st_local("pr", "y" + strofreal(tnfi) + "-y" + strofreal(tnfj)); st_local("ev", strofreal(tnfE[tnfj, tnfi])); st_local("zv", strofreal(tnfZ[tnfj, tnfi]))
+        local es = cond(`ev' >= 0, "+", "-") + strofreal(abs(`ev'), "%5.3f")
+        local line : display %3.0f `m' "  " %4.0f `q' "   " %-21s "`pr'" "  " %9s "`es'" "   " %9.2f `zv'
+        tnf_chk 1 "`line'" "14: m = `m' rank `q' line"
+    }
+}
+capture mata: mata drop tnfR tnfE tnfZ tnfi tnfj
+
+* a fitted df = 0 row, hand-built (owner 2026-11-22: df = 0 rows stay in the table, with a note).
+* The display is called directly; the values are arbitrary, only status, df and m matter.
+tempname HT HR
+matrix `HT' = (1, 9, 1, 1, 30, .2, .02, .99, .98, 1, ., ., ., 0, 1.5, .03) \ ///
+              (2, 4, 1, 1, 10, .1, .01, .99, .99, 1, ., .3, .2, 0, .9, .02) \ ///
+              (3, 0, 1, 1, 0, ., ., ., ., 1, ., .3, .2, 0, .5, .004)
+matrix `HR' = (2, 1, 1, 2, .031, 2.5) \ (3, 1, 3, 5, -.012, -1.25)
+quietly log using "$TNF_LG", text replace name(tnflog)
+_efacompare_show, matname(`HT') n(500) p(6) items(y1 y2 y3 y4 y5 y6) mmax(3) epsgiven(0) resname(`HR') excl("")
+quietly log close tnflog
+local line : display %3.0f 3 "  " %4.0f 1 "   " %-21s "y3-y5" "  " %9s "-0.012" "   " %9.2f -1.25
+tnf_chk 1 "`line'" "14: a fitted df = 0 row is ranked in the table"
+tnf_chk 1 "Largest residuals at df = 0 (m = 3)" "14: the df = 0 residual note names m = 3"
+tnf_chk 0 "left out because" "14: no left-out note when every row is fitted"
+* the same table with m = 3 rotation failed: left out, and no df = 0 residual note
+matrix `HT'[3, 3] = 3
+matrix `HR' = `HR'[1, 1...]
+quietly log using "$TNF_LG", text replace name(tnflog)
+_efacompare_show, matname(`HT') n(500) p(6) items(y1 y2 y3 y4 y5 y6) mmax(3) epsgiven(0) resname(`HR') excl("")
+quietly log close tnflog
+tnf_chk 1 "Largest residuals: m = 3 left out because" "14: a rotation-failed df = 0 row is left out"
+tnf_chk 0 "Largest residuals at df = 0" "14: no df = 0 residual note for a row not fitted"
+
+* a fitted df = 0 row through the row program (review mutant, 2026-11-22): p = 3, m = 1 has
+* df = 0; efacompare itself refuses p < 4, and p = 6, m = 3 is refused as not identified, so this
+* is the one df = 0 fitted row reachable from committed data
+tempname RW0 TP0
+capture noisily _efacompare_row y1 y2 y3, m(1) matname(`RW0') topname(`TP0')
+local rc0 = _rc
+tnf_ok "`rc0' == 0" "14: df = 0 row: the row program runs on y1-y3, m = 1 (rc `rc0')"
+if `rc0' == 0 {
+    tnf_ok "el(`RW0',1,2) == 0 & el(`RW0',1,3) == 1" "14: df = 0 row: premise, df 0 and status fitted"
+    tnf_ok "el(`RW0',1,16) == e(srmr)" "14: df = 0 row: srmr is the posted e(srmr)"
+    capture confirm matrix `TP0'
+    tnf_ok "!_rc" "14: df = 0 row: the largest residuals are returned (topname matrix exists)"
+    capture confirm matrix `TP0'
+    if !_rc tnf_ok "colsof(`TP0') == 6 & rowsof(`TP0') == 3" "14: df = 0 row: 3 x 6 (p = 3 has 3 pairs)"
+}
+
+* an excluded (repaired) pair: emptycell y1-y2
+import delimited using "fixtures/data/emptycell.csv", clear varnames(1) delimiters(",")
+quietly log using "$TNF_LG", text replace name(tnflog)
+capture noisily efacompare y1-y4, maxfactors(1)
+local rc = _rc
+quietly log close tnflog
+tnf_ok "`rc' == 0" "14: emptycell m = 1 runs (rc `rc')"
+tnf_chk 1 "Not ranked: y1-y2 (one-empty-cell repair" "14: the repaired pair is named in a footnote"
+tnf_chk 0 "y1-y2      " "14: the repaired pair is not a ranked line"
+
+* a fitted row with no rankable pair (review mutant, 2026-11-22): hand-built e(), every
+* off-diagonal Nresid missing; no top matrix is written and every pair is named
+capture program drop tnf_top0
+program tnf_top0, eclass
+    tempname b R Z
+    matrix `b' = (0)
+    matrix colnames `b' = x
+    ereturn post `b'
+    matrix `R' = (0, .1, .2 \ .1, 0, .3 \ .2, .3, 0)
+    matrix `Z' = J(3, 3, .)
+    ereturn matrix Resid = `R'
+    ereturn matrix Nresid = `Z'
+    ereturn local indicators "y1 y2 y3"
+    local efc_excl "stale"
+    capture matrix drop tnf_top0m
+    capture noisily mata: dwlsmv_efacompare_top(1, "tnf_top0m")
+    local rcm = _rc
+    capture confirm matrix tnf_top0m
+    local made = !_rc
+    capture matrix drop tnf_top0m
+    c_local rcm "`rcm'"
+    c_local made "`made'"
+    c_local ex "`efc_excl'"
+end
+tnf_top0
+local exok = ("`ex'" == "y1-y2 y1-y3 y2-y3")
+tnf_ok "`rcm' == 0" "14: no rankable pair: dwlsmv_efacompare_top runs (rc `rcm')"
+tnf_ok "`made' == 0" "14: no rankable pair: no top matrix is created"
+tnf_ok "`exok'" "14: no rankable pair: efc_excl lists every pair, in item order (got [`ex'])"
 
 if $TNF_NF {
     display as error _n "test_efacompare: $TNF_NF failure(s)"

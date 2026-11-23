@@ -67,6 +67,8 @@
 #                                  93_so_data.R                    (optional)
 #   fixtures/MANIFEST_lavaan_so.json  lavaan second-order references, V and U,
 #                                  99s_lavaan_second_order.R       (optional)
+#   fixtures/MANIFEST_lavaan_srmr.json  lavaan SRMR and normalized residuals,
+#                                  99t_lavaan_srmr.R               (optional)
 #
 # Tiers 2 and 3 are optional because they need lavaan and Mplus respectively,
 # and the whole point of the tier split is that tier 1 regenerates on any
@@ -232,7 +234,9 @@ optional <- list(
   list(file = "MANIFEST_so_data.json", label = "tier 1: second-order data (Cases H, I, J)",
        gen = "93_so_data.R"),
   list(file = "MANIFEST_lavaan_so.json", label = "lavaan second-order references (release B, B4)",
-       gen = "99s_lavaan_second_order.R")
+       gen = "99s_lavaan_second_order.R"),
+  list(file = "MANIFEST_lavaan_srmr.json", label = "lavaan SRMR and normalized residuals (residual diagnostics)",
+       gen = "99t_lavaan_srmr.R")
 )
 
 for (t in optional) {

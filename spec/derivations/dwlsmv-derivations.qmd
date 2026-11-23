@@ -18709,6 +18709,719 @@ The options as they were presented for the decision follow, unchanged.
 - **N1 (finding, no decision asked).** c1 is not nested in threshold-constraining levels (Result
   FI2); recommend one help sentence saying so.
 
+## Residual diagnostics: SRMR and the largest normalized residuals {#sec-resid-diag}
+
+*Drafted 2026-11-21 by a read-only agent for the owner's stop/go gate (E-117
+§3), derivation first. **Executed by the drafting agent only** (R 4.6.0, lavaan 0.7.2, every chunk below extracted from
+this text and run in order; the main session has not re-run it). **No Stata has run.** Nothing in `src/` or `tests/`
+depends on this section yet. It settles the gate's three questions or says that it cannot. Every new R name starts with
+`sr_` and every chunk name with `sr-`; the chunks use base R, except the `sr-*lavaan*` chunks, which call lavaan on
+committed fixtures, and they use `Phi2` and `phi2` of the setup chunk.*
+
+*Amended 2026-11-22 (main session, after the end-of-module review). The banner above is the state
+at drafting. Since then the standalone script was re-run by the main session
+(E-117), Stata has run, and
+`src/` depends on this section (`dwlsmv_resid`, `dwlsmv_resid_rank`, `dwlsmv_m11_resid`,
+`efacompare`). The open items O1–O4 were decided by the owner as recommended (E-119,
+2026-11-22), and the names proposed in O6 were adopted. One display rule changed: `efacompare` now
+ranks the residuals of a fitted $df=0$ row (owner, 2026-11-22), where this section said it should
+not; see the amendment at SR5. The mathematics is unchanged.*
+
+### Notation and definitions
+
+One group, $G=1$, no covariates (the eligible case, Result SR5). $p$ indicators, $P=p(p-1)/2$ pairs, $T$ thresholds.
+Stage 1 returns $s=(s_\tau',s_\rho')'$ with $s_\rho=(r_1,\dots,r_P)'$ the polychoric correlations in column-major
+lower-triangle order (spec §4.2), and $\hat\Gamma$ with $\hat\Gamma_{kk}$ the entry at $r_k$; $N$ is Stage 1's $N$ (after
+listwise deletion). $\hat\theta$ is the fitted parameter vector and $\sigma(\hat\theta)=(\sigma_\tau',\sigma_\rho')'$ the
+model-implied statistics in the same order, with $\rho_k(\hat\theta)$ the entries of $\sigma_\rho$. Define
+
+$$
+e_k=r_k-\rho_k(\hat\theta),\qquad
+\mathrm{SRMR}=\sqrt{\frac{\sum_{k=1}^{P}e_k^2}{P+p}},\qquad
+z_k=\frac{e_k}{\sqrt{\hat\Gamma_{kk}/N}} .
+$$
+
+$e_k$ is observed minus implied. $z_k$ is the **normalized residual**. $\mathrm{SRMR}$ is lavaan's `srmr`
+(`srmr_bentler_nomean`), which the owner fixed as the definition (decision 1).
+
+### Result SR1: the SRMR, its denominator, and why thresholds drop out
+
+**The $p$ in the denominator.** lavaan's `srmr_bentler_nomean` is the root of the mean squared residual over the *lower
+triangle including the diagonal*, with the $p$ diagonal residuals equal to zero, so the divisor is $P+p=p(p+1)/2$ while
+only the $P$ off-diagonal residuals can be nonzero. It is not the root mean square of the off-diagonal residuals,
+which is `crmr_nomean` $=\sqrt{\sum e_k^2/P}$:
+
+$$
+\mathrm{SRMR}=\mathrm{CRMR}_{\mathrm{nomean}}\sqrt{\frac{P}{P+p}} .
+$$
+
+The diagonal residuals are zero by construction, not by fit: Θ is derived, $\sigma_{jj}=1$ in the delta
+parameterization (spec §4.6), and $s_{jj}=1$. So the diagonal contributes $p$ to the divisor and nothing to the sum.
+That is a property of the definition, the same for every model, and is why SRMR is smaller than the root mean square of
+the $P$ pair residuals by the fixed factor $\sqrt{P/(P+p)}$ ($\sqrt{15/21}=0.845$ at $p=6$).
+
+**Why thresholds drop out at $G=1$.** lavaan's `srmr_bentler` and `crmr` add the threshold residuals
+$\tau_i-\hat\tau_i$ to the sum and their number $T$ to the divisor. At $G=1$ with no covariate and no invariance
+constraint, every threshold is a free parameter of its own, $\sigma_\tau(\theta)=\theta_\tau$, and $\Delta$ restricted to
+the threshold rows and columns is the identity, so $\hat\tau=s_\tau$ exactly (`@sec-marker-recovery` Result 5; the
+objective separates, $F=(s_\tau-\theta_\tau)'W_\tau(s_\tau-\theta_\tau)+(s_\rho-\sigma_\rho(\theta_\rho))'W_\rho(\cdot)$,
+and its $\theta_\tau$ gradient $-2W_\tau(s_\tau-\theta_\tau)$ vanishes at $\theta_\tau=s_\tau$ whatever $\theta_\rho$ is).
+The threshold residuals are therefore zero, and including them only enlarges the divisor:
+
+$$
+\mathrm{SRMR}_{\text{with thresholds}}^2\,(T+P+p)=\mathrm{SRMR}^2\,(P+p).
+$$
+
+This is not true with several groups and invariance constraints, where a threshold is tied across groups (spec §4.8
+G6), nor with a covariate; SRMR is posted only where it holds (Result SR5). The statement is about the exact solution:
+the numerical fit reaches $\hat\tau=s_\tau$ to the optimizer's tolerance, and `sr-lavaan` records how closely lavaan does.
+
+**Chosen divisor.** $P+p$, decided by the owner (decision 1) and checked against lavaan in `sr-lavaan`. CRMR is
+derivable from SRMR and is not stored.
+
+### Result SR2: the normalized residual and its variance
+
+$\hat\Gamma=N^{-1}\sum_i\hat\psi_i\hat\psi_i'$ is $N$ times the asymptotic covariance of $s$ (spec §4.4, the
+convention of the Notation above), so $\hat\Gamma_{kk}/N$ estimates $\operatorname{Var}(r_k)$, the sampling variance of
+the **sample** polychoric alone. $z_k$ divides the residual by that: it is the observed correlation's own standard error
+and nothing about $\hat\theta$.
+
+This is what lavaan calls `normalized`, and it is not the **standardized** residual. Under a correct model
+$e=(I-Q)(s-\sigma_0)+o_p(N^{-1/2})$, $Q=\Delta(\Delta'W\Delta)^{-1}\Delta'W$, so
+$\operatorname{Var}(e)=(I-Q)\Gamma(I-Q)'/N$, which is the standardized residual's denominator. The two denominators are
+not ordered in general ($I-Q$ is a $W$-orthogonal projection, not a contraction in the $\Gamma$ metric); lavaan's
+standardized value was the larger on the one fit the package note records. So $z_k$ is **not** asymptotically $N(0,1)$
+under a correct model, it is not a test, and no cutoff is attached to it (decision 4). It is a scale for ranking
+residuals by how large they are against the precision of the correlation they describe. Its use in `efacompare`'s
+"largest residuals" table is exactly that.
+
+**Where it is exact.** At $df=0$ with $\Delta$ square and invertible, $Q=I$ and $e=0$ to first order (Result SR5). When
+a model implies a correlation of exactly the sample value, $e_k=0$ and $z_k=0$ whatever $\hat\Gamma_{kk}$ is.
+
+`sr-lavaan` checks the formula against lavaan's `normalized` on committed data, using lavaan's own $\Gamma$ and
+$N=$ `ntotal`; a divisor $N-1$ is required to miss.
+
+### Result SR3: which pairs exist at posting (the missing-pair question)
+
+**No fit that reaches posting has a missing or inestimable polychoric.** This is read from the spec and the code, not
+assumed. `dwls_sample_stats()` classifies every pair and then either aborts or returns $s$ with all $P$ entries filled:
+
+| Pair | Stage 1 | Reaches posting? | $r_k$ | $\hat\Gamma_{kk}$ |
+|---|---|---|---|---|
+| root found (status 1, or status 6 by the endpoint check) | enters | yes | the root | $>0$ |
+| status 5, zero-probe 6, 3, 4, 7, 8; perfect association (two empty cells on a diagonal, binary) | **aborts, rc 3498**, no `stage1` struct, no fit | no | none | none |
+| other status 2 (no sign change up to $B$) | aborts unless `keepbound` | only with `keepbound` | $\pm B$, `bound[k]`=1 | at $\pm B$, raw weights |
+| binary, exactly one empty cell | repaired ($c=0.5$, margins kept, O6) | yes | $\hat\rho^+$, `bound[k]`=0 | construction (a), uncentred |
+| repaired with $\lvert\hat\rho^+\rvert\ge B$ | aborts (O3), nothing truncated | no | none | none |
+| an empty category | aborts upstream, in `dwlsmv_thresholds()` | no | none | none |
+
+(spec Module 2, *Which pairs enter `s` and Γ̂* and *One-empty-cell repair*; `dwls_sample_stats.mata` lines 37-58 and
+the classification loop; the `abort` is `exit(3498)` after **all** pairs are classified.) Missing values of the
+indicators are listwise-deleted before Stage 1, so every retained row is complete on all $p$ indicators and every pair
+is estimated on the same $N$. Two further facts make the denominator safe:
+
+- $\hat\Gamma_{kk}>0$ at every polychoric entry. `dwlsmv_m11_fitidx()` runs `dwlsmv_fitidx_base()` on every
+  single-group fit that reaches `dwlsmv_m11_fit()` (unconditional, before the convergence flag is read, line 247 of
+  `dwlsmv_m11_fit.mata`), and that function aborts with rc 3498 on a missing $r_k$ or $\hat\Gamma_{kk}$ and on
+  $\hat\Gamma_{kk}\le0$. So $z_k$ is finite at every pair of a fit that reaches posting, **by the existing guard, not
+  by anything new**.
+- $p\ge2$ is needed for any pair; $p=1$ gives $P=0$ and $\mathrm{SRMR}=0/1$. Such a model is not identified in dwlsmv's
+  grammar; this is not established here from the code (item O5 below).
+
+Hence **the SRMR sum has exactly $P$ terms, none missing, in every fit that reaches posting**, and no rule for a
+missing pair is needed. A guard is still warranted in the implementation (assert no missing in $e$ and $z$; abort rc
+3498 if one occurs, as `dwlsmv_fitidx_base` does), because the claim rests on Stage 1's classification and a future
+change to it would otherwise corrupt SRMR silently. That guard cannot fire today.
+
+The three cases the gate names:
+
+- **An inestimable pair** never reaches posting: Stage 1 aborts, nothing is fitted, nothing is posted.
+- **A repaired pair** has $r_k=\hat\rho^+$, a finite number inside $(-B,B)$. It enters SRMR as any other pair. Whether
+  $z_k$ is a valid scale for it is Result SR4.
+- **A pair kept at $\pm B$ under `keepbound`** has $r_k=\pm B$ exactly (`bound[k]`=1). Its residual $e_k=\pm B-\rho_k(\hat\theta)$
+  is a number and enters SRMR. Whether $z_k$ is a valid scale for it is Result SR4.
+
+### Result SR4: is $\hat\Gamma_{kk}$ a valid variance for a repaired pair, and for a pair at the bound?
+
+The answer is **no for the pair at the bound, and not justified for the repaired pair** (not calibrated in any of four
+designs, in no fixed direction; a valid scale in some other regime is not excluded), with an argument and a measurement
+for each. Neither verdict touches SRMR, which needs no variance.
+
+**The repaired pair.** Let a binary pair have table $n$ with exactly one empty cell $e$, and $\hat\rho^+=h(\hat q_1,\hat q_2,\hat p_{11}+c\sigma_e/N)$
+the root of the repaired score (`@sec-o6`). The empirical $\hat\Gamma_{\rho\rho}$ that production forms is construction
+(a): $\psi_\rho$ at $\hat\rho^+$ with the **raw** weights $n/N$, summed over the real observations. Three facts from
+`@sec-o6`:
+
+1. *First order, the repair is irrelevant.* With every true cell probability positive the repair event has probability
+   $\to0$ exponentially, and on its complement $n^+=n$. So $\hat\Gamma_{kk}/N$ is the right variance in the limit.
+2. *At the sample it is not the variance of the estimator that produced $r_k$.* (a) is the influence function of the
+   unrepaired root evaluated at a point that is not its root: $\bar\psi_\rho\ne0$ at $O(1)$ (`@sec-o6`, item 2). It
+   differs from the delta-method variance $\nabla h'V(\hat\pi^+)\nabla h$ of the repaired estimator, which is (b), by
+   25% either way on the two derivation tables (T1: 0.279 against 0.212; T2: 3.31 against 4.09).
+3. *The repair is lavaan's and Mplus's convention*, not a statistical result; the spec says so and that its effect on SEs
+   at small $N$ is not established.
+
+So for a repaired pair $\hat\Gamma_{kk}/N$ is the number lavaan prints and the number the fit's own sandwich uses, and
+whether it is a calibrated scale at the sample size where repair occurs is a finite-sample question. **Measurement
+`sr-repair-mc`** (base R; designs fixed from the exact probability of one empty cell, and a first set replaced after it
+gave too few repaired replicates, see the chunk's note, so the designs are chosen after measuring; no cutoff is proposed): simulate binary pairs with sparse cells,
+keep the replicates with exactly one empty cell (repaired) and those with none (ordinary) from the *same* design, and
+compare, for each group, the Monte Carlo variance and mean-square error of $\hat\rho$ with $\hat\Gamma_{\rho\rho}/N$, and
+$\mathrm{rms}(z)$ with $z=(\hat\rho-\rho_0)/\sqrt{\hat\Gamma_{\rho\rho}/N}$, where $\rho_0$ is the generating value
+(the truth a correct model would imply at the pair). The ordinary replicates are the control: $\mathrm{rms}(z)$ near 1
+there and away from 1 in the repaired group is a repair effect, not a small-$N$ effect. Monte Carlo standard errors are
+bootstrap (resampling replicates).
+
+**Result (run 2026-11-21, R 4.6.0; `sr-repair-mc` below).** In all four designs the repaired replicates are
+**worse calibrated than the ordinary ones from the same design**, and the error has no single direction:
+
+| design $(N,\rho_0,a{=}b)$ | repaired $n$ | ratio `se2_a`/`var_mc` repaired | ordinary | rms $z$ repaired | ordinary |
+|---|---|---|---|---|---|
+| D1 (100, .5, 1.5) | 981 | 0.47 (SE 0.02) | 1.56 | 2.10 (SE 0.08) | 1.34 |
+| D2 (100, .5, 1.8) | 2860 | 0.33 (0.01) | 2.74 | 2.75 (0.09) | 1.41 |
+| D3 (30, .8, 0) | 485 | 5.23 (0.29) | 1.13 | 2.43 (0.07) | 1.30 |
+| D4 (60, .6, 1.2) | 478 | 0.22 (0.01) | 1.30 | 2.73 (0.11) | 1.29 |
+
+(D1 to D4 ordinary-replicate ratios are above 1 and their rms $z$ above 1 because the designs are sparse; that is the
+small-$N$ baseline, not a repair effect.) In D1, D2 and D4 the mean production variance is 2 to 4.5 times *smaller*
+than the Monte Carlo variance of $\hat\rho^+$; in D3 it is 5 times *larger*; and the root-mean-square error of
+$\hat\rho^+$ about the generating value is 2.1 to 2.75 times the scale $z$ divides by, against 1.3 to 1.4 for the
+ordinary control. The delta-method variance (b) is not uniformly better: its mean is 3.1, 3.6 and 4.0 times the Monte Carlo variance in
+D1, D2 and D3, and 1.07 times in D4. $\hat\rho^+$ is also biased (−0.22 in D1, −0.20 in D4, +0.13 in D3, +0.03 in
+D2), which the table's rms $z$ includes and the ratio column does not. So the production $\hat\Gamma_{\rho\rho}/N$ of a repaired pair is **not a calibrated scale** in
+these designs, and not in a known direction. This is evidence from four designs, not a bound.
+
+**The pair at the bound.** Under `keepbound` a pair whose root lies beyond $B$ enters at $r_k=\pm B$. Two things are
+true of it by construction. $r_k$ is not a root of the pair's score: $\bar S(\pm B)\ne0$ (that is what "no sign change
+up to $B$" means), so $\bar\psi_\rho\ne0$ at $O(1)$, as for a repaired pair. And $r_k=\min(\hat\rho_{ML},B)$ is a
+clipped estimator: its sampling distribution has an atom at $B$, and the asymptotic normal approximation that
+$\hat\Gamma_{kk}/N$ describes does not hold for it (a boundary problem, not a smooth functional). The spec already
+records that the effect of such a pair on SEs and $T_3$ is "not established" and that a pre-registered experiment "did
+not support inclusion". **Measurement `sr-bound-mc`** shows the clipped estimator's variance against $\hat\Gamma_{\rho\rho}/N$
+on a binary design.
+
+**Result (run 2026-11-21).** At $N=2000$, $a=b=0$: with $\rho_0=0.999$ ($=B$) 52% of the replicates with no empty cell are
+kept at $B$; the variance of the clipped estimator is $6.9\times10^{-8}$ and the mean production $\hat\Gamma/N$ is
+$1.9\times10^{-7}$, 2.7 times larger. With $\rho_0=0.9995$, 96% are kept, the clipped variance is $1.5\times10^{-9}$ and the
+mean scale $2.1\times10^{-7}$, 140 times larger. The scale is the sampling variance of an unclipped estimator, which a
+clipped estimator does not have. A second effect is not measured here but follows from the form: as $\rho\to1$,
+$\hat\Gamma_{\rho\rho}\to0$ (the pair's own information diverges; measured here, about $4\times10^{-4}$ at the bound
+against 1.0 to 1.5 for the ordinary pairs of `case_E`), so a modest misfit at a pair held near $\pm B$ gives a
+very large $z$ and the pair would crowd the top of any ranking. The first measurement says the scale is not valid at the
+bound; this second remark says the failure would push such pairs *up*, so it matters for a ranking.
+
+**What the gate's rule gives.** The owner's rule (package §3): if $z_k$ cannot be justified for repaired pairs, the
+feature narrows, with those pairs staying in SRMR and leaving the ranking, named in a footnote; SRMR is not delayed.
+The verdict by group is in *Decisions this section leaves*, items O1 and O2.
+
+### Result SR5: eligibility and posting
+
+**Rule, stated for SRMR and for the residual matrices together** (owner's decision 3: "as the fit indices are"). They
+are computed and posted when, and only when, all of these hold:
+
+1. the fit is single-group (`group()` not given). The multi-group path (`dwlsmv.ado` lines 359-388) posts the fit
+   indices but SRMR is deliberately not posted there (decision 3, $G=1$ only for now): under invariance the threshold
+   rows are a selection of the stacked $s$ (spec §4.8 G6), and lavaan's multi-group SRMR, $\sum_g(n_g/N)\mathrm{SRMR}_g$
+   (package §1, not re-derived here), is a weighting the owner has not decided;
+2. there is no covariate (`e(covariates)` empty; the conditional fit posts no fit index, decision 2026-11-13 (a),
+   and its Stage 1 map has slope rows between thresholds and pairs, so the polychoric rows are not $T+1..D$);
+3. the optimizer converged (`converged != 0`): the same condition under which $T_3$ and the fit indices are posted
+   (owner 2026-11-18);
+4. for `efa()`: the geomin rotation converged (otherwise nothing is posted, rc 3498, `dwlsmv_rotfail`).
+
+`invariance()` fits are multi-group and are excluded by (1). The matrices are built **at fit time** from Stage 1's
+$s$, $\hat\Gamma$ and $N$ and $\sigma(\hat\theta)$, because `dwlsmv_m11_clear()` removes `dwlsmv_m11_st` before the
+command returns: **the replay path cannot recompute them**, so a replay shows exactly what was posted (as with the fit
+indices, "shown only when posted"). Proposed names, not decided: `e(srmr)`; `e(Resid)` ($p\times p$ signed $e$, zero
+diagonal, items as stripe in `e(indicators)` order); `e(Nresid)` ($p\times p$ normalized, diagonal missing).
+
+*What the formula needs from each fit kind.* For a CFA, $\rho_k(\hat\theta)$ are the polychoric rows of
+`dwls_model(θ̂)`; for an EFA they are the off-diagonal entries of $\hat\Lambda\hat\Phi\hat\Lambda'$, which **no rotation
+changes** (Result SR6), so the posted values do not depend on which geomin start won. An *inadmissible* converged fit
+(a communality above 1, $\hat\theta_{jj}<0$) still has well-defined off-diagonal $\sigma_\rho$; SRMR uses only those, so
+the Heywood sign of Θ does not enter. The fit indices are posted for such a fit, so by the "as the fit indices are" rule
+SRMR is too (item O3).
+
+**$df=0$ fits.** (`sr-df0`.) What the fit indices do: $D_L=0$ makes RMSEA, CFI and TLI missing (F3, `dwlsmv_fitidx`),
+posted as missing scalars, and the header prints "." for them and, for an EFA fit, the note "With df = 0 the model fits
+exactly; T3 and the fit indices are not informative." What the residuals do at $df=0$:
+
+- If a **real solution exists** the fit reaches $\sigma_\rho(\hat\theta)=s_\rho$ (so $e=0$, SRMR $=0$) to the optimizer's
+  tolerance. At $df=0$ with $\Delta$ invertible, $I-Q=0$, so the *standardized* residual's variance is exactly zero too.
+  The normalized $z_k=e_k/\sqrt{\hat\Gamma_{kk}/N}$ is then rounding noise divided by a positive scale, not exactly 0.
+- A $df=0$ model need **not** have a real solution: the number of parameters equals the number of statistics, but the
+  map $\theta\mapsto\sigma$ is not onto. For a one-factor model with three indicators, $\lambda_i\lambda_j=r_{ij}$ has a
+  real solution iff $r_{12}r_{13}/r_{23}>0$ (and the same for the other two ratios). Where it fails, the least-squares
+  fit has $e\ne0$ at $df=0$ (`sr-df0`). So **SRMR at $df=0$ is not identically zero**, and a nonzero value there
+  reports a solution that does not exist, which RMSEA/CFI/TLI cannot show.
+- A real solution can be **improper** (a Heywood case, $\lambda>1$): $e=0$ and SRMR $=0$ while $\theta_{jj}<0$.
+
+So at $df=0$ the residuals are computed and carry information in the second case, and no information in the first and
+third. The rule is open (item O4): options (a) post the computed values (recommended), (b) post missing, following F3,
+(c) omit. Whatever is posted, a ranking of $z_k$ at $df=0$ ranks rounding noise, which is why `efacompare` leaves
+$df=0$ rows out of its table (package decision 5); that is a display rule and is not decided here.
+
+*Amended 2026-11-22.* The sentence above holds only for the first and third cases. In the second (no real solution)
+$e\ne0$ and its ranking is informative. No quantity in the fit separates the cases without a cutoff (the optimizer
+stops on the gradient, not on the size of $e$), so the owner kept fitted $df=0$ rows in `efacompare`'s table, with a
+footnote saying that residuals near zero mean the correlations are reproduced exactly and larger ones mean the model
+does not reproduce them, as happens when no exact solution exists (E-119; worded after the
+end-of-module review so as to claim no more than the direction derived here). What is derived here is one direction only: no real solution implies $e\ne0$.
+A nonzero $e$ at $df=0$ can also come from a stationary point that is not the global minimum or from the optimizer's
+stopping tolerance; this section does not bound either.
+
+**A fit that did not converge** posts nothing: the last iterate is not a solution, $e$ at it is not a fit summary, and
+the fit indices are omitted for the same reason (`dwlsmv.ado` lines 560-574).
+
+### Result SR6: residuals do not depend on the rotation
+
+$\sigma_\rho$ is the off-diagonal part of $\Lambda\Phi\Lambda'$. Any nonsingular $T$ with $\operatorname{diag}(T\Phi T')=1$
+maps $(\Lambda,\Phi)\mapsto(\Lambda T^{-1},T\Phi T')$ and leaves $\Lambda\Phi\Lambda'$ unchanged, hence $\sigma_\rho$, $e$,
+SRMR, $z$ and every ranking. So an `efa()` fit's residuals are those of the unrotated model, and a rotation failure
+affects only whether the loadings can be reported, not the residuals, which is why Result SR5 still withholds them
+(the fit is not posted). Verified in `sr-rotinv`.
+
+### Result SR7: SRMR need not fall as factors are added
+
+The fit minimizes the *weighted* discrepancy $F=\sum_k w_ke_k^2$ ($w_k=1/\hat\Gamma_{kk}$), which is non-increasing in
+$m$ at global minima (the $m$-factor echelon model contains the $(m-1)$-factor one: zero out a column). SRMR is the
+*unweighted* $\sum e_k^2$. A model can lower the weighted sum by shrinking residuals of low-variance pairs while raising
+those of high-variance pairs, so SRMR can rise. This is a statement that SRMR is not guaranteed to fall; **it is not a
+claim about how often it does not**. `sr-mono` is a search with proxy weights, labeled below as chosen after looking at
+simulated data; it shows existence only. The Stata measurement of 2026-11-21 (package §3a) found SRMR falling on
+`case_E` and `case_F` at every $m$ that converged; two datasets are not frequency evidence either way. The help says
+SRMR is not promised to fall (owner's guidance).
+
+### Verification
+
+```{r sr-setup}
+#| cache: true
+# Definitions of the Notation, written from the formulas, not copied from lavaan.
+# Lower-triangle order (i > j, column-major) is R's lower.tri order, which is the spec 4.2 order.
+sr_off <- function(R, S) (R - S)[lower.tri(R)]               # e_k = r_k - rho_k(theta-hat)
+sr_defs <- function(r, p, th = numeric(0)) {                  # r: the P pair residuals
+  P <- length(r); Tn <- length(th)
+  c(srmr         = sqrt(sum(r^2) / (P + p)),                  # lavaan srmr = srmr_bentler_nomean
+    crmr_nomean  = sqrt(sum(r^2) / P),
+    srmr_bentler = sqrt((sum(r^2) + sum(th^2)) / (Tn + P + p)),
+    crmr         = sqrt((sum(r^2) + sum(th^2)) / (Tn + P)))
+}
+sr_z <- function(e, gdiag, N) e / sqrt(gdiag / N)             # the normalized residual
+```
+
+**SR1, by hand.** Two nonzero residuals at $p=6$; the divisor, the $\sqrt{P/(P+p)}$ relation, and the saturated-threshold
+identity (zero threshold residuals only enlarge the divisor). The largest-residual pair and its sign are asserted.
+
+```{r sr-formula}
+p <- 6; P <- p * (p - 1) / 2
+r <- rep(0, P); r[4] <- 0.05; r[9] <- -0.12                   # two nonzero residuals
+d <- sr_defs(r, p)
+stopifnot(abs(d["srmr"] - sqrt((0.05^2 + 0.12^2) / 21)) < 1e-15,
+          abs(d["crmr_nomean"] - sqrt((0.05^2 + 0.12^2) / 15)) < 1e-15,
+          abs(d["srmr"] - d["crmr_nomean"] * sqrt(P / (P + p))) < 1e-15)
+rc <- rep(0.03, P); dc <- sr_defs(rc, p)                      # a constant residual c
+stopifnot(abs(dc["crmr_nomean"] - 0.03) < 1e-15, abs(dc["srmr"] - 0.03 * sqrt(15 / 21)) < 1e-15)
+# largest |residual| and its pair (i > j in lower.tri order); sign = observed minus implied
+R0 <- matrix(0, p, p); R0[lower.tri(R0)] <- r; ij <- which(lower.tri(R0), arr.ind = TRUE)
+k <- which.max(abs(r)); stopifnot(identical(unname(ij[k, ]), c(6L, 2L)), r[k] == -0.12)
+# thresholds saturated (tau-hat = s_tau): zero threshold residuals only dilute the denominator
+Tn <- 12; d0 <- sr_defs(r, p, th = rep(0, Tn))
+stopifnot(abs(d0["srmr_bentler"]^2 * (Tn + P + p) - d["srmr"]^2 * (P + p)) < 1e-15)
+```
+
+**SR6, rotation invariance.** A random rotation rescaled to keep $\operatorname{diag}(\Phi)=1$: the implied off-diagonal
+correlations, the residual vector, SRMR, the normalized residuals and the ranking are unchanged. Tolerance $10^{-13}$
+(rounding of two $6\times2$ products).
+
+```{r sr-rotinv}
+set.seed(1)
+sr_L  <- matrix(c(.7, .6, .5, 0, 0, .1, 0, .1, 0, .6, .7, .5), 6, 2)
+sr_Ph <- matrix(c(1, .3, .3, 1), 2)
+sr_rot <- function(L, Ph, Tm) {                               # rows of T rescaled so diag(T Ph T') = 1
+  Tm <- Tm / sqrt(diag(Tm %*% Ph %*% t(Tm)))
+  list(L = L %*% solve(Tm), Ph = Tm %*% Ph %*% t(Tm))
+}
+sr_Rs <- crossprod(matrix(rnorm(6 * 40), 40)); sr_Rs <- sr_Rs / sqrt(outer(diag(sr_Rs), diag(sr_Rs)))
+sr_gd <- runif(15, .5, 2)                                     # stand-in for diag(Gamma) at the pair rows
+sr_ok <- TRUE
+for (b in 1:20) {
+  Tm <- matrix(rnorm(4), 2) + diag(2) * 2
+  ro <- sr_rot(sr_L, sr_Ph, Tm)
+  S1 <- sr_L %*% sr_Ph %*% t(sr_L); S2 <- ro$L %*% ro$Ph %*% t(ro$L)
+  e1 <- sr_off(sr_Rs, S1); e2 <- sr_off(sr_Rs, S2)
+  sr_ok <- sr_ok && max(abs(e1 - e2)) < 1e-13 && abs(diff(diag(ro$Ph))) < 1e-13 &&
+    abs(sr_defs(e1, 6)["srmr"] - sr_defs(e2, 6)["srmr"]) < 1e-13 &&
+    identical(order(-abs(sr_z(e1, sr_gd, 500))[1:15])[1:3], order(-abs(sr_z(e2, sr_gd, 500))[1:15])[1:3]) &&
+    max(abs(sr_z(e1, sr_gd, 500) - sr_z(e2, sr_gd, 500))) < 1e-10
+}
+stopifnot(sr_ok)
+```
+
+**SR7, the weighted fit and the proxy search.** `sr_fit` minimizes $\sum_{i<j}W_{ij}(R_{ij}-(\Lambda\Lambda')_{ij})^2$ over
+an echelon $\Lambda$ ($p\times m$, the first $k-1$ rows of column $k$ zero, as dwlsmv's EFA). Checks: the analytic
+gradient against central differences; recovery of an exact two-factor population; and nestedness, the global minimum of
+$F$ not rising from $m=1$ to $m=2$, over 30 random sample matrices and weights.
+
+```{r sr-weighted}
+sr_mask <- function(p, m) { mk <- matrix(1, p, m); if (m > 1) for (k in 2:m) mk[seq_len(k - 1), k] <- 0; mk }
+sr_F  <- function(x, R, W, m) { mk <- sr_mask(nrow(R), m); L <- matrix(x, nrow(R), m) * mk
+  E <- R - tcrossprod(L); diag(E) <- 0; sum(W[upper.tri(W)] * E[upper.tri(E)]^2) }
+sr_gr <- function(x, R, W, m) { mk <- sr_mask(nrow(R), m); L <- matrix(x, nrow(R), m) * mk
+  E <- R - tcrossprod(L); diag(E) <- 0; as.vector(-2 * (W * E) %*% L * mk) }
+sr_fit <- function(R, W, m, nstart = 12) {
+  p <- nrow(R); mk <- sr_mask(p, m); best <- NULL
+  for (s in seq_len(nstart)) {
+    o <- optim(rnorm(p * m, .5, .3) * as.vector(mk), sr_F, sr_gr, R = R, W = W, m = m,
+               method = "BFGS", control = list(maxit = 5000, reltol = 1e-14))
+    if (is.null(best) || o$value < best$value) best <- o
+  }
+  L <- matrix(best$par, p, m) * mk; list(F = best$value, Sigma = tcrossprod(L))
+}
+set.seed(2)
+sr_S1 <- sr_L %*% sr_Ph %*% t(sr_L); diag(sr_S1) <- 1
+sr_W1 <- matrix(1, 6, 6); diag(sr_W1) <- 0
+x0 <- as.vector(matrix(runif(12, .2, .8), 6, 2) * sr_mask(6, 2)); h <- 1e-6      # gradient vs central differences
+fd <- sapply(seq_along(x0), function(i) { e <- replace(numeric(12), i, h)
+  (sr_F(x0 + e, sr_S1, sr_W1, 2) - sr_F(x0 - e, sr_S1, sr_W1, 2)) / (2 * h) })
+stopifnot(max(abs(fd - sr_gr(x0, sr_S1, sr_W1, 2))) < 1e-7)
+stopifnot(sr_fit(sr_S1, sr_W1, 2)$F < 1e-12)                  # an exact two-factor population is recovered (SRMR = 0)
+```
+
+```{r sr-nested}
+# Global minima of F are non-increasing in m: the m-factor echelon model contains the (m-1) one.
+set.seed(3)
+sr_nest <- sapply(1:30, function(b) {
+  A <- crossprod(matrix(rnorm(6 * 30), 30)); R <- A / sqrt(outer(diag(A), diag(A)))
+  W <- matrix(exp(rnorm(36)), 6); W <- (W + t(W)) / 2; diag(W) <- 0
+  f1 <- sr_fit(R, W, 1); f2 <- sr_fit(R, W, 2); f2$F - f1$F })
+stopifnot(max(sr_nest) < 1e-8)                                # F(m = 2) <= F(m = 1) up to the optimizer
+```
+
+**Chosen after looking.** `sr-mono` searches for a sample matrix and weights where SRMR rises while $F$ falls. The
+design (a two-group-free one-factor population, $p=6$, $N=300$), the proxy weights $1/v$ with
+$v_{ij}=(1-R_{ij}^2)^2N^{-1}e^{\varepsilon}$, $\varepsilon\sim N(0,\mathrm{sdw}^2)$, and the two spreads (0.5 and 2) are
+this section's choices, made after an earlier search at spread 2 showed increases; the weights are a stand-in for
+$1/\hat\Gamma_{kk}$ and are **not** a measurement of how often it happens under real $\hat\Gamma$. The assertion is
+existence: at least one increase at the large spread, confirmed by a refit of the stored example.
+
+```{r sr-mono}
+set.seed(20261121)
+sr_sim2 <- function(p, m0, N, sdw, mmax) {
+  L0 <- matrix(0, p, m0); idx <- split(seq_len(p), rep(seq_len(m0), length.out = p))
+  for (k in seq_len(m0)) L0[idx[[k]], k] <- runif(length(idx[[k]]), .4, .8)
+  Rp <- tcrossprod(L0); diag(Rp) <- 1
+  v <- (1 - Rp^2)^2 / N * exp(rnorm(p * p, 0, sdw)); v <- (v + t(v)) / 2
+  E <- matrix(0, p, p); E[upper.tri(E)] <- rnorm(p * (p - 1) / 2, 0, sqrt(v[upper.tri(v)])); E <- E + t(E)
+  R <- Rp + E; diag(R) <- 1; diag(v) <- 1; W <- 1 / v; diag(W) <- 0
+  o <- sapply(1:mmax, function(m) { f <- sr_fit(R, W, m, 6)
+    c(F = f$F, S = sqrt(sum(sr_off(R, f$Sigma)^2) / (p * (p - 1) / 2 + p))) })
+  list(o = o, R = R, W = W)
+}
+sr_mono <- lapply(c(small = 0.5, large = 2), function(sdw) {
+  nrep <- 100; cF <- cS <- 0; ex <- NULL
+  for (b in 1:nrep) { z <- sr_sim2(6, 1, 300, sdw, 2); o <- z$o
+    cF <- cF + any(diff(o["F", ]) > 1e-8)
+    if (any(diff(o["S", ]) > 1e-9)) { cS <- cS + 1; if (is.null(ex)) ex <- z } }
+  list(nrep = nrep, F_rises = cF, SRMR_rises = cS, ex = ex)
+})
+print(sapply(sr_mono, function(z) c(nrep = z$nrep, F_rises = z$F_rises, SRMR_rises = z$SRMR_rises)))
+stopifnot(all(sapply(sr_mono, `[[`, "F_rises") == 0), sr_mono$large$SRMR_rises >= 1)
+ex <- sr_mono$large$ex                                         # the stored example, refit independently
+sr_f1 <- sr_fit(ex$R, ex$W, 1, 20); sr_f2 <- sr_fit(ex$R, ex$W, 2, 20)
+stopifnot(sr_f2$F < sr_f1$F + 1e-8,
+          sqrt(sum(sr_off(ex$R, sr_f2$Sigma)^2)) > sqrt(sum(sr_off(ex$R, sr_f1$Sigma)^2)))
+```
+
+**Binary-pair building blocks.** For the repaired-pair and bound-pair measurements, a binary pair with cells in the
+order $(11,21,12,22)$ (category 0 is "1"), $\pi_{rs}=p_{rs}+\sigma_{rs}t$, $\sigma=(1,-1,-1,1)$, and the production
+construction (a): $\psi_a=(1\{Y_1=0\}-\Phi(a))/\phi(a)$, $\psi_b$ likewise,
+$\psi_\rho=(u-I_{\rho a}\psi_a-I_{\rho b}\psi_b)/I_{\rho\rho}$ with $u_c=\partial_\rho\log\pi_c$ and the empirical
+informations $I=\sum_cW_c(\cdot)$, $W=n/N$ (the raw weights, empty cell zero). This is written from the formulas of
+`@sec-normaliser` and `@sec-o6`, not from their code; `sr-pair-lavaan` checks it against lavaan's $\Gamma$.
+
+```{r sr-pair}
+sr_sig   <- c(1, -1, -1, 1)
+sr_cells <- function(a, b, r) { p11 <- Phi2(a, b, r)
+  c(p11, pnorm(b) - p11, pnorm(a) - p11, 1 - pnorm(a) - pnorm(b) + p11) }
+sr_dpi <- function(a, b, r) {
+  s <- sqrt(1 - r^2); A <- pnorm((b - r * a) / s); Bq <- pnorm((a - r * b) / s)
+  list(rho = sr_sig * phi2(a, b, r),
+       a = dnorm(a) * c(A, -A, 1 - A, -(1 - A)),
+       b = dnorm(b) * c(Bq, 1 - Bq, -Bq, -(1 - Bq)))
+}
+sr_psi <- function(a, b, r, W) {                              # cells x (psi_a, psi_b, psi_rho)
+  pi_ <- sr_cells(a, b, r); d <- sr_dpi(a, b, r)
+  u <- d$rho / pi_; ua <- d$a / pi_; ub <- d$b / pi_
+  Ira <- sum(W * u * ua); Irb <- sum(W * u * ub); Irr <- sum(W * u^2)
+  pa <- (c(1, 0, 1, 0) - pnorm(a)) / dnorm(a); pb <- (c(1, 1, 0, 0) - pnorm(b)) / dnorm(b)
+  cbind(a = pa, b = pb, rho = (u - Ira * pa - Irb * pb) / Irr)
+}
+# The estimator and Stage 1's classification of one binary pair (spec Module 2): ok / repaired (one empty cell, c = 0.5,
+# margins kept) / aborted (two or more empty cells; a repaired root beyond B) / kept at +-B (no empty cell, root beyond B).
+sr_binfit <- function(n, c0 = 0.5, B = 0.999) {
+  N <- sum(n); e <- which(n == 0)
+  if (length(e) > 1) return(list(kind = "abort"))
+  th <- c(qnorm(sum(n[1, ]) / N), qnorm(sum(n[, 1]) / N))
+  rep <- length(e) == 1
+  np <- if (rep) n + c0 * sr_sig[e] * matrix(sr_sig, 2) else n
+  tgt <- np[1, 1] / N
+  fl <- Phi2(th[1], th[2], -B) - tgt; fh <- Phi2(th[1], th[2], B) - tgt
+  if (fl * fh > 0) {
+    if (rep) return(list(kind = "abort"))
+    rho <- if (fh < 0) B else -B; kind <- "bound"
+  } else {
+    rho <- uniroot(function(r) Phi2(th[1], th[2], r) - tgt, c(-B, B), tol = 1e-12)$root; kind <- "ok"
+  }
+  W <- as.vector(n) / N; Wb <- as.vector(np) / N
+  pa <- sr_psi(th[1], th[2], rho, W); pb <- sr_psi(th[1], th[2], rho, Wb)
+  list(kind = kind, rep = rep, rho = rho, th = th, Ga = sum(W * pa[, 3]^2), Gb = sum(Wb * pb[, 3]^2),
+       psibar = sum(W * pa[, 3]))
+}
+sr_sim <- function(N, rho, a, b) {                            # one binary pair; category 0 is z <= threshold
+  z1 <- rnorm(N); z2 <- rho * z1 + sqrt(1 - rho^2) * rnorm(N)
+  y1 <- as.integer(z1 > a); y2 <- as.integer(z2 > b)
+  matrix(c(sum(y1 == 0 & y2 == 0), sum(y1 == 1 & y2 == 0), sum(y1 == 0 & y2 == 1), sum(y1 == 1 & y2 == 1)), 2)
+}
+```
+
+**$\hat\Gamma$ for a repaired pair is lavaan's, and my $\psi$ is the production one.** On the derivation's tables T1 and
+T2 (`@sec-o6`) and one ordinary table, lavaan (0.7.2, `zero.add = c(0.5, 0)`, keep-margins) is fitted; at lavaan's own
+$\hat\rho$ the $3\times3$ block of $\Gamma$ for $(\tau_1,\tau_2,\rho)$ must equal `sr_psi`'s $\sum_cW_c\psi_c\psi_c'$. A
+mutant (the centred $\Gamma$) must miss it. Tolerance $10^{-10}$ relative to $1+|\cdot|$, set before running from
+`Phi2`'s accuracy ($10^{-12}$) times a few derivative factors.
+
+```{r sr-pair-lavaan}
+suppressPackageStartupMessages(library(lavaan))
+sr_tabs <- list(T1 = matrix(c(22, 0, 6, 12), 2), T2 = matrix(c(0, 7, 9, 24), 2), T0 = matrix(c(22, 3, 6, 12), 2))
+sr_lab  <- c("y1|t1", "y2|t1", "y1~~y2")
+sr_pl <- t(sapply(names(sr_tabs), function(nm) {
+  n <- sr_tabs[[nm]]; N <- sum(n); cell <- rep(1:4, as.vector(n))
+  dat <- data.frame(y1 = ordered(c(0, 1, 0, 1)[cell], levels = 0:1), y2 = ordered(c(0, 0, 1, 1)[cell], levels = 0:1))
+  fit <- sem("y1 ~~ y2", data = dat, estimator = "WLSMV", parameterization = "delta",
+             zero.add = c(0.5, 0), zero.keep.margins = TRUE)
+  rl <- lavInspect(fit, "sampstat")$cov["y2", "y1"]
+  G  <- unclass(lavInspect(fit, "gamma"))[sr_lab, sr_lab]
+  th <- c(qnorm(sum(n[1, ]) / N), qnorm(sum(n[, 1]) / N)); W <- as.vector(n) / N
+  ps <- sr_psi(th[1], th[2], rl, W); Gm <- crossprod(ps * sqrt(W))
+  psc <- scale(ps, scale = FALSE); Gc <- crossprod(psc * sqrt(W))   # the centred mutant
+  rel <- function(A, B) max(abs(A - B) / (1 + abs(B)))
+  c(rho_lavaan = rl, G_vs_mine = rel(G, Gm), G_vs_centred = rel(G, Gc), Grr = G[3, 3],
+    psibar_rho = sum(W * ps[, 3]))
+}))
+sr_pl
+stopifnot(sr_pl[, "G_vs_mine"] < 1e-10, sr_pl[c("T1", "T2"), "G_vs_centred"] > 1e-3)   # floor chosen after measuring
+```
+
+**Measurement: a repaired pair's $\hat\Gamma_{\rho\rho}/N$ against the Monte Carlo.** (`sr-repair-mc`.) Four designs,
+fixed from the exact multinomial probability of exactly one empty cell (at least about 8% of replicates, computed
+before any simulation, so that the repaired group is large enough), none tuned on results:
+$(N,\rho_0,a,b)=$ (100, .5, 1.5, 1.5), (100, .5, 1.8, 1.8), (30, .8, 0, 0), (60, .6, 1.2, 1.2), 6000
+replicates each, seed 20261121. (A first set of designs, with the empty-cell probability below 5%, gave too few repaired
+replicates and failed the count check; it was replaced, not tuned.) $(a)$ is production; $(b)$ (delta method at the repaired proportions) is the reference
+the derivation compares it with. Rows: the replicates that Stage 1 would **repair** (exactly one empty cell and
+$|\hat\rho^+|<B$) and those it would pass **ordinary** (no empty cell, root inside $B$). The statistics per group:
+`bias`, `var_mc` $=\operatorname{Var}(\hat\rho)$, `se2_a` $=\overline{\hat\Gamma^{(a)}_{\rho\rho}/N}$, `se2_b` likewise,
+`ratio_a` $=$ `se2_a`/`var_mc`, `rms_z` $=\sqrt{\overline{z^2}}$ with $z=(\hat\rho-\rho_0)/\sqrt{\hat\Gamma^{(a)}_{\rho\rho}/N}$,
+and bootstrap SEs (400 resamples) for `ratio_a` and `rms_z`. No assertion is a pass/fail on calibration; the assertions
+are on the machinery: the counts are positive, the repaired group exists in every design, and $\bar\psi_\rho\ne0$ for
+every repaired replicate and $=0$ (to $10^{-9}$) for every ordinary one.
+
+```{r sr-repair-mc}
+sr_designs <- list(D1 = c(N = 100, rho = .5, a = 1.5, b = 1.5), D2 = c(N = 100, rho = .5, a = 1.8, b = 1.8),
+                   D3 = c(N = 30,  rho = .8, a = 0,   b = 0),   D4 = c(N = 60,  rho = .6, a = 1.2, b = 1.2))
+sr_boot <- function(M, f, B = 400) { n <- nrow(M); sd(replicate(B, f(M[sample.int(n, n, TRUE), , drop = FALSE]))) }
+sr_summ <- function(M, N, rho0) {            # M columns: rho, Ga, Gb
+  zf  <- function(X) sqrt(mean(((X[, 1] - rho0)^2) / (X[, 2] / N)))
+  rf  <- function(X) mean(X[, 2] / N) / var(X[, 1])
+  c(n = nrow(M), bias = mean(M[, 1]) - rho0, var_mc = var(M[, 1]), se2_a = mean(M[, 2] / N), se2_b = mean(M[, 3] / N),
+    ratio_a = rf(M), ratio_a_se = sr_boot(M, rf), rms_z = zf(M), rms_z_se = sr_boot(M, zf))
+}
+set.seed(20261121)
+sr_rep <- lapply(sr_designs, function(dz) {
+  ft <- lapply(seq_len(6000), function(i) sr_binfit(sr_sim(dz["N"], dz["rho"], dz["a"], dz["b"])))
+  kd <- sapply(ft, `[[`, "kind"); rp <- sapply(ft, function(f) isTRUE(f$rep))
+  pick <- function(sel) do.call(rbind, lapply(ft[sel], function(f) c(f$rho, f$Ga, f$Gb, f$psibar)))
+  Mr <- pick(kd == "ok" & rp); Mo <- pick(kd == "ok" & !rp)
+  list(counts = c(repaired = nrow(Mr), ordinary = nrow(Mo), aborted = sum(kd == "abort"), bound = sum(kd == "bound")),
+       repaired = sr_summ(Mr[, 1:3], dz["N"], dz["rho"]), ordinary = sr_summ(Mo[, 1:3], dz["N"], dz["rho"]),
+       psibar = c(rep_min = min(abs(Mr[, 4])), ord_max = max(abs(Mo[, 4]))))
+})
+sr_rep_tab <- do.call(rbind, lapply(names(sr_rep), function(nm) {
+  z <- sr_rep[[nm]]; rbind(cbind(design = nm, group = "repaired", t(z$repaired)),
+                           cbind(design = nm, group = "ordinary", t(z$ordinary))) }))
+print(t(sapply(sr_rep, function(z) z$counts)))
+print(data.frame(sr_rep_tab[, 1:2], signif(apply(sr_rep_tab[, -(1:2)], 2, as.numeric), 3)))
+stopifnot(all(sapply(sr_rep, function(z) z$counts["repaired"] > 50)),
+          all(sapply(sr_rep, function(z) z$psibar["rep_min"] > 1e-6 && z$psibar["ord_max"] < 1e-9)))
+```
+
+**Measurement: a pair kept at $\pm B$.** (`sr-bound-mc`.) Binary pairs at $N=2000$, $a=b=0$, with $\rho_0$ at $B$
+($0.999$) and above it ($0.9995$): the replicates with no empty cell, split by whether the root is beyond $B$ (kept at
+$B$) or not. Over all no-empty-cell replicates the clipped estimator $\tilde\rho=\min(\hat\rho,B)$ has a variance, and
+$\hat\Gamma_{\rho\rho}/N$ is its production scale. Reported, not asserted against a tolerance: the share kept at $B$,
+$\operatorname{Var}(\tilde\rho)$ against the mean of $\hat\Gamma/N$ over the same replicates and over the kept ones
+alone, and $\mathrm{rms}(z)$ among the kept.
+
+```{r sr-bound-mc}
+set.seed(20261122)
+sr_bd <- lapply(c(B999 = .999, B9995 = .9995), function(r0) {
+  ft <- lapply(seq_len(3000), function(i) sr_binfit(sr_sim(2000, r0, 0, 0)))
+  kd <- sapply(ft, `[[`, "kind"); keep <- ft[kd %in% c("ok", "bound")]
+  M <- t(sapply(keep, function(f) c(f$rho, f$Ga, f$kind == "bound", f$psibar)))
+  kb <- M[, 3] == 1
+  c(rho0 = r0, share_kept = mean(kb), n_kept = sum(kb), n_total = nrow(M), var_clipped = var(M[, 1]),
+    mean_se2_all = mean(M[, 2] / 2000), mean_se2_kept = if (any(kb)) mean(M[kb, 2] / 2000) else NA,
+    rms_z_kept = if (any(kb)) sqrt(mean(((M[kb, 1] - r0)^2) / (M[kb, 2] / 2000))) else NA,
+    psibar_kept_med = if (any(kb)) median(abs(M[kb, 4])) else NA)
+})
+print(signif(do.call(rbind, sr_bd), 3))
+stopifnot(all(sapply(sr_bd, function(z) z["n_kept"] > 50)))
+```
+
+**$df=0$: the residual need not be zero.** One factor, three indicators ($df=0$). Exact solution exists iff
+$r_{12}r_{13}/r_{23}>0$; the Heywood case (a loading above 1) has residual zero; the sign-inconsistent case has a
+strictly positive least-squares residual. lavaan on the first three items of `case_E` is a real $df=0$ fit, reported.
+
+```{r sr-df0}
+sr_df0 <- function(R) { f <- function(l) sum(((R - tcrossprod(l))[lower.tri(R)])^2); best <- NULL
+  for (s in 1:30) { o <- optim(runif(3, -.9, .9), f, method = "BFGS", control = list(reltol = 1e-16, maxit = 2000))
+    if (is.null(best) || o$value < best$value) best <- o }
+  best$value }
+R3 <- function(r12, r13, r23) matrix(c(1, r12, r13, r12, 1, r23, r13, r23, 1), 3)
+sr_ok3 <- R3(.5, .4, .3); sr_hey <- R3(.9, .9, .5); sr_bad <- R3(.5, .4, -.3)
+l1 <- sqrt(.5 * .4 / .3); l2 <- .5 / l1; l3 <- .4 / l1                      # exact solution of the proper case
+stopifnot(max(abs((sr_ok3 - tcrossprod(c(l1, l2, l3)))[lower.tri(sr_ok3)])) < 1e-15)
+h1 <- sqrt(.9 * .9 / .5); stopifnot(h1 > 1)                                 # Heywood: lambda_1 > 1, still exact
+stopifnot(max(abs((sr_hey - tcrossprod(c(h1, .9 / h1, .9 / h1)))[lower.tri(sr_hey)])) < 1e-15)
+sr_df0_vals <- c(proper = sr_df0(sr_ok3), heywood = sr_df0(sr_hey), no_real_solution = sr_df0(sr_bad))
+print(sr_df0_vals)
+stopifnot(sr_df0_vals["proper"] < 1e-12, sr_df0_vals["heywood"] < 1e-12, sr_df0_vals["no_real_solution"] > 1e-3)
+```
+
+**SR1 and SR2 against lavaan 0.7.2.** `case_E` ($N=5000$, six items), the one-factor and two-factor CFA, `WLSMV`, delta
+parameterization. Hypotheses, written before the first run: (i) `fitMeasures()["srmr"]` equals the hand formula from
+`lavInspect` sample and implied correlations, to $10^{-12}$; (ii) `srmr_bentler` squared times $(T+P+p)$ equals `srmr`
+squared times $(P+p)$ to $10^{-10}$ if and only if the threshold residuals are zero, and the largest threshold residual
+is at most $10^{-5}$ (lavaan's own convergence); (iii) lavaan's `normalized` residual equals $e_k/\sqrt{\Gamma_{kk}/N}$
+with lavaan's $\Gamma$ and $N=$ `ntotal`, to $10^{-8}$ relative; the same with $N-1$ must miss by more than $10^{-6}$;
+(iv) the largest $|z|$ pair and its sign agree with `residuals(type="normalized")`.
+
+```{r sr-lavaan}
+root <- file.path("..", "..")
+sr_dE <- read.csv(file.path(root, "fixtures", "data", "case_E.csv"))
+sr_lavfit <- function(m, d, ...) sem(m, data = d, ordered = names(d), estimator = "WLSMV",
+  parameterization = "delta", test = "scaled.shifted", zero.add = c(0.5, 0), zero.keep.margins = TRUE, ...)
+sr_hand <- function(fit) {
+  ss <- lavInspect(fit, "sampstat"); im <- lavInspect(fit, "implied"); Ro <- ss$cov; nm <- colnames(Ro)
+  lt <- which(lower.tri(Ro), arr.ind = TRUE); lab <- paste0(nm[lt[, 2]], "~~", nm[lt[, 1]])
+  G <- unclass(lavInspect(fit, "gamma")); stopifnot(all(lab %in% rownames(G)))
+  list(e = (Ro - im$cov)[lower.tri(Ro)], gk = diag(G)[lab], N = lavInspect(fit, "ntotal"),
+       th = ss$th - im$th, p = ncol(Ro), lab = lab)
+}
+sr_cmp <- function(fit) {
+  h <- sr_hand(fit); P <- length(h$e); Tn <- length(h$th)
+  fm <- fitMeasures(fit, c("srmr", "srmr_bentler", "crmr_nomean", "df"))
+  z  <- unname(sr_z(h$e, h$gk, h$N)); zN1 <- unname(sr_z(h$e, h$gk, h$N - 1))
+  zl <- residuals(fit, type = "normalized")$cov[lower.tri(diag(h$p))]
+  rl <- residuals(fit, type = "raw")$cov[lower.tri(diag(h$p))]
+  big <- abs(h$e) >= 1e-5     # added after the first run: lavaan divides by 1, not by the SE, below 1e-5
+  gap <- function(x) if (any(big)) max(abs(x[big] - zl[big]) / pmax(1, abs(zl[big]))) else NA_real_
+  c(df = fm[["df"]], srmr_gap = abs(sr_defs(h$e, h$p)[["srmr"]] - fm[["srmr"]]),
+    crmr_gap = abs(sr_defs(h$e, h$p)[["crmr_nomean"]] - fm[["crmr_nomean"]]),
+    dilute_gap = abs(fm[["srmr_bentler"]]^2 * (Tn + P + h$p) - fm[["srmr"]]^2 * (P + h$p)),
+    max_th_resid = max(abs(h$th)), raw_gap = max(abs(h$e - rl)),
+    n_small = sum(!big), z_gap = gap(z), zN1_gap = gap(zN1),
+    small_is_e = if (any(!big)) max(abs(zl[!big] - h$e[!big])) else NA_real_,
+    same_top = as.numeric(which.max(abs(z)) == which.max(abs(zl)) && sign(z[which.max(abs(z))]) == sign(zl[which.max(abs(zl))])),
+    max_abs_z = max(abs(z)), srmr = fm[["srmr"]])
+}
+sr_fits <- list(one_factor = sr_lavfit("f =~ y1 + y2 + y3 + y4 + y5 + y6", sr_dE, std.lv = TRUE),
+                two_factor = sr_lavfit("f1 =~ y1 + y2 + y3\n f2 =~ y4 + y5 + y6", sr_dE, std.lv = TRUE),
+                df0_three  = sr_lavfit("f =~ y1 + y2 + y3", sr_dE[, 1:3], std.lv = TRUE))
+sr_lv <- t(sapply(sr_fits, sr_cmp)); print(signif(sr_lv, 4))
+stopifnot(sr_lv[, "srmr_gap"] < 1e-12, sr_lv[, "crmr_gap"] < 1e-12, sr_lv[, "raw_gap"] < 1e-12,
+          sr_lv[, "dilute_gap"] < 1e-10, sr_lv[, "max_th_resid"] < 1e-5,
+          all(sr_lv[, "z_gap"] < 1e-8, na.rm = TRUE), all(sr_lv[, "small_is_e"] < 1e-12, na.rm = TRUE),
+          sr_lv[c("one_factor", "two_factor"), "zN1_gap"] > 1e-6,
+          sr_lv[c("one_factor", "two_factor"), "same_top"] == 1)
+cat("lavaan", as.character(packageVersion("lavaan")), "\n")
+```
+
+**A repaired pair in lavaan's normalized residual.** `emptycell.csv` ($N=400$, four binary items; $y_1,y_2$ has exactly
+one empty cell). lavaan repairs it by default. Checks: the pair is detected from the table; lavaan's $\Gamma_{kk}$ at the
+pair equals `sr_psi`'s (a) $\hat\Gamma_{\rho\rho}$ at lavaan's $\hat\rho$ ($10^{-8}$ relative); lavaan's `normalized`
+residual there equals $e/\sqrt{\Gamma_{kk}/N}$ ($10^{-8}$). This establishes that lavaan's $z$ for a repaired pair is
+the formula of Result SR2 with construction (a); it does **not** establish that this is a calibrated scale (that is
+`sr-repair-mc`).
+
+```{r sr-lavaan-repaired}
+sr_dR <- read.csv(file.path(root, "fixtures", "data", "emptycell.csv"))
+sr_fR <- sr_lavfit("f =~ y1 + y2 + y3 + y4", sr_dR, std.lv = TRUE)
+sr_hR <- sr_hand(sr_fR)
+sr_tab12 <- matrix(table(factor(sr_dR$y1, 0:1), factor(sr_dR$y2, 0:1)), 2); stopifnot(sum(sr_tab12 == 0) == 1)
+k12 <- which(sr_hR$lab == "y1~~y2"); stopifnot(length(k12) == 1)
+NR <- nrow(sr_dR); thR <- c(qnorm(sum(sr_tab12[1, ]) / NR), qnorm(sum(sr_tab12[, 1]) / NR))
+rlR <- lavInspect(sr_fR, "sampstat")$cov["y2", "y1"]
+GaR <- sum((as.vector(sr_tab12) / NR) * sr_psi(thR[1], thR[2], rlR, as.vector(sr_tab12) / NR)[, 3]^2)
+zlR <- residuals(sr_fR, type = "normalized")$cov[lower.tri(diag(4))]
+zR  <- sr_z(sr_hR$e, sr_hR$gk, sr_hR$N)
+bigR <- abs(sr_hR$e) >= 1e-5                                   # lavaan's SE = 1 rule below 1e-5 (see above)
+sr_rp <- c(Gkk_lavaan = unname(sr_hR$gk[k12]), Gkk_mine = GaR, rel_gap = unname(abs(sr_hR$gk[k12] - GaR) / sr_hR$gk[k12]),
+           e = sr_hR$e[k12], z_lavaan = zlR[k12], z_hand = unname(zR[k12]),
+           max_z_gap = max(abs(zR[bigR] - zlR[bigR]) / pmax(1, abs(zlR[bigR]))))
+print(signif(sr_rp, 5))
+stopifnot(sr_rp["rel_gap"] < 1e-8, sr_rp["max_z_gap"] < 1e-8)
+```
+
+### What was verified, and what it does not certify
+
+| Chunk | Comparator (axes that differ) | Deciding criterion | Does not certify |
+|---|---|---|---|
+| `sr-lavaan` | lavaan 0.7.2 (code, optimizer; shares the formulas) | `srmr` and `raw` equal to $10^{-12}$; `normalized` equal to $10^{-8}$ off the $<10^{-5}$ rule, $N-1$ misses | dwlsmv's Stage 1 or Stata code; a pass is agreement with lavaan |
+| `sr-pair-lavaan` | lavaan's $\Gamma$ (code) | my (a) $\psi$ equals lavaan's $\Gamma$ block to $10^{-10}$ | that (a) is a good variance (that is `sr-repair-mc`) |
+| `sr-lavaan-repaired` | lavaan | lavaan's $z$ at a repaired pair is $e/\sqrt{\Gamma_{kk}/N}$ with (a) | calibration |
+| `sr-formula`, `sr-rotinv`, `sr-df0` | closed forms (hand) | identities to $10^{-15}$ to $10^{-13}$ | nothing about Stata |
+| `sr-repair-mc`, `sr-bound-mc` | Monte Carlo (algorithm) | none: diagnostics, designs fixed in advance, no tolerance | a bound on the error of $z$; frequency in real data |
+| `sr-mono` | simulation with proxy weights (chosen after looking) | existence of an SRMR increase | frequency under real $\hat\Gamma$ |
+
+Proportionate effort (a project rule): standard checks are enough. Trigger (b) (extreme regimes) is met only by the bound
+design, which is a diagnostic, not a certification; no high-precision treatment is claimed.
+
+**Not run, owed:** every Stata function, the Stage 1 classification claims of Result SR3 (read from source, not
+executed here), and a check that dwlsmv's own $\hat\tau$ equals $s_\tau$ (lavaan's threshold residual is exactly 0, so
+it says nothing about dwlsmv's optimizer).
+
+### Decisions this section leaves
+
+Each is open for the owner; none is resolved here.
+
+- **O1. Repaired pairs and the normalized residual** (gate question 2a). *Verdict: not justified.* Options.
+  (a) The pair stays in SRMR and in `e(Resid)`, and `e(Nresid)` is missing at it; it leaves the ranking and is named in a
+  footnote. Membership is derivable at posting (`dwlsmv_emptycell_pairs(Y, map)`), so no field is added. Consequence:
+  `efacompare` cannot rank a repaired pair even when it is the largest raw residual; the footnote says so. This is the
+  owner's gate rule and the **recommendation**. (b) The pair stays in the ranking, marked (decision 6 as written):
+  consequence, the ranking mixes pairs whose scale is off by a factor of 2 to 5 in either direction with ordinary pairs.
+  (c) As lavaan does, unmarked: lavaan prints the same $z$ (`sr-lavaan-repaired`). What bears: `sr-repair-mc`. Not
+  established: calibration on real data; any threshold beyond which repair is safe; the direction of the error.
+- **O2. Pairs held at $\pm B$ under `keepbound`** (gate question 2b). *Verdict: not valid.* (a) Same narrowing as O1(a);
+  membership is already posted (`e(bound)`). **Recommended.** (b) Keep with a mark. Consequence: such pairs would crowd
+  the top (the scale is small by construction at $\rho\to1$). Not established: that the bound occurs in practice often.
+- **O3. Inadmissible converged fits** (communality above 1; a negative implied variance). SRMR uses off-diagonals only, so
+  it is defined. Options: (a) post, as the fit indices do (recommended, consistent with decision 3); (b) withhold.
+- **O4. $df=0$.** Options: (a) post the computed values (recommended): at $df=0$ with a real solution $e$ is 0 to
+  optimizer tolerance, and with no real solution it is not, which the fit indices cannot show; `sr-df0`; (b) post missing,
+  following F3; (c) omit. Whichever is chosen, $z$ at $df=0$ ranks rounding noise and must not be ranked (display, later).
+  *Decided 2026-11-22: (a). The display rule was reversed the same day; see the amendment at SR5.*
+- **O5. $p=1$** ($P=0$). Not reachable if a one-indicator model is refused earlier; not established from the code. If it
+  can reach posting, SRMR$=0$ and the residual matrices are $1\times1$; the implementation should refuse or post missing.
+- **O6. Names and diagonal convention.** Proposed: `e(srmr)`, `e(Resid)` (diagonal 0), `e(Nresid)` (diagonal missing).
+  The raw matrix is signed, observed minus implied, symmetric; both have the items as stripe in `e(indicators)` order.
+- **O7. lavaan's rule below $10^{-5}$.** lavaan's `normalized` residual equals the raw residual (it divides by 1) when
+  $|e|<10^{-5}$ (found by the first run, `sr-lavaan`). dwlsmv does not copy this: $z$ is always $e/\sqrt{\Gamma_{kk}/N}$.
+  Consequence for fixtures: compare to lavaan only where $|e|\ge10^{-5}$.
+- **O8. Multiple groups** are not derived here (decision 3: $G=1$ only).
+- **O9. Monotonicity** is stated as non-guaranteed only; no claim about frequency (Result SR7).
+
 ## Gate: an ordinal observed variable in a structural path, as a single-indicator factor {#sec-single-indicator}
 
 **Superseded in part (2026-10-24, E-006).** For an *exogenous* predictor,
